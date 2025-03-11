@@ -1,9 +1,20 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
+import { ProfilesModule } from './profiles/profiles.module';
+import { ConnectionsModule } from './connections/connections.module';
+import { MessagesModule } from './messages/messages.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { CompaniesModule } from './companies/companies.module';
+import { JobsModule } from './jobs/jobs.module';
+import { PostsModule } from './posts/posts.module';
+import { SecurityModule } from './security/security.module';
+import { AdminModule } from './admin/admin.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
-  imports: [],
+  imports: [AuthModule, ProfilesModule, ConnectionsModule, MessagesModule, NotificationsModule, CompaniesModule, JobsModule, PostsModule, SecurityModule, AdminModule, PaymentsModule],
   controllers: [AppController],
   providers: [AppService],
 })
