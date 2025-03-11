@@ -128,9 +128,20 @@ Each commit message should follow this format:
  ├── app.module.ts
 ```
 
+## Code Naming Convention
+| Resource                    | Naming Convention |
+|-----------------------------|------------|
+| Modules/Directories         | lowercase, plural |
+| Files                       | PascalCase |
+| Classes & Interfaces        | PascalCase |
+| Enums                       | PascalCase |
+| Variables & Functions       | camelCase |
+| Constants                   | UPPER_SNAKE_CASE |
+| Enum Values                 | UPPER_SNAKE_CASE |
+| Database Collections        | snake_case, plural |
+| Database Collections Fields | camelCase |
+
 ## Additional Notes
-- Follow **PascalCase** for file naming.
-- Follow **lowercase and plural** for module and directory naming.
 - Ensure **eslint** rules are followed to maintain clean code.
 
 ## Code Formatting
