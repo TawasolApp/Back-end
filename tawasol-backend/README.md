@@ -137,4 +137,3 @@ Each commit message should follow this format:
 We use **Prettier** for code formatting.
 1. Install the Prettier extension in VS Code.
 2. Format code using **Right-click > Format with Prettier**.
-
