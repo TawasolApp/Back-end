@@ -12,9 +12,11 @@ import { PostsModule } from './posts/posts.module';
 import { SecurityModule } from './security/security.module';
 import { AdminModule } from './admin/admin.module';
 import { PaymentsModule } from './payments/payments.module';
+import { ConfigModule } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 
 @Module({
-  imports: [AuthModule, ProfilesModule, ConnectionsModule, MessagesModule, NotificationsModule, CompaniesModule, JobsModule, PostsModule, SecurityModule, AdminModule, PaymentsModule],
+  imports: [ConfigModule.forRoot(), MongooseModule.forRoot(process.env.MONGO_URI || ''), AuthModule, ProfilesModule, ConnectionsModule, MessagesModule, NotificationsModule, CompaniesModule, JobsModule, PostsModule, SecurityModule, AdminModule, PaymentsModule],
   controllers: [AppController],
   providers: [AppService],
 })
