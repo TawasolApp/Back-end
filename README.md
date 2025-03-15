@@ -64,6 +64,14 @@ To run the project in production mode:
 npm run start
 ```
 
+## Running the Seeding Script
+
+To populate the database with test data, run the following command:
+
+```sh
+ts-node src/seed.ts
+```
+
 ## API Documentation
 
 Swagger is used for API documentation. Once the backend is running, visit:
@@ -108,10 +116,14 @@ Each commit message should follow this format:
  │   │   ├── repositories/
  │   │   ├── dtos/
  │   │   ├── entities/
+ |   |   ├── infrastructure/
+ |   |   |   ├── database/
+ |   |   |   |   ├── user.schema.ts
+ |   |   |   |   ├── user.seeder.ts
  │   │   ├── auth.module.ts
  │   ├── users/
  │   ├── posts/
- │   ├── messaging/
+ │   ├── messages/
  │   ├── jobs/
  │   ├── notifications/
  ├── common/
@@ -125,6 +137,7 @@ Each commit message should follow this format:
  │   ├── jwt.ts
  │   ├── swagger.ts
  ├── main.ts
+ ├── seed.ts
  ├── app.module.ts
 ```
 
@@ -132,14 +145,13 @@ Each commit message should follow this format:
 | Resource                    | Naming Convention |
 |-----------------------------|------------|
 | Modules/Directories         | lowercase, plural |
-| Files                       | PascalCase |
+| Files                       | kebab-case |
 | Classes & Interfaces        | PascalCase |
 | Enums                       | PascalCase |
 | Variables & Functions       | camelCase |
 | Constants                   | UPPER_SNAKE_CASE |
-| Enum Values                 | UPPER_SNAKE_CASE |
-| Database Collections        | snake_case, plural |
-| Database Collections Fields | camelCase |
+| Database Collections        | PascalCase |
+| Database Collections Fields | snake_case |
 
 ## Additional Notes
 - Ensure **eslint** rules are followed to maintain clean code.
