@@ -5,8 +5,6 @@ export type PostDocument = Post & Document;
 
 @Schema({ timestamps: { createdAt: 'posted_at', updatedAt: 'editted_at' }, versionKey: false })
 export class Post {
-  @Prop({ type: Types.ObjectId, auto: true })
-  _id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   creator: Types.ObjectId;
@@ -28,6 +26,12 @@ export class Post {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];
+
+  @Prop({ enum: ['Public', 'Connections', 'Private'], default: 'Public' })
+  visibility: string;
+
+  @Prop({ enum: ['User', 'Company'], required: true })
+  authorType: string;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);
