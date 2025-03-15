@@ -81,6 +81,7 @@ export class ProfileSeeder {
           start_date: faker.date.past(),
           expiry_date: faker.date.future(),
           auto_renewal: faker.datatype.boolean(),
+          cancel_date: undefined
         },
         plan_statistics: {
           message_count: faker.number.int({ min: 0, max: 1000 }),

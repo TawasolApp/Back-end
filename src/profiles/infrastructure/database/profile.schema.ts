@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { IsOptional } from 'class-validator';
 import { Document, Types } from 'mongoose';
 
 export type ProfileDocument = Profile & Document;
@@ -90,7 +91,8 @@ class PlanDetails {
   auto_renewal: boolean;
 
   @Prop()
-  cancel_date: Date;
+  @IsOptional()
+  cancel_date?: Date; 
 }
 
 @Schema({ _id: false })
