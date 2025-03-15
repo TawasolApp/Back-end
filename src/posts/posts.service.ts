@@ -21,7 +21,9 @@ export class PostsService {
     } catch (error) {
       console.error('Error creating post:', error);
       if (error.name === 'ValidationError') {
-        throw new InternalServerErrorException('Validation failed for the post data');
+        throw new InternalServerErrorException(
+          'Validation failed for the post data',
+        );
       }
       throw new InternalServerErrorException('Failed to create post');
     }
@@ -33,7 +35,9 @@ export class PostsService {
     } catch (error) {
       console.error('Error fetching all posts:', error);
       if (error.name === 'NetworkError') {
-        throw new InternalServerErrorException('Network error occurred while fetching posts');
+        throw new InternalServerErrorException(
+          'Network error occurred while fetching posts',
+        );
       }
       throw new InternalServerErrorException('Failed to fetch posts');
     }
@@ -73,7 +77,9 @@ export class PostsService {
         throw new NotFoundException('Invalid post id');
       }
       if (error.name === 'NetworkError') {
-        throw new InternalServerErrorException('Network error occurred while deleting post');
+        throw new InternalServerErrorException(
+          'Network error occurred while deleting post',
+        );
       }
       throw new InternalServerErrorException('Failed to delete post');
     }

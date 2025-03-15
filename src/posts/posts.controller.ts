@@ -1,4 +1,14 @@
-import { Controller, Get, Post, Body, Param, Delete, UsePipes, ValidationPipe, InternalServerErrorException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Delete,
+  UsePipes,
+  ValidationPipe,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { Post as PostEntity } from './infrastructure/database/post.schema';

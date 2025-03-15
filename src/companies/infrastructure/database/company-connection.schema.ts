@@ -3,7 +3,10 @@ import { Document, Types } from 'mongoose';
 
 export type CompanyConnectionDocument = CompanyConnection & Document;
 
-@Schema({ timestamps: { createdAt: 'created_at', updatedAt: false }, versionKey: false })
+@Schema({
+  timestamps: { createdAt: 'created_at', updatedAt: false },
+  versionKey: false,
+})
 export class CompanyConnection {
   @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
@@ -15,6 +18,7 @@ export class CompanyConnection {
   company_id: Types.ObjectId;
 }
 
-export const CompanyConnectionSchema = SchemaFactory.createForClass(CompanyConnection);
+export const CompanyConnectionSchema =
+  SchemaFactory.createForClass(CompanyConnection);
 
 CompanyConnectionSchema.set('collection', 'CompanyConnections');

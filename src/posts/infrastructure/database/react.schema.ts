@@ -3,12 +3,18 @@ import { Document, Types } from 'mongoose';
 
 export type ReactDocument = React & Document;
 
-@Schema({ timestamps: { createdAt: 'reacted_at', updatedAt: false }, versionKey: false })
+@Schema({
+  timestamps: { createdAt: 'reacted_at', updatedAt: false },
+  versionKey: false,
+})
 export class React {
   @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ enum: ['User', 'Company'], required: true })
+  user_type: string;
+
+  @Prop({ type: Types.ObjectId, required: true, refPath: 'user_type' })
   user: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })

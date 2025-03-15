@@ -1,5 +1,4 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { IsOptional } from 'class-validator';
 import { Document, Types } from 'mongoose';
 
 export type ProfileDocument = Profile & Document;
@@ -28,7 +27,7 @@ export class Education {
   start_date: Date;
 
   @Prop()
-  end_date: Date;
+  end_date?: Date;
 
   @Prop()
   grade: string;
@@ -44,7 +43,7 @@ export class Certification {
 
   @Prop({ required: true })
   company: string;
-  
+
   @Prop()
   issue_date: Date;
 }
@@ -54,7 +53,17 @@ export class WorkExperience {
   @Prop({ required: true })
   title: string;
 
-  @Prop({ enum: ['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'] })
+  @Prop({
+    enum: [
+      'full_time',
+      'part_time',
+      'self_employed',
+      'freelance',
+      'contract',
+      'internship',
+      'apprenticeship',
+    ],
+  })
   employment_type: string;
 
   @Prop({ required: true })
@@ -64,7 +73,7 @@ export class WorkExperience {
   start_date: Date;
 
   @Prop()
-  end_date: Date;
+  end_date?: Date;
 
   @Prop()
   location: string;
@@ -91,8 +100,7 @@ class PlanDetails {
   auto_renewal: boolean;
 
   @Prop()
-  @IsOptional()
-  cancel_date?: Date; 
+  cancel_date?: Date;
 }
 
 @Schema({ _id: false })
@@ -111,7 +119,7 @@ export class Profile {
 
   @Prop({ required: true })
   username: string;
-  
+
   @Prop()
   profile_picture: string;
 
@@ -122,16 +130,16 @@ export class Profile {
   resume: string;
 
   @Prop()
-  headline: string
+  headline: string;
 
   @Prop()
-  bio: string
+  bio: string;
 
   @Prop()
-  location: string
+  location: string;
 
   @Prop()
-  industry: string
+  industry: string;
 
   @Prop({ type: [Skill], default: [] })
   skill: Skill[];
@@ -149,7 +157,7 @@ export class Profile {
   visibility: string;
 
   @Prop()
-  connection_count: number
+  connection_count: number;
 
   @Prop({ type: PlanDetails, required: true })
   plan_details: PlanDetails;
