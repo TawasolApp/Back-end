@@ -64,6 +64,14 @@ To run the project in production mode:
 npm run start
 ```
 
+## Running the Seeding Script
+
+To populate the database with test data, run the following command:
+
+```sh
+ts-node src/seed.ts
+```
+
 ## API Documentation
 
 Swagger is used for API documentation. Once the backend is running, visit:
