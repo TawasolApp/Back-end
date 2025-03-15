@@ -10,6 +10,7 @@ export class PostsController {
   @Post()
   @UsePipes(new ValidationPipe())
   async addPost(@Body() createPostDto: CreatePostDto) {
+    //TODO : Add media upload.
     try {
       console.log('Received request to create post:', createPostDto);
       const post = await this.postsService.addPost(createPostDto);

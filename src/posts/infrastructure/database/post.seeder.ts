@@ -21,7 +21,7 @@ export class PostSeeder {
         share_count: faker.number.int({ min: 0, max: 20 }),
         tags: [new Types.ObjectId(), new Types.ObjectId()],
         visibility: faker.helpers.arrayElement(['Public', 'Connections', 'Private']),
-        authorType: faker.helpers.arrayElement(['User', 'Company']),
+        author_type: faker.helpers.arrayElement(['User', 'Company']),
       });
     }
 

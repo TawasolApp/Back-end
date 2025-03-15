@@ -31,7 +31,7 @@ export class Post {
   visibility: string;
 
   @Prop({ enum: ['User', 'Company'], required: true })
-  authorType: string;
+  author_type: string;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);
