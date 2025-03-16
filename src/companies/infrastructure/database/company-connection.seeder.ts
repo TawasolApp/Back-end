@@ -1,0 +1,53 @@
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import {
+  CompanyConnection,
+  CompanyConnectionDocument,
+} from './company-connection.schema';
+import {
+  User,
+  UserDocument,
+} from '../../../auth/infrastructure/database/user.schema';
+import { Company, CompanyDocument } from './company.schema';
+import { faker } from '@faker-js/faker';
+
+@Injectable()
+export class CompanyConnectionSeeder {
+  constructor(
+    @InjectModel(CompanyConnection.name)
+    private companyConnectionModel: Model<CompanyConnectionDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+  ) {}
+
+  async seedCompanyConnections(count: number): Promise<void> {
+    const users = await this.userModel.find().select('_id').lean();
+    const companies = await this.companyModel.find().select('_id').lean();
+
+    if (users.length === 0 || companies.length === 0) {
+      console.log('No users or companies found. Seeding aborted.');
+      return;
+    }
+
+    const companyConnections: Partial<CompanyConnectionDocument>[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const randomUser = faker.helpers.arrayElement(users);
+      const randomCompany = faker.helpers.arrayElement(companies);
+
+      companyConnections.push({
+        user_id: randomUser._id,
+        company_id: randomCompany._id,
+      });
+    }
+
+    await this.companyConnectionModel.insertMany(companyConnections);
+    console.log(`${count} company connections seeded successfully!`);
+  }
+
+  async clearCompanyConnections(): Promise<void> {
+    await this.companyConnectionModel.deleteMany({});
+    console.log('CompanyConnections collection cleared.');
+  }
+}

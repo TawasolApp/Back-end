@@ -9,15 +9,15 @@ export class UserSeeder {
   constructor(@InjectModel(User.name) private userModel: Model<UserDocument>) {}
 
   async seedUsers(count: number): Promise<void> {
-    const users: Partial<UserDocument>[] = []; // 👈 Explicitly define the type
+    const users: Partial<UserDocument>[] = [];
 
     for (let i = 0; i < count; i++) {
       users.push({
         first_name: faker.person.firstName(),
         last_name: faker.person.lastName(),
         email: faker.internet.email().toLowerCase(),
-        password: faker.internet.password(), // Not hashed (for testing purposes)
-        role: faker.helpers.arrayElement(['customer', 'employer', 'admin']) as User["role"], // 👈 Fix applied
+        password: faker.internet.password(),
+        role: faker.helpers.arrayElement(['customer', 'employer', 'admin']),
       });
     }
 

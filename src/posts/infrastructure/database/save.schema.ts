@@ -3,7 +3,10 @@ import { Document, Types } from 'mongoose';
 
 export type SaveDocument = Save & Document;
 
-@Schema({ timestamps: { createdAt: 'saved_at', updatedAt: false }, versionKey: false })
+@Schema({
+  timestamps: { createdAt: 'saved_at', updatedAt: false },
+  versionKey: false,
+})
 export class Save {
   @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;

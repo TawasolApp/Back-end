@@ -3,7 +3,10 @@ import { Document, Types } from 'mongoose';
 
 export type ShareDocument = Share & Document;
 
-@Schema({ timestamps: { createdAt: 'shared_at', updatedAt: false }, versionKey: false })
+@Schema({
+  timestamps: { createdAt: 'shared_at', updatedAt: false },
+  versionKey: false,
+})
 export class Share {
   @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
