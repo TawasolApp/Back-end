@@ -37,7 +37,7 @@ export class ShareSeeder {
 
       shares.push({
         user: user._id,
-        post: post.id,
+        post: post._id,
       });
     }
 

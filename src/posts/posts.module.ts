@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { APP_PIPE, APP_FILTER } from '@nestjs/core';
+import { APP_PIPE } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import { Post, PostSchema } from './infrastructure/database/post.schema';
 import {
@@ -17,9 +17,11 @@ import { ShareSeeder } from './infrastructure/database/share.seeder';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { ValidationPipe } from '@nestjs/common';
-<<<<<<< Updated upstream
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
+import { Company, CompanySchema } from '../companies/infrastructure/database/company.schema'; // Correct import path
+import { Profile, ProfileSchema } from '../profiles/infrastructure/database/profile.schema';
+import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
 
 @Module({
   imports: [
@@ -29,19 +31,12 @@ import { CompaniesModule } from '../companies/companies.module';
       { name: React.name, schema: ReactSchema },
       { name: Save.name, schema: SaveSchema },
       { name: Share.name, schema: ShareSchema },
+      { name: Company.name, schema: CompanySchema },
+      { name: Profile.name, schema: ProfileSchema },
     ]),
     AuthModule,
     CompaniesModule,
-=======
-import { AuthModule } from '../auth/auth.module'; // Import AuthModule
-import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
-
-@Module({
-  imports: [
-    MongooseModule.forFeature([{ name: Post.name, schema: PostSchema }]),
-    AuthModule, // Add AuthModule to imports
     ProfilesModule, // Add ProfilesModule to imports
->>>>>>> Stashed changes
   ],
   providers: [
     PostSeeder,

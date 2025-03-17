@@ -8,13 +8,21 @@ import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './infrastructure/database/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { GetPostDto } from './dto/get-post.dto';
-import { Profile, ProfileDocument } from '../profiles/infrastructure/database/profile.schema'; // Import Profile schema
+import {
+  Profile,
+  ProfileDocument,
+} from '../profiles/infrastructure/database/profile.schema'; // Import Profile schema
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/company.schema'; // Import Company schema
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
-    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument> // Inject Profile model
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>, // Inject Profile model
+    @InjectModel(Company.name) private companyModel: Model<CompanyDocument>, // Inject Company model
   ) {}
 
   async addPost(createPostDto: CreatePostDto): Promise<Post> {
@@ -37,7 +45,7 @@ export class PostsService {
   async getAllPosts(): Promise<GetPostDto[]> {
     try {
       const posts = await this.postModel.find().exec();
-      return Promise.all(posts.map(post => this.mapToGetPostDto(post)));
+      return Promise.all(posts.map((post) => this.mapToGetPostDto(post)));
     } catch (error) {
       console.error('Error fetching all posts:', error);
       if (error.name === 'NetworkError') {
@@ -49,7 +57,6 @@ export class PostsService {
     }
   }
 
-  
   async getPost(id: string): Promise<GetPostDto> {
     try {
       const post = await this.postModel.findById(id).exec();
@@ -68,24 +75,35 @@ export class PostsService {
       throw new InternalServerErrorException('Failed to fetch post');
     }
   }
-  
+
   private async mapToGetPostDto(post: PostDocument): Promise<GetPostDto> {
-    const authorProfile = await this.profileModel.findById(post.authorId).exec();
+    let authorProfile;
+    let authorProfilePicture;
+
+    if (post.author_type === 'User') {
+      authorProfile = await this.profileModel.findById(post.author_id).exec();
+      authorProfilePicture = authorProfile.profile_picture;
+    } else if (post.author_type === 'Company') {
+      authorProfile = await this.companyModel.findById(post.author_id).exec();
+      authorProfilePicture = authorProfile.logo;
+    }
+
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
     }
+
     return {
       id: post.id.toString(),
-      authorId: post.authorId.toString(),
+      authorId: post.author_id.toString(),
       authorName: authorProfile.name, // Fetch authorName from profile
-      authorPicture: authorProfile.profile_picture, // Fetch authorPicture from profile
+      authorPicture: authorProfilePicture, // Fetch authorPicture from profile
       authorBio: authorProfile.bio, // Fetch authorBio from profile
       content: post.text,
       media: post.media,
       likes: post.react_count,
       comments: post.comment_count,
       shares: post.share_count,
-      taggedUsers: post.tags.map(tag => tag.toString()),
+      taggedUsers: post.tags.map((tag) => tag.toString()),
       visibility: post.visibility as 'Public' | 'Connections' | 'Private',
       authorType: post.author_type as 'User' | 'Company',
       isLiked: false, // Add logic to determine if the post is liked

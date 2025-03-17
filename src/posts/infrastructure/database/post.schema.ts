@@ -9,6 +9,9 @@ export type PostDocument = Post & Document;
 })
 export class Post {
 
+  @Prop({ type: Types.ObjectId, auto: true })
+  _id: Types.ObjectId;
+  
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   author_id: Types.ObjectId;
 
