@@ -17,6 +17,7 @@ import { ShareSeeder } from './infrastructure/database/share.seeder';
 import { PostsController } from './posts.controller';
 import { PostsService } from './posts.service';
 import { ValidationPipe } from '@nestjs/common';
+<<<<<<< Updated upstream
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
 
@@ -31,6 +32,16 @@ import { CompaniesModule } from '../companies/companies.module';
     ]),
     AuthModule,
     CompaniesModule,
+=======
+import { AuthModule } from '../auth/auth.module'; // Import AuthModule
+import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: Post.name, schema: PostSchema }]),
+    AuthModule, // Add AuthModule to imports
+    ProfilesModule, // Add ProfilesModule to imports
+>>>>>>> Stashed changes
   ],
   providers: [
     PostSeeder,

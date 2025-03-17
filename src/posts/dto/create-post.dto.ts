@@ -2,10 +2,7 @@ import { IsString, IsOptional, IsArray, IsEnum } from 'class-validator';
 
 export class CreatePostDto {
   @IsString()
-  readonly creator: string;
-
-  @IsString()
-  readonly text: string;
+  readonly content: string;
 
   @IsOptional()
   @IsArray()
@@ -13,7 +10,7 @@ export class CreatePostDto {
 
   @IsOptional()
   @IsArray()
-  readonly tags?: string[];
+  readonly taggedUsers?: string[];
 
   @IsString()
   @IsEnum(['Public', 'Connections', 'Private'])

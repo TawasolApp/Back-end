@@ -47,8 +47,8 @@ export class PostSeeder {
           : [];
 
       posts.push({
-        creator_type: isUser ? 'User' : 'Company',
-        creator: creator._id,
+        author_type: isUser ? 'User' : 'Company',
+        author_id: creator._id,
         text: faker.lorem.paragraph(),
         media: [faker.image.url()],
         react_count: faker.number.int({ min: 0, max: 100 }),

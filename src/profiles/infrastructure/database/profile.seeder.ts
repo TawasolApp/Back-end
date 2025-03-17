@@ -8,6 +8,7 @@ import {
 } from '../../../auth/infrastructure/database/user.schema';
 import { faker } from '@faker-js/faker';
 
+
 @Injectable()
 export class ProfileSeeder {
   constructor(

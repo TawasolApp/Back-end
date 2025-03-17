@@ -118,8 +118,8 @@ export class Profile {
   _id: Types.ObjectId;
 
   @Prop({ required: true })
-  username: string;
-
+  name: string;
+  
   @Prop()
   profile_picture: string;
 

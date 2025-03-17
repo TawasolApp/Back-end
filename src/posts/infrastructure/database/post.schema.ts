@@ -8,14 +8,9 @@ export type PostDocument = Post & Document;
   versionKey: false,
 })
 export class Post {
-  @Prop({ type: Types.ObjectId, auto: true })
-  _id: Types.ObjectId;
-  
-  @Prop({ enum: ['User', 'Company'], required: true })
-  creator_type: string;
 
-  @Prop({ type: Types.ObjectId, required: true, refPath: 'creator_type' })
-  creator: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  author_id: Types.ObjectId;
 
   @Prop({ required: true })
   text: string;
@@ -40,6 +35,9 @@ export class Post {
 
   @Prop({ enum: ['User', 'Company'], required: true })
   author_type: string;
+
+  @Prop({ type: Date, default: () => new Date().toISOString() })
+  posted_at: string;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

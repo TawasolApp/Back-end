@@ -7,10 +7,15 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './infrastructure/database/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
+import { GetPostDto } from './dto/get-post.dto';
+import { Profile, ProfileDocument } from '../profiles/infrastructure/database/profile.schema'; // Import Profile schema
 
 @Injectable()
 export class PostsService {
-  constructor(@InjectModel(Post.name) private postModel: Model<PostDocument>) {}
+  constructor(
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument> // Inject Profile model
+  ) {}
 
   async addPost(createPostDto: CreatePostDto): Promise<Post> {
     //TODO : Add User Authentication
@@ -29,9 +34,10 @@ export class PostsService {
     }
   }
 
-  async getAllPosts(): Promise<Post[]> {
+  async getAllPosts(): Promise<GetPostDto[]> {
     try {
-      return await this.postModel.find().exec();
+      const posts = await this.postModel.find().exec();
+      return Promise.all(posts.map(post => this.mapToGetPostDto(post)));
     } catch (error) {
       console.error('Error fetching all posts:', error);
       if (error.name === 'NetworkError') {
@@ -43,13 +49,14 @@ export class PostsService {
     }
   }
 
-  async getPost(id: string): Promise<Post> {
+  
+  async getPost(id: string): Promise<GetPostDto> {
     try {
       const post = await this.postModel.findById(id).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
-      return post;
+      return this.mapToGetPostDto(post); // Use mapToGetPostDto method
     } catch (error) {
       console.error(`Error fetching post with id ${id}:`, error);
       if (error instanceof NotFoundException) {
@@ -60,6 +67,30 @@ export class PostsService {
       }
       throw new InternalServerErrorException('Failed to fetch post');
     }
+  }
+  
+  private async mapToGetPostDto(post: PostDocument): Promise<GetPostDto> {
+    const authorProfile = await this.profileModel.findById(post.authorId).exec();
+    if (!authorProfile) {
+      throw new NotFoundException('Author profile not found');
+    }
+    return {
+      id: post.id.toString(),
+      authorId: post.authorId.toString(),
+      authorName: authorProfile.name, // Fetch authorName from profile
+      authorPicture: authorProfile.profile_picture, // Fetch authorPicture from profile
+      authorBio: authorProfile.bio, // Fetch authorBio from profile
+      content: post.text,
+      media: post.media,
+      likes: post.react_count,
+      comments: post.comment_count,
+      shares: post.share_count,
+      taggedUsers: post.tags.map(tag => tag.toString()),
+      visibility: post.visibility as 'Public' | 'Connections' | 'Private',
+      authorType: post.author_type as 'User' | 'Company',
+      isLiked: false, // Add logic to determine if the post is liked
+      timestamp: post.posted_at,
+    };
   }
 
   async deletePost(id: string): Promise<void> {

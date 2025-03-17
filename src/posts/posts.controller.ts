@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
+import { GetPostDto } from './dto/get-post.dto';
 import { Post as PostEntity } from './infrastructure/database/post.schema';
 
 @Controller('posts')
@@ -33,7 +34,7 @@ export class PostsController {
   }
 
   @Get()
-  async getAllPosts() {
+  async getAllPosts(): Promise<GetPostDto[]> {
     try {
       return await this.postsService.getAllPosts();
     } catch (error) {
