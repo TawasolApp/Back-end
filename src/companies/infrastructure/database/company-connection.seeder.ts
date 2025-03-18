@@ -22,24 +22,40 @@ export class CompanyConnectionSeeder {
   ) {}
 
   async seedCompanyConnections(count: number): Promise<void> {
-    const users = await this.userModel.find().select('_id').lean();
+    const users = await this.userModel
+      .find({ role: 'customer' })
+      .select('_id')
+      .lean();
+
     const companies = await this.companyModel.find().select('_id').lean();
 
     if (users.length === 0 || companies.length === 0) {
-      console.log('No users or companies found. Seeding aborted.');
+      console.log('No eligible users or companies found. Seeding aborted.');
       return;
     }
+
+    const existingConnections = await this.companyConnectionModel
+      .find()
+      .select('user_id company_id')
+      .lean();
+    const existingSet = new Set(
+      existingConnections.map((c) => `${c.user_id}-${c.company_id}`),
+    );
 
     const companyConnections: Partial<CompanyConnectionDocument>[] = [];
 
     for (let i = 0; i < count; i++) {
       const randomUser = faker.helpers.arrayElement(users);
       const randomCompany = faker.helpers.arrayElement(companies);
+      const key = `${randomUser._id}-${randomCompany._id}`;
 
-      companyConnections.push({
-        user_id: randomUser._id,
-        company_id: randomCompany._id,
-      });
+      if (!existingSet.has(key)) {
+        existingSet.add(key);
+        companyConnections.push({
+          user_id: randomUser._id,
+          company_id: randomCompany._id,
+        });
+      }
     }
 
     await this.companyConnectionModel.insertMany(companyConnections);

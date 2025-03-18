@@ -18,13 +18,22 @@ export class Company {
   industry: string;
 
   @Prop({ required: true })
-  location: string;
-
-  @Prop()
   description: string;
 
   @Prop()
-  since: Date;
+  founded: number;
+
+  @Prop()
+  website: string;
+
+  @Prop({ required: true })
+  location: string;
+
+  @Prop()
+  email: string;
+
+  @Prop()
+  contact_number: string;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);
