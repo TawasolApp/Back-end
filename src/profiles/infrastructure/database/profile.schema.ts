@@ -86,7 +86,7 @@ export class WorkExperience {
 }
 
 @Schema({ _id: false })
-class PlanDetails {
+export class PlanDetails {
   @Prop({ enum: ['monthly', 'yearly'], default: 'monthly' })
   plan_type: string;
 
@@ -104,7 +104,7 @@ class PlanDetails {
 }
 
 @Schema({ _id: false })
-class PlanStatistics {
+export class PlanStatistics {
   @Prop({ required: true })
   message_count: number;
 
@@ -114,10 +114,10 @@ class PlanStatistics {
 
 @Schema({ timestamps: false, versionKey: false })
 export class Profile {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true , default: () => new Types.ObjectId()})
   _id: Types.ObjectId;
-
-  @Prop({ required: true })
+  
+  @Prop({ required: true ,unique: true})
   username: string;
 
   @Prop()
@@ -141,17 +141,17 @@ export class Profile {
   @Prop()
   industry: string;
 
-  @Prop({ type: [Skill], default: [] })
-  skill: Skill[];
+  @Prop({ type: [Skill], default: undefined })
+  skill?: Skill[];
 
-  @Prop({ type: [Education], default: [] })
-  education: Education[];
+  @Prop({ type: [Education], default: undefined })
+  education?: Education[];
 
-  @Prop({ type: [Certification], default: [] })
-  certification: Certification[];
+  @Prop({ type: [Certification], default: undefined })
+  certification?: Certification[];
 
-  @Prop({ type: [WorkExperience], default: [] })
-  work_experience: WorkExperience[];
+  @Prop({ type: [WorkExperience], default: undefined })
+  work_experience?: WorkExperience[];
 
   @Prop({ enum: ['public', 'private', 'connections_only'], default: 'public' })
   visibility: string;
@@ -159,10 +159,10 @@ export class Profile {
   @Prop()
   connection_count: number;
 
-  @Prop({ type: PlanDetails, required: true })
+  @Prop({ type: PlanDetails })
   plan_details: PlanDetails;
 
-  @Prop({ type: PlanStatistics, required: true })
+  @Prop({ type: PlanStatistics, required: true, default: { message_count: 0, application_count: 0 } })
   plan_statistics: PlanStatistics;
 }
 

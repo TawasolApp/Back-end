@@ -153,6 +153,13 @@ Each commit message should follow this format:
 | Database Collections        | PascalCase |
 | Database Collections Fields | snake_case |
 
+Examples:
+
+camelCase
+PascalCase
+snake_case
+kebab-case
+
 ## Additional Notes
 - Ensure **eslint** rules are followed to maintain clean code.
 
