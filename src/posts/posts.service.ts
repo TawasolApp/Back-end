@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   InternalServerErrorException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -17,6 +18,8 @@ import {
   CompanyDocument,
 } from '../companies/infrastructure/database/company.schema'; // Import Company schema
 import { React, ReactDocument } from './infrastructure/database/react.schema';
+import { Reactions, UpdateReactionsDto } from './dto/update-reactions.dto';
+import { ReactionDto } from './dto/get-reactions.dto'; // Import ReactionDto
 
 @Injectable()
 export class PostsService {
@@ -109,13 +112,18 @@ export class PostsService {
     let authorProfilePicture;
     if (post.author_type === 'User') {
       authorProfile = await this.profileModel.findById(post.author_id).exec();
+      if (!authorProfile) {
+        console.error(`User profile with id ${post.author_id} not found`);
+        throw new NotFoundException('Author profile not found');
+      }
       authorProfilePicture = authorProfile.profile_picture;
     } else if (post.author_type === 'Company') {
       authorProfile = await this.companyModel.findById(post.author_id).exec();
+      if (!authorProfile) {
+        console.error(`Company profile with id ${post.author_id} not found`);
+        throw new NotFoundException('Author profile not found');
+      }
       authorProfilePicture = authorProfile.logo;
-    }
-    if (!authorProfile) {
-      throw new NotFoundException('Author profile not found');
     }
 
     let userReactionType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null = null;
@@ -171,5 +179,158 @@ export class PostsService {
       }
       throw new InternalServerErrorException('Failed to delete post');
     }
+  }
+
+  async updateReactions(
+    postId: string,
+    userId: string,
+    updateReactionsDto: UpdateReactionsDto,
+  ): Promise<Post> {
+    let count = 0;
+
+    for (const reaction in updateReactionsDto.reactions) {
+      if (updateReactionsDto.reactions[reaction] === true) {
+        count++;
+      }
+    }
+
+    if (count > 1) {
+      throw new BadRequestException('Only one reaction is allowed');
+    }
+
+    const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
+    console.log(`Converted postId to ObjectId: ${objectIdPostId}`);
+
+    const post = await this.postModel
+      .findById(objectIdPostId) // Use converted ObjectId
+      .exec();
+
+    if (!post) {
+      console.error(`Post with id ${postId} not found`);
+      console.log(`Checking if post exists in the database...`);
+      const postExists = await this.postModel.exists({ _id: objectIdPostId });
+      console.log(`Post exists: ${postExists}`);
+      throw new NotFoundException(`Post with id ${postId} not found`);
+    }
+
+    const reactions = updateReactionsDto.reactions;
+    for (const [reactionType, value] of Object.entries(reactions)) {
+      let reactorType: 'User' | 'Company';
+      const reactorProfile = await this.profileModel
+        .findById(new Types.ObjectId(userId))
+        .exec();
+      if (reactorProfile) {
+        reactorType = 'User';
+      } else {
+        const reactorCompany = await this.companyModel
+          .findById(new Types.ObjectId(userId))
+          .exec();
+        if (reactorCompany) {
+          reactorType = 'Company';
+        } else {
+          throw new NotFoundException('Reactor not found');
+        }
+      }
+      if (value === true) {
+        const existingReaction = await this.reactModel.findOne({
+          post_Id: objectIdPostId, // Use converted ObjectId
+          user_Id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+          user_type: reactorType,
+        });
+        if (!existingReaction) {
+          const newReaction = new this.reactModel({
+            _id: new Types.ObjectId(),
+            post_Id: objectIdPostId, // Use converted ObjectId
+            user_Id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            user_type: reactorType,
+            type: reactionType,
+          });
+          await newReaction.save();
+          console.log(`Added ${reactionType} reaction to post`);
+          post.react_count++;
+          await post.save();
+        } else {
+          console.log(`Reaction already exists for post`);
+          throw new InternalServerErrorException(
+            `Reaction already exists for post`,
+          );
+        }
+      } else {
+        const existingReaction = await this.reactModel.findOne({
+          post_Id: objectIdPostId, // Use converted ObjectId
+          user_Id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+          user_type: reactorType,
+          type: reactionType,
+        });
+        console.log(`Existing reaction: ${existingReaction}`);
+        if (existingReaction) {
+          await this.reactModel.deleteOne({ _id: existingReaction._id });
+          post.react_count--;
+          await post.save();
+          console.log(`Removed ${reactionType} reaction from post`);
+        }
+      }
+    }
+
+    return post;
+  }
+
+  async getReactions(postId: string): Promise<ReactionDto[]> {
+    try {
+      const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
+      const reactions = await this.reactModel
+        .find({ post_Id: objectIdPostId })
+        .exec();
+      if (!reactions || reactions.length === 0) {
+        throw new NotFoundException('Reactions not found');
+      }
+
+      return Promise.all(
+        reactions.map((reaction) => this.mapToReactionDto(reaction)),
+      );
+    } catch (err) {
+      console.error(
+        `Error fetching reactions for post with id ${postId}:`,
+        err,
+      );
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+      if (err.name === 'CastError') {
+        throw new NotFoundException('Invalid post id format');
+      }
+      throw new InternalServerErrorException('Failed to fetch reactions');
+    }
+  }
+
+  async mapToReactionDto(reaction: ReactDocument): Promise<ReactionDto> {
+    let authorProfile;
+    let authorProfilePicture;
+    if (reaction.user_type === 'User') {
+      authorProfile = await this.profileModel.findById(reaction.user_Id).exec();
+      if (!authorProfile) {
+        console.error(`User profile with id ${reaction.user_Id} not found`);
+        throw new NotFoundException('Author profile not found');
+      }
+      authorProfilePicture = authorProfile.profile_picture;
+    } else if (reaction.user_type === 'Company') {
+      authorProfile = await this.companyModel.findById(reaction.user_Id).exec();
+      if (!authorProfile) {
+        console.error(`Company profile with id ${reaction.user_Id} not found`);
+        throw new NotFoundException('Author profile not found');
+      }
+      authorProfilePicture = authorProfile.logo;
+    }
+
+    return {
+      likeId: reaction._id.toString(),
+      postId: reaction.post_Id.toString(),
+      authorId: reaction.user_Id.toString(),
+      authorType: reaction.user_type as 'User' | 'Company',
+      type: reaction.type as 'Like' | 'Love' | 'Laugh' | 'Clap',
+      authorName: authorProfile.name,
+      authorPicture: authorProfilePicture,
+      authorBio: authorProfile.bio,
+    };
   }
 }

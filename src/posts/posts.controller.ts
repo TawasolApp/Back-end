@@ -8,11 +8,14 @@ import {
   UsePipes,
   ValidationPipe,
   InternalServerErrorException,
+  Query,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { GetPostDto } from './dto/get-post.dto';
 import { Post as PostEntity } from './infrastructure/database/post.schema';
+import { UpdateReactionsDto } from './dto/update-reactions.dto';
+import { ReactionDto } from './dto/get-reactions.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -59,6 +62,42 @@ export class PostsController {
     } catch (error) {
       console.error(`Error in deletePost controller for id ${id}:`, error);
       throw error;
+    }
+  }
+
+  @Post(':postId/react/:userId')
+  @UsePipes(new ValidationPipe())
+  async updateReactions(
+    @Param('postId') postId: string,
+    @Param('userId') userId: string,
+    @Body() updateReactionsDto: UpdateReactionsDto,
+  ) {
+    try {
+      const updatedPost = await this.postsService.updateReactions(
+        postId,
+        userId,
+        updateReactionsDto,
+      );
+      return updatedPost;
+    } catch (error) {
+      console.error(
+        `Error in updateReactions controller for postId ${postId} and userId ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to update reactions');
+    }
+  }
+
+  @Get(':postId/reactions')
+  async getReactions(@Param('postId') postId: string): Promise<ReactionDto[]> {
+    try {
+      return await this.postsService.getReactions(postId);
+    } catch (error) {
+      console.error(
+        `Error in getReactions controller for postId ${postId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to fetch reactions');
     }
   }
 }

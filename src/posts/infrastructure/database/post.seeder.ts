@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './post.schema';
 import {
   User,
@@ -11,6 +11,7 @@ import {
   CompanyDocument,
 } from '../../../companies/infrastructure/database/company.schema';
 import { faker } from '@faker-js/faker';
+import { React, ReactDocument } from './react.schema';
 
 @Injectable()
 export class PostSeeder {
@@ -18,6 +19,7 @@ export class PostSeeder {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(React.name) private reactModel: Model<ReactDocument>,
   ) {}
 
   async seedPosts(count: number): Promise<void> {
@@ -51,14 +53,14 @@ export class PostSeeder {
         author_id: creator._id,
         text: faker.lorem.paragraph(),
         media: [faker.image.url()],
-        react_count: faker.number.int({ min: 0, max: 100 }),
-        comment_count: faker.number.int({ min: 0, max: 50 }),
-        share_count: faker.number.int({ min: 0, max: 20 }),
+        react_count: 0,
+        comment_count: 0,
+        share_count: 0,
         tags,
         visibility: faker.helpers.arrayElement([
-          'public',
-          'connections',
-          'private',
+          'Public',
+          'Connections',
+          'Private',
         ]),
       });
     }
@@ -70,5 +72,16 @@ export class PostSeeder {
   async clearPosts(): Promise<void> {
     await this.postModel.deleteMany({});
     console.log('Posts collection cleared.');
+  }
+
+  async updatePostCounts() {
+    const posts = await this.postModel.find().exec();
+    for (const post of posts) {
+      const reactCount = await this.reactModel
+        .countDocuments({ post_Id: post._id })
+        .exec();
+      post.react_count = reactCount;
+      await post.save();
+    }
   }
 }
