@@ -23,9 +23,7 @@ export class PostsController {
   async addPost(@Body() createPostDto: CreatePostDto) {
     //TODO : Add media upload.
     try {
-      console.log('Received request to create post:', createPostDto);
       const post = await this.postsService.addPost(createPostDto);
-      console.log('Post created successfully:', post);
       return post;
     } catch (error) {
       console.error('Error in addPost controller:', error);

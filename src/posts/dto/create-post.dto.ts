@@ -2,7 +2,10 @@ import { IsString, IsOptional, IsArray, IsEnum } from 'class-validator';
 
 export class CreatePostDto {
   @IsString()
-  readonly content: string;
+  readonly authorId: string; // Add userId field
+
+  @IsString()
+  readonly text: string;
 
   @IsOptional()
   @IsArray()
@@ -16,7 +19,4 @@ export class CreatePostDto {
   @IsEnum(['Public', 'Connections', 'Private'])
   readonly visibility?: string;
 
-  @IsString()
-  @IsEnum(['User', 'Company'])
-  readonly authorType: string;
 }

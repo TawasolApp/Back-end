@@ -44,8 +44,8 @@ export class GetPostDto {
   @IsEnum(['User', 'Company'])
   authorType: 'User' | 'Company';
 
-  @IsBoolean()
-  isLiked: boolean;
+  @IsEnum(['Like', 'Love' , 'Laugh', 'Clap'])
+  reactType : 'Like' | 'Love' | 'Laugh' | 'Clap' | null;
 
   @IsOptional()
   @ValidateNested()

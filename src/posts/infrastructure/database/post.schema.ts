@@ -33,7 +33,7 @@ export class Post {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];
 
-  @Prop({ enum: ['public', 'connections', 'private'], default: 'public' })
+  @Prop({ enum: ['Public', 'Connections', 'Private'], default: 'Public' })
   visibility: string;
 
   @Prop({ enum: ['User', 'Company'], required: true })

@@ -16,6 +16,7 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/company.schema'; // Import Company schema
+import { React, ReactDocument } from './infrastructure/database/react.schema';
 
 @Injectable()
 export class PostsService {
@@ -23,23 +24,35 @@ export class PostsService {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>, // Inject Profile model
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>, // Inject Company model
+    @InjectModel(React.name) private reactModel: Model<ReactDocument>, // Inject React model
   ) {}
 
-  async addPost(createPostDto: CreatePostDto): Promise<Post> {
-    //TODO : Add User Authentication
-    //TODO : Make sure that the creator id and the tagged users are valid.
-    try {
-      const post = new this.postModel(createPostDto);
-      return await post.save();
-    } catch (error) {
-      console.error('Error creating post:', error);
-      if (error.name === 'ValidationError') {
-        throw new InternalServerErrorException(
-          'Validation failed for the post data',
-        );
+  async addPost(createPostDto: CreatePostDto): Promise<{ message: string }> {
+    let authorType: 'User' | 'Company';
+    const authorProfile = await this.profileModel
+      .find({ _id: new Types.ObjectId(createPostDto.authorId) })
+      .exec();
+    if (authorProfile) {
+      authorType = 'User';
+    } else {
+      const authorCompany = await this.companyModel
+        .find({ _id: new Types.ObjectId(createPostDto.authorId) })
+        .exec();
+      if (authorCompany) {
+        authorType = 'Company';
+      } else {
+        throw new NotFoundException('Author not found');
       }
-      throw new InternalServerErrorException('Failed to create post');
     }
+
+    const createdPost = new this.postModel({
+      _id: new Types.ObjectId(),
+      ...createPostDto,
+      author_id: createPostDto.authorId,
+      author_type: authorType,
+    });
+    const savedPost = await createdPost.save();
+    return { message: 'Post added successfully' };
   }
 
   async getAllPosts(): Promise<GetPostDto[]> {
@@ -76,10 +89,24 @@ export class PostsService {
     }
   }
 
-  private async mapToGetPostDto(post: PostDocument): Promise<GetPostDto> {
+  async getUserPosts(userId: string): Promise<GetPostDto[]> {
+    try {
+      const posts = await this.postModel
+        .find({ author_id: new Types.ObjectId(userId) })
+        .exec();
+      return Promise.all(posts.map((post) => this.mapToGetPostDto(post)));
+    } catch (error) {
+      console.error(`Error fetching posts for user with id ${userId}:`, error);
+      throw new InternalServerErrorException('Failed to fetch user posts');
+    }
+  }
+
+  private async mapToGetPostDto(
+    post: PostDocument,
+    userId?: string,
+  ): Promise<GetPostDto> {
     let authorProfile;
     let authorProfilePicture;
-
     if (post.author_type === 'User') {
       authorProfile = await this.profileModel.findById(post.author_id).exec();
       authorProfilePicture = authorProfile.profile_picture;
@@ -87,9 +114,21 @@ export class PostsService {
       authorProfile = await this.companyModel.findById(post.author_id).exec();
       authorProfilePicture = authorProfile.logo;
     }
-
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
+    }
+
+    let userReactionType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null = null;
+    if (userId) {
+      const userReaction = await this.reactModel
+        .findOne({
+          post: post._id,
+          user: new Types.ObjectId(userId),
+        })
+        .exec();
+      userReactionType = userReaction
+        ? (userReaction.type as 'Like' | 'Love' | 'Laugh' | 'Clap')
+        : null;
     }
 
     return {
@@ -106,7 +145,7 @@ export class PostsService {
       taggedUsers: post.tags.map((tag) => tag.toString()),
       visibility: post.visibility as 'Public' | 'Connections' | 'Private',
       authorType: post.author_type as 'User' | 'Company',
-      isLiked: false, // Add logic to determine if the post is liked
+      reactType: userReactionType, // Add logic to determine if the post is liked
       timestamp: post.posted_at,
     };
   }

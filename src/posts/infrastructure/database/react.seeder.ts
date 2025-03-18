@@ -50,8 +50,8 @@ export class ReactSeeder {
       reacts.push({
         user_type: isUser ? 'User' : 'Company',
         user: user._id,
-        post: post._id,
-        type: faker.helpers.arrayElement(['like', 'love', 'laugh', 'clap']),
+        post: post.id,
+        type: faker.helpers.arrayElement(['Like', 'Love', 'Laugh', 'Clap']),
       });
     }
 
