@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { React } from './react.schema';
 
 export type CommentDocument = Comment & Document;
 
@@ -9,7 +10,7 @@ export class Reply {
   author_type: string;
 
   @Prop({ type: Types.ObjectId, required: true, refPath: 'author_type' })
-  author: Types.ObjectId;
+  author_id: Types.ObjectId;
 
   @Prop()
   content: string;
@@ -19,18 +20,6 @@ export class Reply {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];
-}
-
-@Schema({ _id: false })
-export class React {
-  @Prop({ enum: ['User', 'Company'], required: true })
-  user_type: string;
-
-  @Prop({ type: Types.ObjectId, required: true, refPath: 'user_type' })
-  user: Types.ObjectId;
-
-  @Prop({ enum: ['like', 'love', 'laugh', 'clap'], required: true })
-  type: string;
 }
 
 @Schema({
@@ -45,16 +34,16 @@ export class Comment {
   author_type: string;
 
   @Prop({ type: Types.ObjectId, required: true, refPath: 'author_type' })
-  author: Types.ObjectId;
+  author_id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
-  post: Types.ObjectId;
+  post_id: Types.ObjectId;
 
   @Prop({ type: [Reply], default: [] })
   replies: Reply[];
 
-  @Prop({ type: [React], default: [] })
-  reacts: React[];
+  @Prop({ default: 0 })
+  react_count: number;
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];

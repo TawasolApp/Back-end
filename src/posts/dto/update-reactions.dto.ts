@@ -1,4 +1,12 @@
-import { IsObject, IsInt, Min, Max, IsBoolean } from 'class-validator';
+import {
+  IsObject,
+  IsInt,
+  Min,
+  Max,
+  IsBoolean,
+  isEnum,
+  IsEnum,
+} from 'class-validator';
 
 export class Reactions {
   @IsBoolean()
@@ -17,4 +25,7 @@ export class Reactions {
 export class UpdateReactionsDto {
   @IsObject()
   reactions: Reactions;
+
+  @IsEnum(['Post', 'Comment'])
+  postType: string;
 }

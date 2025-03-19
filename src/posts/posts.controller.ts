@@ -9,6 +9,7 @@ import {
   ValidationPipe,
   InternalServerErrorException,
   Query,
+  Patch,
 } from '@nestjs/common';
 import { PostsService } from './posts.service';
 import { CreatePostDto } from './dto/create-post.dto';
@@ -16,6 +17,7 @@ import { GetPostDto } from './dto/get-post.dto';
 import { Post as PostEntity } from './infrastructure/database/post.schema';
 import { UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto';
+import { EditPostDto } from './dto/edit-post.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -62,6 +64,18 @@ export class PostsController {
     } catch (error) {
       console.error(`Error in deletePost controller for id ${id}:`, error);
       throw error;
+    }
+  }
+
+  @Patch(':id')
+  @UsePipes(new ValidationPipe())
+  async editPost(@Param('id') id: string, @Body() editPostDto: EditPostDto) {
+    try {
+      const updatedPost = await this.postsService.editPost(id, editPostDto);
+      return updatedPost;
+    } catch (error) {
+      console.error(`Error in editPost controller for id ${id}:`, error);
+      throw new InternalServerErrorException('Failed to edit post');
     }
   }
 

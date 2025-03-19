@@ -21,6 +21,11 @@ import { React, ReactDocument } from './infrastructure/database/react.schema';
 import { Reactions, UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto'; // Import ReactionDto
 import { Save, SaveDocument } from './infrastructure/database/save.schema';
+import { EditPostDto } from './dto/edit-post.dto';
+import {
+  Comment,
+  CommentDocument,
+} from './infrastructure/database/comment.schema';
 
 @Injectable()
 export class PostsService {
@@ -30,7 +35,40 @@ export class PostsService {
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>, // Inject Company model
     @InjectModel(React.name) private reactModel: Model<ReactDocument>, // Inject React model
     @InjectModel(Save.name) private saveModel: Model<SaveDocument>, // Inject Save model
+    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>, // Inject Comment model
   ) {}
+
+  async editPost(id: string, editPostDto: EditPostDto): Promise<Post> {
+    const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    if (editPostDto.authorId) {
+      let authorType: 'User' | 'Company';
+      const authorProfile = await this.profileModel
+        .find({ _id: new Types.ObjectId(editPostDto.authorId) })
+        .exec();
+      if (authorProfile) {
+        authorType = 'User';
+      } else {
+        const authorCompany = await this.companyModel
+          .find({ _id: new Types.ObjectId(editPostDto.authorId) })
+          .exec();
+        if (authorCompany) {
+          authorType = 'Company';
+        } else {
+          throw new NotFoundException('Author not found');
+        }
+      }
+      post.author_id = new Types.ObjectId(editPostDto.authorId);
+      post.author_type = authorType;
+    }
+
+    Object.assign(post, editPostDto);
+    await post.save();
+    return post;
+  }
 
   async addPost(createPostDto: CreatePostDto): Promise<{ message: string }> {
     let authorType: 'User' | 'Company';
@@ -137,7 +175,7 @@ export class PostsService {
         })
         .exec();
       userReactionType = userReaction
-        ? (userReaction.type as 'Like' | 'Love' | 'Laugh' | 'Clap')
+        ? (userReaction.react_type as 'Like' | 'Love' | 'Laugh' | 'Clap')
         : null;
     }
 
@@ -187,7 +225,7 @@ export class PostsService {
     postId: string,
     userId: string,
     updateReactionsDto: UpdateReactionsDto,
-  ): Promise<Post> {
+  ): Promise<Post | Comment> {
     let count = 0;
 
     for (const reaction in updateReactionsDto.reactions) {
@@ -199,20 +237,33 @@ export class PostsService {
     if (count > 1) {
       throw new BadRequestException('Only one reaction is allowed');
     }
-
+    let post;
+    let comment;
     const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
     console.log(`Converted postId to ObjectId: ${objectIdPostId}`);
+    if (updateReactionsDto.postType === 'Post') {
+      post = await this.postModel
+        .findById(objectIdPostId) // Use converted ObjectId
+        .exec();
 
-    const post = await this.postModel
-      .findById(objectIdPostId) // Use converted ObjectId
-      .exec();
-
-    if (!post) {
-      console.error(`Post with id ${postId} not found`);
-      console.log(`Checking if post exists in the database...`);
-      const postExists = await this.postModel.exists({ _id: objectIdPostId });
-      console.log(`Post exists: ${postExists}`);
-      throw new NotFoundException(`Post with id ${postId} not found`);
+      if (!post) {
+        console.error(`Post with id ${postId} not found`);
+        console.log(`Checking if post exists in the database...`);
+        const postExists = await this.postModel.exists({ _id: objectIdPostId });
+        console.log(`Post exists: ${postExists}`);
+        throw new NotFoundException(`Post with id ${postId} not found`);
+      }
+    } else {
+      comment = await this.commentModel.findById(objectIdPostId);
+      if (!comment) {
+        console.error(`Comment with id ${postId} not found`);
+        console.log(`Checking if comment exists in the database...`);
+        const commentExists = await this.commentModel.exists({
+          _id: objectIdPostId,
+        });
+        console.log(`Comment exists: ${commentExists}`);
+        throw new NotFoundException(`Comment with id ${postId} not found`);
+      }
     }
 
     const reactions = updateReactionsDto.reactions;
@@ -235,22 +286,33 @@ export class PostsService {
       }
       if (value === true) {
         const existingReaction = await this.reactModel.findOne({
-          post_Id: objectIdPostId, // Use converted ObjectId
-          user_Id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+          post_id: objectIdPostId, // Use converted ObjectId
+          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
           user_type: reactorType,
         });
         if (!existingReaction) {
           const newReaction = new this.reactModel({
             _id: new Types.ObjectId(),
-            post_Id: objectIdPostId, // Use converted ObjectId
-            user_Id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            post_id: objectIdPostId, // Use converted ObjectId
+            user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
             user_type: reactorType,
-            type: reactionType,
+            react_type: reactionType,
+            post_type: updateReactionsDto.postType,
           });
-          await newReaction.save();
-          console.log(`Added ${reactionType} reaction to post`);
-          post.react_count++;
-          await post.save();
+          // await newReaction.save();
+          console.log(`Added ${reactionType} reaction`);
+          if (post) {
+            post.react_count++;
+            await post.save();
+            newReaction.post_type = 'Post';
+            await newReaction.save();
+          }
+          if (comment) {
+            comment.react_count++;
+            await comment.save();
+            newReaction.post_type = 'Comment';
+            await newReaction.save();
+          }
         } else {
           console.log(`Reaction already exists for post`);
           throw new InternalServerErrorException(
@@ -259,29 +321,41 @@ export class PostsService {
         }
       } else {
         const existingReaction = await this.reactModel.findOne({
-          post_Id: objectIdPostId, // Use converted ObjectId
-          user_Id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+          post_id: objectIdPostId, // Use converted ObjectId
+          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
           user_type: reactorType,
-          type: reactionType,
+          react_type: reactionType,
         });
         console.log(`Existing reaction: ${existingReaction}`);
         if (existingReaction) {
           await this.reactModel.deleteOne({ _id: existingReaction._id });
-          post.react_count--;
-          await post.save();
+          if (post) {
+            post.react_count--;
+            await post.save();
+          }
+          if (comment) {
+            comment.react_count--;
+            await comment.save();
+          }
           console.log(`Removed ${reactionType} reaction from post`);
         }
       }
     }
-
-    return post;
+    let returned;
+    if (post) {
+      returned = post;
+    }
+    if (comment) {
+      returned = comment;
+    }
+    return returned;
   }
 
   async getReactions(postId: string): Promise<ReactionDto[]> {
     try {
       const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
       const reactions = await this.reactModel
-        .find({ post_Id: objectIdPostId })
+        .find({ post_id: objectIdPostId })
         .exec();
       if (!reactions || reactions.length === 0) {
         throw new NotFoundException('Reactions not found');
@@ -309,16 +383,16 @@ export class PostsService {
     let authorProfile;
     let authorProfilePicture;
     if (reaction.user_type === 'User') {
-      authorProfile = await this.profileModel.findById(reaction.user_Id).exec();
+      authorProfile = await this.profileModel.findById(reaction.user_id).exec();
       if (!authorProfile) {
-        console.error(`User profile with id ${reaction.user_Id} not found`);
+        console.error(`User profile with id ${reaction.user_id} not found`);
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.profile_picture;
     } else if (reaction.user_type === 'Company') {
-      authorProfile = await this.companyModel.findById(reaction.user_Id).exec();
+      authorProfile = await this.companyModel.findById(reaction.user_id).exec();
       if (!authorProfile) {
-        console.error(`Company profile with id ${reaction.user_Id} not found`);
+        console.error(`Company profile with id ${reaction.user_id} not found`);
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.logo;
@@ -326,10 +400,10 @@ export class PostsService {
 
     return {
       likeId: reaction._id.toString(),
-      postId: reaction.post_Id.toString(),
-      authorId: reaction.user_Id.toString(),
+      postId: reaction.post_id.toString(),
+      authorId: reaction.user_id.toString(),
       authorType: reaction.user_type as 'User' | 'Company',
-      type: reaction.type as 'Like' | 'Love' | 'Laugh' | 'Clap',
+      type: reaction.react_type as 'Like' | 'Love' | 'Laugh' | 'Clap',
       authorName: authorProfile.name,
       authorPicture: authorProfilePicture,
       authorBio: authorProfile.bio,
@@ -346,8 +420,8 @@ export class PostsService {
 
     if (
       await this.saveModel.exists({
-        post_Id: new Types.ObjectId(post._id),
-        user_Id: new Types.ObjectId(userId),
+        post_id: new Types.ObjectId(post._id),
+        user_id: new Types.ObjectId(userId),
       })
     ) {
       throw new BadRequestException('Post already saved');
@@ -366,7 +440,7 @@ export class PostsService {
   async getSavedPosts(userId: string): Promise<GetPostDto[]> {
     try {
       const savedPosts = await this.saveModel
-        .find({ user_Id: new Types.ObjectId(userId) })
+        .find({ user_id: new Types.ObjectId(userId) })
         .exec();
 
       if (!savedPosts || savedPosts.length === 0) {
@@ -375,7 +449,7 @@ export class PostsService {
 
       return Promise.all(
         savedPosts.map(async (save) => {
-          const post = await this.postModel.findById(save.post_Id).exec();
+          const post = await this.postModel.findById(save.post_id).exec();
           if (!post) {
             throw new NotFoundException('Post not found');
           }

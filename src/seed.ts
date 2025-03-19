@@ -41,11 +41,13 @@ async function bootstrap() {
   await commentSeeder.seedComments(15);
   await reactSeeder.clearReacts();
   await reactSeeder.seedReacts(30);
+  await reactSeeder.seedCommentReacts(30);
   await saveSeeder.clearSaves();
   await saveSeeder.seedSaves(20);
   await shareSeeder.clearShares();
   await shareSeeder.seedShares(5);
   await postSeeder.updatePostCounts();
+  await commentSeeder.updateCommentReactCounts();
 
   await app.close();
 }

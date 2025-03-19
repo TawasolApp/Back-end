@@ -78,7 +78,7 @@ export class PostSeeder {
     const posts = await this.postModel.find().exec();
     for (const post of posts) {
       const reactCount = await this.reactModel
-        .countDocuments({ post_Id: post._id })
+        .countDocuments({ post_id: post._id })
         .exec();
       post.react_count = reactCount;
       await post.save();

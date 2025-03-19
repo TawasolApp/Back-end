@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Comment, CommentDocument } from './comment.schema';
 import {
   User,
@@ -15,6 +15,7 @@ import {
   PostDocument,
 } from '../../../posts/infrastructure/database/post.schema';
 import { faker } from '@faker-js/faker';
+import { React, ReactDocument } from './react.schema'; // Import React schema
 
 @Injectable()
 export class CommentSeeder {
@@ -23,6 +24,7 @@ export class CommentSeeder {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
+    @InjectModel(React.name) private reactModel: Model<ReactDocument>, // Inject React model
   ) {}
 
   async seedComments(count: number): Promise<void> {
@@ -70,7 +72,7 @@ export class CommentSeeder {
 
           return {
             author_type: isReplyUser ? 'User' : 'Company',
-            author: replyAuthor._id,
+            author_id: replyAuthor._id,
             content: faker.lorem.sentence(),
             reacts: [],
             tags: replyTags,
@@ -78,34 +80,30 @@ export class CommentSeeder {
         },
       );
 
-      const reacts = Array.from(
-        { length: faker.number.int({ min: 0, max: 5 }) },
-        () => {
-          const isReactUser = faker.datatype.boolean();
-          const reactingUser = isReactUser
-            ? faker.helpers.arrayElement(users)
-            : faker.helpers.arrayElement(companies);
-
-          return {
-            user_type: isReactUser ? 'User' : 'Company',
-            user: reactingUser._id,
-            type: faker.helpers.arrayElement(['like', 'love', 'laugh', 'clap']),
-          };
-        },
-      );
-
       comments.push({
         author_type: authorType,
-        author: author._id,
-        post: post._id,
+        author_id: author._id,
+        post_id: post._id,
         replies,
-        reacts,
         tags,
+        react_count: 0,
       });
     }
 
     await this.commentModel.insertMany(comments);
     console.log(`${count} comments seeded successfully!`);
+  }
+
+  async updateCommentReactCounts(): Promise<void> {
+    const comments = await this.commentModel.find().exec();
+    for (const comment of comments) {
+      const reactCount = await this.reactModel
+        .countDocuments({ post_id: new Types.ObjectId(comment._id) })
+        .exec();
+      comment.react_count = reactCount;
+      await comment.save();
+    }
+    console.log('Comment react counts updated.');
   }
 
   async clearComments(): Promise<void> {
