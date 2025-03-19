@@ -119,7 +119,7 @@ export class Profile {
 
   @Prop({ required: true })
   name: string;
-
+  
   @Prop()
   profile_picture: string;
 

@@ -15,12 +15,12 @@ export class React {
   user_type: string;
 
   @Prop({ type: Types.ObjectId, required: true, refPath: 'user_type' })
-  user: Types.ObjectId;
+  user_Id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
-  post: Types.ObjectId;
+  post_Id: Types.ObjectId;
 
-  @Prop({ enum: ['like', 'love', 'laugh', 'clap'], required: true })
+  @Prop({ enum: ['Like', 'Love', 'Laugh', 'Clap'], required: true })
   type: string;
 }
 

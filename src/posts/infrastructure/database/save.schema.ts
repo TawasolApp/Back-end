@@ -12,10 +12,10 @@ export class Save {
   _id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  user: Types.ObjectId;
+  user_Id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
-  post: Types.ObjectId;
+  post_Id: Types.ObjectId;
 }
 
 export const SaveSchema = SchemaFactory.createForClass(Save);

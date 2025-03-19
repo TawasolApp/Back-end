@@ -8,9 +8,10 @@ export type PostDocument = Post & Document;
   versionKey: false,
 })
 export class Post {
+
   @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
-
+  
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   author_id: Types.ObjectId;
 
@@ -32,7 +33,7 @@ export class Post {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];
 
-  @Prop({ enum: ['public', 'connections', 'private'], default: 'public' })
+  @Prop({ enum: ['Public', 'Connections', 'Private'], default: 'Public' })
   visibility: string;
 
   @Prop({ enum: ['User', 'Company'], required: true })
