@@ -40,9 +40,9 @@ async function bootstrap() {
   await commentSeeder.clearComments();
   await commentSeeder.seedComments(15);
   await reactSeeder.clearReacts();
-  await reactSeeder.seedReacts(100);
+  await reactSeeder.seedReacts(30);
   await saveSeeder.clearSaves();
-  await saveSeeder.seedSaves(5);
+  await saveSeeder.seedSaves(20);
   await shareSeeder.clearShares();
   await shareSeeder.seedShares(5);
   await postSeeder.updatePostCounts();

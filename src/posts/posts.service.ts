@@ -20,6 +20,7 @@ import {
 import { React, ReactDocument } from './infrastructure/database/react.schema';
 import { Reactions, UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto'; // Import ReactionDto
+import { Save, SaveDocument } from './infrastructure/database/save.schema';
 
 @Injectable()
 export class PostsService {
@@ -28,6 +29,7 @@ export class PostsService {
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>, // Inject Profile model
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>, // Inject Company model
     @InjectModel(React.name) private reactModel: Model<ReactDocument>, // Inject React model
+    @InjectModel(Save.name) private saveModel: Model<SaveDocument>, // Inject Save model
   ) {}
 
   async addPost(createPostDto: CreatePostDto): Promise<{ message: string }> {
@@ -332,5 +334,60 @@ export class PostsService {
       authorPicture: authorProfilePicture,
       authorBio: authorProfile.bio,
     };
+  }
+
+  async savePost(postId: string, userId: string): Promise<{ message: string }> {
+    const post = await this.postModel
+      .findById(new Types.ObjectId(postId))
+      .exec();
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    if (
+      await this.saveModel.exists({
+        post_Id: new Types.ObjectId(post._id),
+        user_Id: new Types.ObjectId(userId),
+      })
+    ) {
+      throw new BadRequestException('Post already saved');
+    }
+
+    const save = new this.saveModel({
+      _id: new Types.ObjectId(),
+      user_Id: new Types.ObjectId(userId),
+      post_Id: new Types.ObjectId(postId),
+    });
+
+    await save.save();
+    return { message: 'Post saved successfully' };
+  }
+
+  async getSavedPosts(userId: string): Promise<GetPostDto[]> {
+    try {
+      const savedPosts = await this.saveModel
+        .find({ user_Id: new Types.ObjectId(userId) })
+        .exec();
+
+      if (!savedPosts || savedPosts.length === 0) {
+        throw new NotFoundException('No saved posts found');
+      }
+
+      return Promise.all(
+        savedPosts.map(async (save) => {
+          const post = await this.postModel.findById(save.post_Id).exec();
+          if (!post) {
+            throw new NotFoundException('Post not found');
+          }
+          return this.mapToGetPostDto(post, userId);
+        }),
+      );
+    } catch (error) {
+      console.error(
+        `Error fetching saved posts for user with id ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to fetch saved posts');
+    }
   }
 }

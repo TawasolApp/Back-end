@@ -100,4 +100,34 @@ export class PostsController {
       throw new InternalServerErrorException('Failed to fetch reactions');
     }
   }
+
+  @Post(':postId/save/:userId')
+  async savePost(
+    @Param('postId') postId: string,
+    @Param('userId') userId: string,
+  ) {
+    try {
+      const saveResult = await this.postsService.savePost(postId, userId);
+      return saveResult;
+    } catch (error) {
+      console.error(
+        `Error in savePost controller for postId ${postId} and userId ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to save post');
+    }
+  }
+
+  @Get('saved/:userId')
+  async getSavedPosts(@Param('userId') userId: string): Promise<GetPostDto[]> {
+    try {
+      return await this.postsService.getSavedPosts(userId);
+    } catch (error) {
+      console.error(
+        `Error in getSavedPosts controller for userId ${userId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to fetch saved posts');
+    }
+  }
 }
