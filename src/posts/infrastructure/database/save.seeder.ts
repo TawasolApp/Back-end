@@ -5,7 +5,7 @@ import { Save, SaveDocument } from './save.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Post,
   PostDocument,

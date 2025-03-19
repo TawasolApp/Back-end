@@ -17,6 +17,7 @@ import { ShareSeeder } from './infrastructure/database/share.seeder';
 import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { CompaniesModule } from '../companies/companies.module';
     ]),
     AuthModule,
     CompaniesModule,
+    UsersModule,
   ],
   providers: [
     PostSeeder,

@@ -8,7 +8,7 @@ import {
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
