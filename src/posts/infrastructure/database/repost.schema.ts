@@ -6,22 +6,22 @@ export type RepostDocument = Repost & Document;
 @Schema({ timestamps: false, versionKey: false })
 export class Repost {
   @Prop({ required: true })
-  authorId: string;
+  autho_id: string;
 
   @Prop({ required: true })
-  postId: string;
+  post_id: string;
 
   @Prop()
   content: string;
 
   @Prop({ type: [String], default: [] })
-  taggedUsers: string[];
+  tagged_users: string[];
 
   @Prop({ enum: ['Public', 'Connections', 'Private'], required: true })
   visibility: string;
 
   @Prop({ enum: ['User', 'Company'], required: true })
-  authorType: string;
+  author_type: string;
 }
 
 export const RepostSchema = SchemaFactory.createForClass(Repost);
