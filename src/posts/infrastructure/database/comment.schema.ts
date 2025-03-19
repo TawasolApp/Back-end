@@ -47,6 +47,12 @@ export class Comment {
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];
+
+  @Prop({ required: true })
+  content: string;
+
+  @Prop({ default: Date.now })
+  commented_at: Date;
 }
 
 export const CommentSchema = SchemaFactory.createForClass(Comment);

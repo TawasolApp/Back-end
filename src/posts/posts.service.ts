@@ -26,6 +26,8 @@ import {
   Comment,
   CommentDocument,
 } from './infrastructure/database/comment.schema';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { GetCommentDto } from './dto/get-comment.dto';
 
 @Injectable()
 export class PostsService {
@@ -463,5 +465,161 @@ export class PostsService {
       );
       throw new InternalServerErrorException('Failed to fetch saved posts');
     }
+  }
+
+  async addComment(
+    postId: string,
+    createCommentDto: CreateCommentDto,
+    userId: string,
+  ): Promise<Comment> {
+    const post = await this.postModel
+      .findById(new Types.ObjectId(postId))
+      .exec();
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    let authorType: 'User' | 'Company';
+    const authorProfile = await this.profileModel
+      .findById(new Types.ObjectId(userId))
+      .exec();
+    if (authorProfile) {
+      authorType = 'User';
+    } else {
+      const authorCompany = await this.companyModel
+        .findById(new Types.ObjectId(userId))
+        .exec();
+      if (authorCompany) {
+        authorType = 'Company';
+      } else {
+        throw new NotFoundException('Author not found');
+      }
+    }
+
+    const newComment = new this.commentModel({
+      _id: new Types.ObjectId(),
+      post_id: new Types.ObjectId(postId),
+      author_type: authorType,
+      author_id: new Types.ObjectId(userId),
+      content: createCommentDto.content,
+      tags:
+        createCommentDto.tagged?.map((tag) => new Types.ObjectId(tag)) || [],
+      react_count: 0,
+      replies: [],
+    });
+
+    await newComment.save();
+    post.comment_count++;
+    await post.save();
+
+    return newComment;
+  }
+
+  async getComments(postId: string): Promise<GetCommentDto[]> {
+    const comments = await this.commentModel
+      .find({ post_id: new Types.ObjectId(postId) })
+      .exec();
+    if (!comments || comments.length === 0) {
+      throw new NotFoundException('No comments found');
+    }
+
+    return Promise.all(
+      comments.map((comment) => this.mapToGetCommentDto(comment)),
+    );
+  }
+
+  private async mapToGetCommentDto(
+    comment: CommentDocument,
+  ): Promise<GetCommentDto> {
+    let authorProfile;
+    let authorProfilePicture;
+    let authorName = 'Unknown';
+    let authorBio = '';
+
+    if (comment.author_type === 'User') {
+      authorProfile = await this.profileModel
+        .findById(comment.author_id)
+        .exec();
+      if (authorProfile) {
+        authorProfilePicture = authorProfile.profile_picture;
+        authorName = authorProfile.name;
+        authorBio = authorProfile.bio;
+      } else {
+        console.log(`User profile with id ${comment.author_id} not found`);
+      }
+    } else if (comment.author_type === 'Company') {
+      authorProfile = await this.companyModel
+        .findById(comment.author_id)
+        .exec();
+      if (authorProfile) {
+        authorProfilePicture = authorProfile.logo;
+        authorName = authorProfile.name;
+        authorBio = authorProfile.bio;
+      } else {
+        console.log(`Company profile with id ${comment.author_id} not found`);
+      }
+    }
+
+    const replies = await Promise.all(
+      comment.replies.map(async (reply) => {
+        let replyAuthorProfile;
+        let replyAuthorProfilePicture;
+        let replyAuthorName = 'Unknown';
+        let replyAuthorBio = '';
+
+        if (reply.author_type === 'User') {
+          replyAuthorProfile = await this.profileModel
+            .findById(reply.author_id)
+            .exec();
+          if (replyAuthorProfile) {
+            replyAuthorProfilePicture = replyAuthorProfile.profile_picture;
+            replyAuthorName = replyAuthorProfile.name;
+            replyAuthorBio = replyAuthorProfile.bio;
+          } else {
+            console.log(
+              `Reply user profile with id ${reply.author_id} not found`,
+            );
+          }
+        } else if (reply.author_type === 'Company') {
+          replyAuthorProfile = await this.companyModel
+            .findById(reply.author_id)
+            .exec();
+          if (replyAuthorProfile) {
+            replyAuthorProfilePicture = replyAuthorProfile.logo;
+            replyAuthorName = replyAuthorProfile.name;
+            replyAuthorBio = replyAuthorProfile.bio;
+          } else {
+            console.log(
+              `Reply company profile with id ${reply.author_id} not found`,
+            );
+          }
+        }
+
+        return {
+          authorId: reply.author_id.toString(),
+          authorName: replyAuthorName,
+          authorPicture: replyAuthorProfilePicture,
+          authorBio: replyAuthorBio,
+          text: reply.content,
+          reactCount: reply.reacts.length,
+          taggedUsers: reply.tags.map((tag) => tag.toString()),
+        };
+      }),
+    );
+
+    return {
+      id: comment._id.toString(),
+      postId: comment.post_id.toString(),
+      authorId: comment.author_id.toString(),
+      authorName: authorName,
+      authorPicture: authorProfilePicture,
+      authorBio: authorBio,
+      authorType: comment.author_type as 'User' | 'Company',
+      content: comment.content,
+      replies,
+      reactCount: comment.react_count,
+      timestamp: comment.commented_at.toISOString(),
+      taggedUsers: comment.tags.map((tag) => tag.toString()),
+    };
   }
 }

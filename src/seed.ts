@@ -10,7 +10,6 @@ import { CommentSeeder } from './posts/infrastructure/database/comment.seeder';
 import { ReactSeeder } from './posts/infrastructure/database/react.seeder';
 import { SaveSeeder } from './posts/infrastructure/database/save.seeder';
 import { ShareSeeder } from './posts/infrastructure/database/share.seeder';
-import { Share } from './posts/infrastructure/database/share.schema';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -48,6 +47,7 @@ async function bootstrap() {
   await shareSeeder.seedShares(5);
   await postSeeder.updatePostCounts();
   await commentSeeder.updateCommentReactCounts();
+  await postSeeder.updateCommentCounts(); // Add this line to update comment counts
 
   await app.close();
 }

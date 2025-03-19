@@ -87,6 +87,8 @@ export class CommentSeeder {
         replies,
         tags,
         react_count: 0,
+        content: faker.lorem.sentence(),
+        commented_at: faker.date.recent(),
       });
     }
 

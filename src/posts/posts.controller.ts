@@ -18,6 +18,8 @@ import { Post as PostEntity } from './infrastructure/database/post.schema';
 import { UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto';
 import { EditPostDto } from './dto/edit-post.dto';
+import { CreateCommentDto } from './dto/create-comment.dto';
+import { GetCommentDto } from './dto/get-comment.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -142,6 +144,42 @@ export class PostsController {
         error,
       );
       throw new InternalServerErrorException('Failed to fetch saved posts');
+    }
+  }
+
+  @Post(':postId/comment/:userId')
+  @UsePipes(new ValidationPipe())
+  async addComment(
+    @Param('postId') postId: string,
+    @Param('userId') userId: string,
+    @Body() createCommentDto: CreateCommentDto,
+  ) {
+    try {
+      const comment = await this.postsService.addComment(
+        postId,
+        createCommentDto,
+        userId,
+      );
+      return comment;
+    } catch (error) {
+      console.error(
+        `Error in addComment controller for postId ${postId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to add comment');
+    }
+  }
+
+  @Get(':postId/comments')
+  async getComments(@Param('postId') postId: string): Promise<GetCommentDto[]> {
+    try {
+      return await this.postsService.getComments(postId);
+    } catch (error) {
+      console.error(
+        `Error in getComments controller for postId ${postId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to fetch comments');
     }
   }
 }
