@@ -9,6 +9,7 @@ import {
   User,
   UserDocument,
 } from '../../../auth/infrastructure/database/user.schema';
+import { ConnectionStatus } from '../connection-status.enum';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
@@ -45,7 +46,7 @@ export class UserConnectionSeeder {
       do {
         sendingUser = faker.helpers.arrayElement(users);
         receivingUser = faker.helpers.arrayElement(users);
-        const key = `${sendingUser._id}-${receivingUser._id}`;
+        key = `${sendingUser._id}-${receivingUser._id}`;
       } while (
         sendingUser._id.equals(receivingUser._id) ||
         existingSet.has(key)
@@ -56,10 +57,10 @@ export class UserConnectionSeeder {
         sending_party: sendingUser._id,
         receiving_party: receivingUser._id,
         status: faker.helpers.arrayElement([
-          'pending',
-          'connected',
-          'following',
-          'blocked',
+          ConnectionStatus.Pending,
+          ConnectionStatus.Connected,
+          ConnectionStatus.Ignored,
+          ConnectionStatus.Following,
         ]),
       });
     }

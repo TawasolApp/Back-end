@@ -6,6 +6,9 @@ import {
 } from './infrastructure/database/user-connection.schema';
 import { UserConnectionSeeder } from './infrastructure/database/user-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
+import { ProfilesModule } from '../profiles/profiles.module';
+import { ConnectionsController } from './connections.controller';
+import { ConnectionsService } from './connections.service';
 
 @Module({
   imports: [
@@ -13,8 +16,10 @@ import { AuthModule } from '../auth/auth.module';
       { name: UserConnection.name, schema: UserConnectionSchema },
     ]),
     AuthModule,
+    ProfilesModule,
   ],
   exports: [MongooseModule, UserConnectionSeeder], // allows other modules to access user schema if needed
-  providers: [UserConnectionSeeder],
+  providers: [UserConnectionSeeder, ConnectionsService],
+  controllers: [ConnectionsController],
 })
 export class ConnectionsModule {}

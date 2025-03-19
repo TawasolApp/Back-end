@@ -13,6 +13,6 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   providers: [ProfileSeeder],
-  exports: [ProfileSeeder],
+  exports: [MongooseModule, ProfileSeeder],
 })
 export class ProfilesModule {}
