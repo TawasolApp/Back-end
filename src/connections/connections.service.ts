@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -49,6 +50,9 @@ export class ConnectionsService {
       await newConnection.save();
       return newConnection;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to save connection.');
     }
   }
@@ -69,14 +73,20 @@ export class ConnectionsService {
           'Only pending connections can be accepted/ignored.',
         );
       }
-      let status: ConnectionStatus;
-      status = isAccept ? ConnectionStatus.Connected : ConnectionStatus.Ignored;
-      return this.userConnectionModel.findByIdAndUpdate(
-        connectionId,
-        { status: status, created_at: new Date().toISOString() },
-        { new: true },
-      );
+      const status: ConnectionStatus = isAccept
+        ? ConnectionStatus.Connected
+        : ConnectionStatus.Ignored;
+      const updatedConnection =
+        await this.userConnectionModel.findByIdAndUpdate(
+          new Types.ObjectId(connectionId),
+          { status: status, created_at: new Date().toISOString() },
+          { new: true },
+        );
+      return updatedConnection;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException(
         'Failed to update connection request status.',
       );
@@ -96,6 +106,9 @@ export class ConnectionsService {
       }
       return connection;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to remove connection.');
     }
   }
@@ -122,6 +135,9 @@ export class ConnectionsService {
       await newConnection.save();
       return newConnection;
     } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Failed to save follow.');
     }
   }
@@ -271,150 +287,3 @@ export class ConnectionsService {
     return result;
   }
 }
-
-// import {
-//   BadRequestException,
-//   Injectable,
-//   InternalServerErrorException,
-//   NotFoundException,
-// } from '@nestjs/common';
-// import { InjectModel } from '@nestjs/mongoose';
-// import { Model } from 'mongoose';
-// import {
-//   UserConnection,
-//   UserConnectionDocument,
-// } from './infrastructure/database/user-connection.schema';
-// import { ConnectionStatus } from './infrastructure/connection-status.enum';
-
-// @Injectable()
-// export class ConnectionsService {
-//   constructor(
-//     @InjectModel(UserConnection.name)
-//     private readonly userConnectionModel: Model<UserConnectionDocument>,
-//   ) {}
-
-//   async requestConnection(sendingParty: string, receivingParty: string) {
-//     try {
-//       if (sendingParty === receivingParty) {
-//         throw new BadRequestException('Cannot request a connection with yourself.');
-//       }
-//       const newConnection = new this.userConnectionModel({
-//         _id: new Types.ObjectId,
-//         sending_party: sendingParty,
-//         receiving_party: receivingParty,
-//         status: ConnectionStatus.Pending,
-//       });
-
-//       return await newConnection.save();
-//     } catch (error) {
-//       throw new InternalServerErrorException('Failed to save connection.');
-//     }
-//   }
-
-//   async updateConnection(connectionId: string, isAccept: boolean) {
-//     try {
-//       const existingConnection = await this.userConnectionModel.findById(connectionId);
-
-//       if (!existingConnection) {
-//         throw new NotFoundException('Connection not found.');
-//       }
-
-//       if (existingConnection.status !== ConnectionStatus.Pending) {
-//         throw new BadRequestException('Only pending connections can be accepted or ignored.');
-//       }
-//       const status: ConnectionStatus = isAccept
-//         ? ConnectionStatus.Connected
-//         : ConnectionStatus.Ignored;
-
-//       return await this.userConnectionModel.findByIdAndUpdate(
-//         connectionId,
-//         { status },
-//         { new: true },
-//       );
-//     } catch (error) {
-//       throw new InternalServerErrorException('Failed to update connection status.');
-//     }
-//   }
-
-//   async removeConnection(connectionId: string) {
-//     try {
-//       const deletedConnection = await this.userConnectionModel.findByIdAndDelete(connectionId);
-
-//       if (!deletedConnection) {
-//         throw new NotFoundException('Connection not found.');
-//       }
-
-//       return { message: 'Connection removed successfully' };
-//     } catch (error) {
-//       throw new InternalServerErrorException('Failed to remove connection.');
-//     }
-//   }
-
-//   async follow(sendingParty: string, receivingParty: string) {
-//     try {
-//       if (sendingParty === receivingParty) {
-//         throw new BadRequestException('Cannot follow yourself.');
-//       }
-
-//       const existingFollow = await this.userConnectionModel.exists({
-//         sending_party: sendingParty,
-//         receiving_party: receivingParty,
-//         status: ConnectionStatus.Following,
-//       });
-
-//       if (existingFollow) {
-//         throw new BadRequestException('You are already following this user.');
-//       }
-
-//       const newConnection = new this.userConnectionModel({
-//         sending_party: sendingParty,
-//         receiving_party: receivingParty,
-//         status: ConnectionStatus.Following,
-//       });
-
-//       return await newConnection.save();
-//     } catch (error) {
-//       throw new InternalServerErrorException('Failed to save follow.');
-//     }
-//   }
-
-//   async getConnection(sendingParty: string, receivingParty: string) {
-//     const connection = await this.userConnectionModel.findOne({
-//       sending_party: sendingParty,
-//       receiving_party: receivingParty,
-//     }).lean();
-
-//     if (!connection) {
-//       throw new NotFoundException('Connection not found.');
-//     }
-
-//     return connection;
-//   }
-
-//   async getConnections(userId: string) {
-//     return await this.userConnectionModel
-//       .find({
-//         $or: [{ sending_party: userId }, { receiving_party: userId }],
-//         status: ConnectionStatus.Connected,
-//       })
-//       .lean();
-//   }
-
-//   async getPendingRequests(userId: string) {
-//     return await this.userConnectionModel
-//       .find({
-//         receiving_party: userId,
-//         status: ConnectionStatus.Pending,
-//       })
-//       .lean();
-//   }
-
-//   async getSentRequests(userId: string) {
-//     return await this.userConnectionModel
-//       .find({
-//         sending_party: userId,
-//         status: ConnectionStatus.Pending,
-//       })
-//       .lean();
-//   }
-// }
