@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Put,
+  Query,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -14,6 +15,7 @@ import { ProfilesService } from './profiles.service';
 import { Types } from 'mongoose';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
+import { CreateProfileDto } from './dto/create-profile.dto';
 
 @Controller('profile')
 export class ProfilesController {
@@ -23,19 +25,19 @@ export class ProfilesController {
 
   @Post()
   @UsePipes(new ValidationPipe())
-  createProfile(@Body() createProfileDto) {
+  createProfile(@Body() createProfileDto:CreateProfileDto) {
     return this.profilesService.createProfile(createProfileDto);
   }
 
   @Get()
   @UsePipes(new ValidationPipe())
-  getProfile(@Body() user: { username: string }) {
-    return this.profilesService.getProfile(user.username);
+  getProfile(@Query('username') username: string) {
+    return this.profilesService.getProfile(username);
   }
 
   @Put()
   @UsePipes(new ValidationPipe())
-  updateProfile(@Body(ValidationPipe) updateProfileDto) {
+  updateProfile(@Body(ValidationPipe) updateProfileDto: UpdateProfileDto) {
     return this.profilesService.updateProfile( updateProfileDto,this._id);
   }
 
