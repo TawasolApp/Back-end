@@ -9,7 +9,6 @@ import {
   User,
   UserDocument,
 } from '../../../auth/infrastructure/database/user.schema';
-import { ConnectionStatus } from '../connection-status.enum';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
@@ -21,46 +20,30 @@ export class UserConnectionSeeder {
   ) {}
 
   async seedUserConnections(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
+    const users = await this.userModel.find().select('_id').lean();
 
     if (users.length < 2) {
       console.log('Not enough users to create connections. Seeding aborted.');
       return;
     }
 
-    const existingConnections = await this.userConnectionModel
-      .find()
-      .select('sending_party receiving_party')
-      .lean();
-    const existingSet = new Set(
-      existingConnections.map((c) => `${c.sending_party}-${c.receiving_party}`),
-    );
-
     const userConnections: Partial<UserConnectionDocument>[] = [];
 
     for (let i = 0; i < count; i++) {
-      let sendingUser, receivingUser, key;
+      let sendingUser, receivingUser;
       do {
         sendingUser = faker.helpers.arrayElement(users);
         receivingUser = faker.helpers.arrayElement(users);
-        key = `${sendingUser._id}-${receivingUser._id}`;
-      } while (
-        sendingUser._id.equals(receivingUser._id) ||
-        existingSet.has(key)
-      );
+      } while (sendingUser._id.equals(receivingUser._id));
 
-      existingSet.add(key);
       userConnections.push({
         sending_party: sendingUser._id,
         receiving_party: receivingUser._id,
         status: faker.helpers.arrayElement([
-          ConnectionStatus.Pending,
-          ConnectionStatus.Connected,
-          ConnectionStatus.Ignored,
-          ConnectionStatus.Following,
+          'pending',
+          'connected',
+          'following',
+          'blocked',
         ]),
       });
     }

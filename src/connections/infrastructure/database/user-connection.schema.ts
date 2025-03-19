@@ -1,11 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ConnectionStatus } from '../connection-status.enum';
 
 export type UserConnectionDocument = UserConnection & Document;
 
 @Schema({
-  timestamps: false,
+  timestamps: { createdAt: 'connected_at', updatedAt: false },
   versionKey: false,
 })
 export class UserConnection {
@@ -19,19 +18,13 @@ export class UserConnection {
   receiving_party: Types.ObjectId;
 
   @Prop({
-    type: String,
-    enum: Object.values(ConnectionStatus),
+    enum: ['pending', 'connected', 'following', 'blocked'],
     required: true,
   })
-  status: ConnectionStatus;
-
-  @Prop({
-    type: String,
-    default: () => new Date().toISOString(),
-  })
-  created_at: string;
+  status: string;
 }
 
 export const UserConnectionSchema =
   SchemaFactory.createForClass(UserConnection);
+
 UserConnectionSchema.set('collection', 'UserConnections');

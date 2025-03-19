@@ -18,12 +18,9 @@ export class CompanySeeder {
         name: faker.company.name(),
         logo: faker.image.url(),
         industry: faker.commerce.department(),
-        description: faker.lorem.sentence(),
-        founded: faker.number.int({ min: 1900, max: new Date().getFullYear() }),
-        website: faker.internet.url(),
         location: faker.location.city(),
-        email: faker.internet.email(),
-        contact_number: faker.phone.number(),
+        description: faker.lorem.sentence(),
+        since: faker.date.past({ years: 50 }),
       });
     }
 
