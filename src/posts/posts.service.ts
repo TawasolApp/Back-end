@@ -92,7 +92,12 @@ export class PostsService {
 
     const createdPost = new this.postModel({
       _id: new Types.ObjectId(),
-      ...createPostDto,
+      text: createPostDto.content,
+      media: createPostDto.media,
+      tags: (createPostDto.taggedUsers ?? []).map(
+        (tag) => new Types.ObjectId(tag),
+      ),
+      visibility: createPostDto.visibility,
       author_id: createPostDto.authorId,
       author_type: authorType,
     });
@@ -431,8 +436,8 @@ export class PostsService {
 
     const save = new this.saveModel({
       _id: new Types.ObjectId(),
-      user_Id: new Types.ObjectId(userId),
-      post_Id: new Types.ObjectId(postId),
+      user_id: new Types.ObjectId(userId),
+      post_id: new Types.ObjectId(postId),
     });
 
     await save.save();
