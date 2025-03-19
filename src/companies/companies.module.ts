@@ -11,6 +11,8 @@ import {
 import { CompanySeeder } from './infrastructure/database/company.seeder';
 import { CompanyConnectionSeeder } from './infrastructure/database/company-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
+import { CompaniesService } from './companies.service';
+import { CompaniesController } from './companies.controller';
 
 @Module({
   imports: [
@@ -21,6 +23,7 @@ import { AuthModule } from '../auth/auth.module';
     AuthModule,
   ],
   exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder],
-  providers: [CompanySeeder, CompanyConnectionSeeder],
+  providers: [CompanySeeder, CompanyConnectionSeeder, CompaniesService],
+  controllers: [CompaniesController],
 })
 export class CompaniesModule {}
