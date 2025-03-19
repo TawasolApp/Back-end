@@ -15,13 +15,16 @@ export class React {
   user_type: string;
 
   @Prop({ type: Types.ObjectId, required: true, refPath: 'user_type' })
-  user_Id: Types.ObjectId;
+  user_id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
-  post_Id: Types.ObjectId;
+  post_id: Types.ObjectId;
+
+  @Prop({ enum: ['Post', 'Comment'] })
+  post_type: string;
 
   @Prop({ enum: ['Like', 'Love', 'Laugh', 'Clap'], required: true })
-  type: string;
+  react_type: string;
 }
 
 export const ReactSchema = SchemaFactory.createForClass(React);

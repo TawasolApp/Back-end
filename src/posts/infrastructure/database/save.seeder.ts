@@ -37,15 +37,15 @@ export class SaveSeeder {
 
       const existingSave = await this.saveModel
         .findOne({
-          user_Id: user._id,
-          post_Id: post._id,
+          user_id: user._id,
+          post_id: post._id,
         })
         .lean();
 
       if (!existingSave) {
         saves.push({
-          user_Id: user._id,
-          post_Id: post._id,
+          user_id: user._id,
+          post_id: post._id,
         });
       }
     }

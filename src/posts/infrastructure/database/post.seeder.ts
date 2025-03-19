@@ -12,6 +12,7 @@ import {
 } from '../../../companies/infrastructure/database/company.schema';
 import { faker } from '@faker-js/faker';
 import { React, ReactDocument } from './react.schema';
+import { Comment, CommentDocument } from './comment.schema';
 
 @Injectable()
 export class PostSeeder {
@@ -20,6 +21,7 @@ export class PostSeeder {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(React.name) private reactModel: Model<ReactDocument>,
+    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
   ) {}
 
   async seedPosts(count: number): Promise<void> {
@@ -78,10 +80,22 @@ export class PostSeeder {
     const posts = await this.postModel.find().exec();
     for (const post of posts) {
       const reactCount = await this.reactModel
-        .countDocuments({ post_Id: post._id })
+        .countDocuments({ post_id: post._id })
         .exec();
       post.react_count = reactCount;
       await post.save();
     }
+  }
+
+  async updateCommentCounts(): Promise<void> {
+    const posts = await this.postModel.find().exec();
+    for (const post of posts) {
+      const commentCount = await this.commentModel
+        .countDocuments({ post_id: post._id })
+        .exec();
+      post.comment_count = commentCount;
+      await post.save();
+    }
+    console.log('Post comment counts updated.');
   }
 }
