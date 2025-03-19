@@ -15,7 +15,7 @@ export class UserSeeder {
     // Define a fixed password for all users
     const plainPassword = 'TestPassword123';  // Set the password for testing
     const hashedPassword = await bcrypt.hash(plainPassword, 10);  // Hashing the fixed password
-
+    console.log('Hashed password:', hashedPassword);
     for (let i = 0; i < count; i++) {
       users.push({
         first_name: faker.person.firstName(),
