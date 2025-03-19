@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { React, ReactDocument } from './react.schema';
 import {
   User,
@@ -41,17 +41,32 @@ export class ReactSeeder {
 
     for (let i = 0; i < count; i++) {
       const isUser = faker.datatype.boolean();
-      const user = isUser
+      let user = isUser
         ? faker.helpers.arrayElement(users)
         : faker.helpers.arrayElement(companies);
 
-      const post = faker.helpers.arrayElement(posts);
+      let post = faker.helpers.arrayElement(posts);
+
+      let existingReact = await this.reactModel.find({
+        post_Id: post._id,
+        user_Id: user._id,
+      });
+
+      while (existingReact.length > 0) {
+        user = isUser
+          ? faker.helpers.arrayElement(users)
+          : faker.helpers.arrayElement(companies);
+        existingReact = await this.reactModel.find({
+          post_Id: post._id,
+          user_Id: user._id,
+        });
+      }
 
       reacts.push({
         user_type: isUser ? 'User' : 'Company',
-        user: user._id,
-        post: post._id,
-        type: faker.helpers.arrayElement(['like', 'love', 'laugh', 'clap']),
+        user_Id: user._id,
+        post_Id: post._id,
+        type: faker.helpers.arrayElement(['Like', 'Love', 'Laugh', 'Clap']),
       });
     }
 
