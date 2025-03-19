@@ -17,7 +17,7 @@ import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 @Controller('profile')
 export class ProfilesController {
-  private _id: Types.ObjectId = new Types.ObjectId('67d970368674cc71ffc6a4f3');
+  private _id: Types.ObjectId = new Types.ObjectId('67d975cf75be23fd748596bf');
 
   constructor(private profilesService: ProfilesService) {}
 
@@ -59,7 +59,7 @@ export class ProfilesController {
     return this.profilesService.updateIndustry(updateIndustryDto,this._id);
   }
 
-  @Post('profile-picture')
+  @Patch('profile-picture')
  
   updateProfilePicture(@Body() updateIndustryDto: UpdateProfileDto) {
     return this.profilesService.updateProfilePicture(updateIndustryDto,this._id);
@@ -70,9 +70,9 @@ export class ProfilesController {
     return this.profilesService.deleteProfilePicture(this._id);
   }
 
-  @Post('cover-photo')
+  @Patch('cover-photo')
   
-  uploadCoverPhoto(@Body() updateIndustryDto: UpdateProfileDto,_id: Types.ObjectId) {
-    return this.profilesService.uploadCoverPhoto(updateIndustryDto,_id);
+  uploadCoverPhoto(@Body() updateIndustryDto: UpdateProfileDto,) {
+    return this.profilesService.uploadCoverPhoto(updateIndustryDto,this._id);
   }
 }
