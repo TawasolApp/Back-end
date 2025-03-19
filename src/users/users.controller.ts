@@ -13,7 +13,7 @@ import { UpdateEmailDto } from './dtos/update-email.dto';
 import { Request } from 'express';
 
 interface AuthenticatedRequest extends Request {
-  user?: { userId: string }; // Ensure userId exists
+  user?: { userId: string }; 
 }
 
 @Controller('users')
