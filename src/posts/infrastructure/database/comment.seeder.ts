@@ -5,7 +5,7 @@ import { Comment, CommentDocument } from './comment.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Company,
   CompanyDocument,
@@ -15,7 +15,7 @@ import {
   PostDocument,
 } from '../../../posts/infrastructure/database/post.schema';
 import { faker } from '@faker-js/faker';
-import { React, ReactDocument } from './react.schema'; // Import React schema
+import { React, ReactDocument } from './react.schema';
 
 @Injectable()
 export class CommentSeeder {
@@ -24,7 +24,7 @@ export class CommentSeeder {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
-    @InjectModel(React.name) private reactModel: Model<ReactDocument>, // Inject React model
+    @InjectModel(React.name) private reactModel: Model<ReactDocument>,
   ) {}
 
   async seedComments(count: number): Promise<void> {
