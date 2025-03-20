@@ -112,11 +112,13 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
     }
 
     async deleteProfilePicture(_id) {
+        console.log("deleteProfilePicture id" +_id)
         const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id },
-            { $unset: { profilePicture: '' } },
+            { _id: _id },
+            { $unset: { profile_picture: '' } },
             { new: true, runValidators: true }
         ).exec();
+        console.log("deleteProfilePicture updatedProfile" +updatedProfile)  
     
         if (!updatedProfile) {
             throw new NotFoundException(`Profile not found`);

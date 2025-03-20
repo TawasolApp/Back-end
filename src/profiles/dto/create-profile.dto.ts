@@ -146,11 +146,11 @@ class PlanDetails {
 
 class PlanStatistics {
   @ApiProperty({ description: 'Message count', example: 10 })
-  @IsNotEmpty()
+  
   message_count: number;
 
   @ApiProperty({ description: 'Application count', example: 5 })
-  @IsNotEmpty()
+
   application_count: number;
 }
 
@@ -243,7 +243,7 @@ export class CreateProfileDto {
   plan_details?: PlanDetails;
 
   @ApiProperty({ description: 'Plan statistics', type: PlanStatistics })
-  @IsNotEmpty()
+  
   @ValidateNested()
   @Type(() => PlanStatistics)
   plan_statistics: PlanStatistics;
