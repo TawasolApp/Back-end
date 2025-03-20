@@ -47,7 +47,7 @@ async function bootstrap() {
   await shareSeeder.seedShares(5);
   await postSeeder.updatePostCounts();
   await commentSeeder.updateCommentReactCounts();
-  await postSeeder.updateCommentCounts(); // Add this line to update comment counts
+  await postSeeder.updateCommentCounts();
 
   await app.close();
 }
