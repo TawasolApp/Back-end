@@ -27,7 +27,7 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
 
     async updateProfile( updateProfileDto: UpdateProfileDto,_id) {
         const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id }, // Find by username
+            { _id:_id }, // Find by id
             { $set: updateProfileDto }, // Only update specified fields
             { new: true, runValidators: true } // Return updated document & apply validators
         ).exec();
@@ -39,77 +39,9 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
         return updatedProfile;
     }
 
-    async updateHeadline(updateHeadlineDto: UpdateProfileDto,_id) {
-        console.log("updateHeadlineDto")
-        const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id },
-            { $set: { headline: updateHeadlineDto.headline } },
-            { new: true, runValidators: true }
-        ).exec();
-    
-        if (!updatedProfile) {
-            throw new NotFoundException(`Profile not found`);
-        }
-    
-        return updatedProfile;
-    }
+   
 
-    async updateBio(updateBioDto: UpdateProfileDto,_id) {
-        console.log("updateBioDto" +_id)
-        const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id },
-            { $set: { bio: updateBioDto.bio } },
-            { new: true, runValidators: true }
-        ).exec();
     
-        if (!updatedProfile) {
-            throw new NotFoundException(`Profile not found`);
-        }
-    
-        return updatedProfile;
-    }
-
-    async updateLocation(updateLocationDto: UpdateProfileDto,_id) {
-        const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id },
-            { $set: { location: updateLocationDto.location } },
-            { new: true, runValidators: true }
-        ).exec();
-    
-        if (!updatedProfile) {
-            throw new NotFoundException(`Profile not found`);
-        }
-    
-        return updatedProfile;
-    }
-
-    async updateIndustry(updateIndustryDto: UpdateProfileDto,_id) {
-        const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id },
-            { $set: { industry: updateIndustryDto.industry } },
-            { new: true, runValidators: true }
-        ).exec();
-    
-        if (!updatedProfile) {
-            throw new NotFoundException(`Profile not found`);
-        }
-    
-        return updatedProfile;
-    }
-
-    async updateProfilePicture(updateProfilePictureDto: UpdateProfileDto,_id) {
-        const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id },
-            { $set: { profilePicture: updateProfilePictureDto.profile_picture } },
-            { new: true, runValidators: true }
-        ).exec();
-    
-        if (!updatedProfile) {
-            throw new NotFoundException(`Profile not found`);
-        }
-    
-        return updatedProfile;
-    }
 
     async deleteProfilePicture(_id) {
         console.log("deleteProfilePicture id" +_id)
@@ -127,10 +59,10 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
         return updatedProfile;
     }
 
-    async uploadCoverPhoto(updateCoverPhotoDto: UpdateProfileDto, _id) {
+    async deleteCoverPhoto(_id) {
         const updatedProfile = await this.profileModel.findOneAndUpdate(
-            { _id:_id},
-            { $set: { coverPhoto: updateCoverPhotoDto.cover_photo } },
+            { _id: _id },
+            { $unset: { cover_photo: '' } },
             { new: true, runValidators: true }
         ).exec();
     
@@ -140,6 +72,78 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
     
         return updatedProfile;
     }
+
+    async deleteResume(_id) {
+        const updatedProfile = await this.profileModel.findOneAndUpdate(
+            { _id: _id },
+            { $unset: { resume: '' } },
+            { new: true, runValidators: true }
+        ).exec();
+    
+        if (!updatedProfile) {
+            throw new NotFoundException(`Profile not found`);
+        }
+    
+        return updatedProfile;
+    }
+
+    async deleteHeadline(_id) {
+        const updatedProfile = await this.profileModel.findOneAndUpdate(
+            { _id: _id },
+            { $unset: { headline: '' } },
+            { new: true, runValidators: true }
+        ).exec();
+    
+        if (!updatedProfile) {
+            throw new NotFoundException(`Profile not found`);
+        }
+    
+        return updatedProfile;
+    }
+
+    async deleteBio(_id) {
+        const updatedProfile = await this.profileModel.findOneAndUpdate(
+            { _id: _id },
+            { $unset: { bio: '' } },
+            { new: true, runValidators: true }
+        ).exec();
+    
+        if (!updatedProfile) {
+            throw new NotFoundException(`Profile not found`);
+        }
+    
+        return updatedProfile;
+    }
+
+    async deleteLocation(_id) {
+        const updatedProfile = await this.profileModel.findOneAndUpdate(
+            { _id: _id },
+            { $unset: { location: '' } },
+            { new: true, runValidators: true }
+        ).exec();
+    
+        if (!updatedProfile) {
+            throw new NotFoundException(`Profile not found`);
+        }
+    
+        return updatedProfile;
+    }
+
+    async deleteIndustry(_id) {
+        const updatedProfile = await this.profileModel.findOneAndUpdate(
+            { _id: _id },
+            { $unset: { industry: '' } },
+            { new: true, runValidators: true }
+        ).exec();
+    
+        if (!updatedProfile) {
+            throw new NotFoundException(`Profile not found`);
+        }
+    
+        return updatedProfile;
+    }
+
+    
     
     
 }

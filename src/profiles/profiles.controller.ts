@@ -44,16 +44,46 @@ export class ProfilesController {
   }
 
 
-
-
- 
-
-
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
   deleteProfilePicture() {
     return this.profilesService.deleteProfilePicture(this._id);
   }
 
+  @Delete('cover-photo')
+  @UsePipes(new ValidationPipe())
+  deleteCoverPhoto() {
+    return this.profilesService.deleteCoverPhoto(this._id);
+  }
+
+  @Delete('resume')
+  @UsePipes(new ValidationPipe())
+  deleteResume() {
+    return this.profilesService.deleteResume(this._id);
+  }
+
+  @Delete('headline')
+  @UsePipes(new ValidationPipe())
+  deleteHeadline() {
+    return this.profilesService.deleteHeadline(this._id);
+  }
+
+  @Delete('bio')
+  @UsePipes(new ValidationPipe())
+  deleteBio() {
+    return this.profilesService.deleteBio(this._id);
+  }
+
+  @Delete('location')
+  @UsePipes(new ValidationPipe())
+  deleteLocation() {
+    return this.profilesService.deleteLocation(this._id);
+  }
+
+  @Delete('industry')
+  @UsePipes(new ValidationPipe())
+  deleteIndustry() {
+    return this.profilesService.deleteIndustry(this._id);
+  }
 
 }
