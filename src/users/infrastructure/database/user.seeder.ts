@@ -13,8 +13,9 @@ export class UserSeeder {
     const users: Partial<UserDocument>[] = [];
 
    
-    const plainPassword = 'TestPassword123';  
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);  
+   
+    const plainPassword = 'TestPassword123';  // Set the password for testing
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);  // Hashing the fixed password
     console.log('Hashed password:', hashedPassword);
     for (let i = 0; i < count; i++) {
       users.push({
