@@ -13,16 +13,19 @@ export class Company {
   name: string;
 
   @Prop()
-  verified: boolean;
+  verified: boolean
 
   @Prop()
   logo: string;
 
   @Prop()
-  followers: number;
+  description: string
 
   @Prop()
-  employees: number;
+  followers: number
+
+  @Prop()
+  employees: number
 
   @Prop({
     type: String,
@@ -30,7 +33,7 @@ export class Company {
     required: true,
   })
   company_type: CompanyType;
-
+  
   @Prop({ required: true })
   industry: string;
 
@@ -44,16 +47,16 @@ export class Company {
   website: string;
 
   @Prop()
-  address: string;
+  address: string
 
   @Prop({ required: true })
   location: string;
 
   @Prop()
-  description: string;
+  email: string;
 
   @Prop()
-  since: Date;
+  contact_number: string;
 }
 
 export const CompanySchema = SchemaFactory.createForClass(Company);
