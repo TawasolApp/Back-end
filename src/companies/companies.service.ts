@@ -80,30 +80,67 @@ export class CompaniesService {
     return companies;
   }
 
-  // ✅ Get company details
   async getCompanyDetails(companyId: string): Promise<CompanyDocument> {
-    const company = await this.companyModel.findById(companyId).exec();
-    if (!company) {
-      throw new NotFoundException(`Company with ID ${companyId} not found.`);
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      return company;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to get company details.');
     }
-    return company;
   }
 
-  // ✅ Get company followers (Dummy Implementation)
   async getCompanyFollowers(companyId: string): Promise<any[]> {
-    return [
-      {
-        userId: '123',
-        username: 'John Doe',
-        profilePicture: 'https://example.com/johndoe.jpg',
-        headline: 'Software Engineer',
-      },
-      {
-        userId: '124',
-        username: 'Jane Doe',
-        profilePicture: 'https://example.com/janedoe.jpg',
-        headline: 'Marketing Manager',
-      },
-    ];
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const followers = await this.companyConnectionModel
+        .find({ company_id: new Types.ObjectId(companyId) })
+        .select('user_id')
+        .lean();
+
+      const result = await Promise.all(
+        followers.map(async (follower) => {
+          const userId = follower.user_id;
+
+          const profile = await this.profileModel
+            .findById(userId)
+            .select('name profile_picture headline')
+            .lean();
+
+          return {
+            userId: profile?._id,
+            username: profile?.name,
+            profilePicture: profile?.profile_picture,
+            headline: profile?.headline,
+          };
+        }),
+      );
+      return result;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to get company followers.',
+      );
+    }
   }
 }
