@@ -12,7 +12,8 @@ export class UserSeeder {
   async seedUsers(count: number): Promise<void> {
     const users: Partial<UserDocument>[] = [];
 
-    // Define a fixed password for all users
+   
+   
     const plainPassword = 'TestPassword123';  // Set the password for testing
     const hashedPassword = await bcrypt.hash(plainPassword, 10);  // Hashing the fixed password
     console.log('Hashed password:', hashedPassword);
@@ -21,7 +22,7 @@ export class UserSeeder {
         first_name: faker.person.firstName(),
         last_name: faker.person.lastName(),
         email: faker.internet.email().toLowerCase(),
-        password: hashedPassword,  // Use the fixed hashed password
+        password: hashedPassword,  
         role: faker.helpers.arrayElement(['customer', 'employer', 'admin']),
       });
     }
