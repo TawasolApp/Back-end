@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Type } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/profile.schema';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { NotFoundException } from '@nestjs/common';
@@ -26,8 +26,18 @@ export class ProfilesService {
     return newProfile.save();
   }
 
-  async getProfile(id) {
-    return await this.profileModel.findOne({ _id: id }).exec();
+  async getProfile(_id:Types.ObjectId) {
+    if (!Types.ObjectId.isValid(_id)) {
+        throw new NotFoundException('Invalid profile ID');
+    }
+
+    // console.log('getProfile id : ' + _id);
+    const getProfile= await this.profileModel.findOne({ _id: _id }).exec();
+    // console.log('getProfile ' + getProfile);
+    if (!getProfile) {
+      throw new NotFoundException('Profile not found');
+    }
+    return getProfile;
   }
 
   async updateProfile(updateProfileDto: UpdateProfileDto, _id) {

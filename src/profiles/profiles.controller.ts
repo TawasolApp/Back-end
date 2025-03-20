@@ -34,8 +34,9 @@ export class ProfilesController {
   @Get(':id')  
   @UsePipes(new ValidationPipe())
   getProfile(@Param('id') id: string) {
-    console.log("getProfile controller username  " )
-    return this.profilesService.getProfile(this._id);
+    // console.log("getProfile controller username  " )
+    const get_id = new Types.ObjectId(id);
+    return this.profilesService.getProfile(get_id);
     
   }
 
