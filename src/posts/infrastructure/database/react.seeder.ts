@@ -5,7 +5,7 @@ import { React, ReactDocument } from './react.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Company,
   CompanyDocument,

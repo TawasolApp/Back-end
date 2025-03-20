@@ -5,7 +5,7 @@ import { Post, PostDocument } from './post.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Company,
   CompanyDocument,

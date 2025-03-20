@@ -6,6 +6,7 @@ import {
 } from './infrastructure/database/user-connection.schema';
 import { UserConnectionSeeder } from './infrastructure/database/user-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConnectionsController } from './connections.controller';
 import { ConnectionsService } from './connections.service';
@@ -15,6 +16,7 @@ import { ConnectionsService } from './connections.service';
     MongooseModule.forFeature([
       { name: UserConnection.name, schema: UserConnectionSchema },
     ]),
+    UsersModule,
     AuthModule,
     ProfilesModule,
   ],

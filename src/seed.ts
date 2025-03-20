@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UserSeeder } from './auth/infrastructure/database/user.seeder';
+import { UserSeeder } from './users/infrastructure/database/user.seeder';
 import { UserConnectionSeeder } from './connections/infrastructure/database/user-connection.seeder';
 import { CompanySeeder } from './companies/infrastructure/database/company.seeder';
 import { CompanyConnectionSeeder } from './companies/infrastructure/database/company-connection.seeder';

@@ -11,6 +11,7 @@ import {
 import { CompanySeeder } from './infrastructure/database/company.seeder';
 import { CompanyConnectionSeeder } from './infrastructure/database/company-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { AuthModule } from '../auth/auth.module';
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
     ]),
     AuthModule,
+    UsersModule
   ],
   exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder],
   providers: [CompanySeeder, CompanyConnectionSeeder],
