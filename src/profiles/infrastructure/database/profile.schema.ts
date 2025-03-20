@@ -142,7 +142,7 @@ export class Profile {
   industry: string;
 
   @Prop({ type: [Skill], default: undefined })
-  skill?: Skill[];
+  skills?: Skill[];
 
   @Prop({ type: [Education], default: undefined })
   education?: Education[];

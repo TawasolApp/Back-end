@@ -16,6 +16,8 @@ import { Types } from 'mongoose';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 import { CreateProfileDto } from './dto/create-profile.dto';
+import { Skill } from './infrastructure/database/profile.schema';
+import { SkillDto } from './dto/skill.dto';
 
 @Controller('profile')
 export class ProfilesController {
@@ -84,6 +86,19 @@ export class ProfilesController {
   @UsePipes(new ValidationPipe())
   deleteIndustry() {
     return this.profilesService.deleteIndustry(this._id);
+  }
+
+
+  @Patch('skills')
+  @UsePipes(new ValidationPipe())
+  addSkill(@Body() skill: SkillDto) {
+    return this.profilesService.addSkill(skill,this._id);
+  }
+
+  @Delete('skills/:skill_name')
+  @UsePipes(new ValidationPipe())
+  deleteSkill(@Param('skill_name') skillName: string, ) {
+    return this.profilesService.deleteSkill(skillName, this._id);
   }
 
 }
