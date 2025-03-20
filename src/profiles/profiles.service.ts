@@ -20,8 +20,9 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
         return newProfile.save();
     }
 
-    async getProfile(username: string) {
-        return this.profileModel.findOne({ username }).exec();
+    async getProfile(id) {
+        
+        return await this.profileModel.findOne({ _id:id }).exec();
     }
 
     async updateProfile( updateProfileDto: UpdateProfileDto,_id) {
@@ -54,6 +55,7 @@ constructor(@InjectModel(Profile.name) private profileModel: Model<Profile>) {}
     }
 
     async updateBio(updateBioDto: UpdateProfileDto,_id) {
+        console.log("updateBioDto" +_id)
         const updatedProfile = await this.profileModel.findOneAndUpdate(
             { _id:_id },
             { $set: { bio: updateBioDto.bio } },
