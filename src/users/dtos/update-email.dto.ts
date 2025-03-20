@@ -1,7 +1,11 @@
-import { IsEmail, IsNotEmpty } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
 
 export class UpdateEmailDto {
-  @IsEmail({}, { message: 'Invalid email format' })
-  @IsNotEmpty({ message: 'Email cannot be empty' })
+  @IsEmail()
+  @IsNotEmpty()
   newEmail: string;
+
+  @IsNotEmpty()
+  @MinLength(6)
+  password: string;  // 🔹 Require current password for verification
 }
