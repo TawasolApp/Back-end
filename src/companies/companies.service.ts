@@ -39,19 +39,25 @@ export class CompaniesService {
       });
       return await newCompany.save();
     } catch (error) {
-      throw new InternalServerErrorException('Failed to save connection.');
+      throw new InternalServerErrorException('Failed to create company.');
     }
   }
 
   async updateCompany(companyId: string, updateData: Partial<Company>) {
     try {
       if (!Types.ObjectId.isValid(companyId)) {
+        console.log('ID');
         throw new BadRequestException('Invalid company ID format.');
+      }
+      if (!Object.keys(updateData).length) {
+        throw new BadRequestException('No update data provided.');
       }
       const existingCompany = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
+      console.log('exist');
       if (!existingCompany) {
+        console.log('not found');
         throw new NotFoundException('Company not found.');
       }
       const updatedCompany = await this.companyModel.findByIdAndUpdate(
@@ -59,6 +65,7 @@ export class CompaniesService {
         { $set: updateData },
         { new: true },
       );
+      console.log('update');
       return updatedCompany;
     } catch (error) {
       if (error instanceof HttpException) {
@@ -141,6 +148,19 @@ export class CompaniesService {
       throw new InternalServerErrorException(
         'Failed to get company followers.',
       );
+    }
+  }
+
+  async followCompany(userId: string, companyId: string) {
+    try {
+      const newFollow = new this.companyConnectionModel({
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(userId),
+        company_id: new Types.ObjectId(companyId),
+      });
+      return await newFollow.save();
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to create company.');
     }
   }
 }

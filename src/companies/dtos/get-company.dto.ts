@@ -11,61 +11,66 @@ import {
 } from 'class-validator';
 import { CompanyType } from '../infrastructure/company-type.enum';
 
+// add followers
 export class GetCompanyDto {
   @IsString()
-  readonly companyId: string;
+  companyId: string;
 
   @IsString()
   @IsNotEmpty()
-  readonly name: string;
+  name: string;
 
   @IsBoolean()
   @IsOptional()
-  readonly verified?: boolean;
+  verified?: boolean;
 
   @IsUrl()
   @IsOptional()
-  readonly logo?: string;
+  logo?: string;
 
   @IsString()
   @IsOptional()
-  readonly description?: string;
+  description?: string;
 
   @IsNumber()
   @Min(1, { message: 'Employee count must be positive' })
   @IsOptional()
-  readonly employees?: number;
+  employees?: number;
+
+  @IsNumber()
+  @IsOptional()
+  followers?: number;
 
   @IsEnum(CompanyType)
-  readonly companyType: CompanyType;
+  companyType: CompanyType;
 
   @IsString()
   @IsNotEmpty()
-  readonly industry: string;
+  industry: string;
 
   @IsString()
   @IsOptional()
-  readonly overview?: string;
+  overview?: string;
 
   @IsNumber()
   @Min(1900, { message: 'Founded year must be valid' })
-  readonly founded: number;
+  founded: number;
 
   @IsUrl()
   @IsOptional()
-  readonly website?: string;
+  website?: string;
 
   @IsString()
   @IsOptional()
-  readonly address?: string;
+  address?: string;
 
   @IsUrl()
-  readonly location: string;
+  location: string;
 
   @IsEmail()
-  readonly email: string;
+  email: string;
 
   @IsString()
   @IsOptional()
-  readonly contactNumber?: string;
+  contactNumber?: string;
 }

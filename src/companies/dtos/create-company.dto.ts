@@ -34,10 +34,12 @@ export class CreateCompanyDto {
   readonly employees?: number;
 
   @IsEnum(CompanyType)
+  @IsOptional()
   readonly companyType: CompanyType;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
+  // @IsNotEmpty()
   readonly industry: string;
 
   @IsString()
@@ -45,6 +47,8 @@ export class CreateCompanyDto {
   readonly overview?: string;
 
   @IsNumber()
+  //extra
+  @IsOptional()
   @Min(1900, { message: 'Founded year must be valid' })
   readonly founded: number;
 
@@ -57,9 +61,12 @@ export class CreateCompanyDto {
   readonly address?: string;
 
   @IsUrl()
+  // extra
+  @IsOptional()
   readonly location: string;
 
   @IsEmail()
+  @IsOptional()
   readonly email: string;
 
   @IsString()

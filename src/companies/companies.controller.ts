@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -12,11 +13,12 @@ import {
 } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dtos/create-company.dto';
-import { GetCompaniesDto } from './dtos/get-companies.dto';
 import { GetCompanyDto } from './dtos/get-company.dto';
 import { GetFollowerDto } from './dtos/get-follower.dto';
-import { toDto, toSchema } from './dtos/company.mapper';
+import { toDto, toSchema } from './dtos/get-company.mapper';
+import { toFollowerDto } from './dtos/get-follower.mapper';
 
+// id and valid data checks should be here
 @Controller('companies')
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
@@ -41,22 +43,22 @@ export class CompaniesController {
     );
   }
 
-  // map to dto
   @Get()
   @HttpCode(HttpStatus.OK)
   async getCompanies(
     @Query('industry') industry: string,
-  ): Promise<GetCompaniesDto[]> {
-    return await this.companiesService.getCompanies(industry);
+  ): Promise<GetCompanyDto[]> {
+    const companies = await this.companiesService.getCompanies(industry);
+    return companies.map((company) => toDto(company));
   }
 
-  // map to dto
   @Get('/:companyId')
   @HttpCode(HttpStatus.OK)
   async getCompanyDetails(
     @Param('companyId') companyId: string,
   ): Promise<GetCompanyDto> {
-    return await this.companiesService.getCompanyDetails(companyId);
+    const company = await this.companiesService.getCompanyDetails(companyId);
+    return toDto(company);
   }
 
   @Get('/:companyId/followers')
@@ -64,6 +66,18 @@ export class CompaniesController {
   async getCompanyFollowers(
     @Param('companyId') companyId: string,
   ): Promise<GetFollowerDto[]> {
-    return await this.companiesService.getCompanyFollowers(companyId);
+    const followers =
+      await this.companiesService.getCompanyFollowers(companyId);
+    return followers.map((follower) => toFollowerDto(follower));
+  }
+
+  @Post('/:companyId/follow')
+  @HttpCode(HttpStatus.OK)
+  async followCompany(@Param('companyId') companyId: string) {
+  }
+
+  @Delete('/:companyId/follow')
+  @HttpCode(HttpStatus.OK)
+  async unfollowCompany(@Param('companyId') companyId: string) {
   }
 }

@@ -1,16 +1,16 @@
-import { IsOptional, IsString, IsUrl } from "class-validator";
+import { IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class GetFollowerDto {
-    @IsString()
-    readonly userId: string;
-  
-    @IsString()
-    readonly username: string;
-  
-    @IsOptional()
-    @IsUrl()
-    readonly profilePicture?: string;
-  
-    @IsString()
-    readonly headline: string;
+  @IsString()
+  userId: string;
+
+  @IsString()
+  username: string;
+
+  @IsOptional()
+  @IsUrl()
+  profilePicture?: string;
+
+  @IsString()
+  headline: string;
 }

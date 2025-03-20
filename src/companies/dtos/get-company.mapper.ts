@@ -1,7 +1,6 @@
 import { Company } from '../infrastructure/database/company.schema';
-import { CreateCompanyDto } from '../dtos/create-company.dto';
-import { GetCompanyDto } from '../dtos/get-company.dto';
-import { GetCompaniesDto } from '../dtos/get-companies.dto';
+import { CreateCompanyDto } from './create-company.dto';
+import { GetCompanyDto } from './get-company.dto';
 
 export function toSchema(
   createCompanyDto: Partial<CreateCompanyDto>,

@@ -26,8 +26,8 @@ async function bootstrap() {
 
   await userSeeder.clearUsers();
   await userSeeder.seedUsers(15);
-  // await profileSeeder.clearProfiles();
-  // await profileSeeder.seedProfiles(10);
+  await profileSeeder.clearProfiles();
+  await profileSeeder.seedProfiles(10);
   // await userConnectionSeeder.clearUserConnections();
   // await userConnectionSeeder.seedUserConnections(5);
   await companySeeder.clearCompanies();

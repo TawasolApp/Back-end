@@ -12,6 +12,7 @@ import { CompanySeeder } from './infrastructure/database/company.seeder';
 import { CompanyConnectionSeeder } from './infrastructure/database/company-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
+import { ProfilesModule } from '../profiles/profiles.module';
 import { CompaniesService } from './companies.service';
 import { CompaniesController } from './companies.controller';
 
@@ -22,7 +23,8 @@ import { CompaniesController } from './companies.controller';
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
     ]),
     AuthModule,
-    UsersModule
+    UsersModule,
+    ProfilesModule,
   ],
   exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder],
   providers: [CompanySeeder, CompanyConnectionSeeder, CompaniesService],

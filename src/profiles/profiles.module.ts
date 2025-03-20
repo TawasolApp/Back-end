@@ -15,6 +15,6 @@ import { UsersModule } from '../users/users.module';
     UsersModule, 
   ],
   providers: [ProfileSeeder],
-  exports: [ProfileSeeder],
+  exports: [MongooseModule, ProfileSeeder],
 })
 export class ProfilesModule {}
