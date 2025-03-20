@@ -39,9 +39,12 @@ export class PostsController {
   }
 
   @Get()
-  async getAllPosts(): Promise<GetPostDto[]> {
+  async getAllPosts(
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ): Promise<GetPostDto[]> {
     try {
-      return await this.postsService.getAllPosts();
+      return await this.postsService.getAllPosts(page, limit);
     } catch (error) {
       console.error('Error in getAllPosts controller:', error);
       throw new InternalServerErrorException('Failed to fetch posts');
@@ -105,15 +108,36 @@ export class PostsController {
   }
 
   @Get(':postId/reactions')
-  async getReactions(@Param('postId') postId: string): Promise<ReactionDto[]> {
+  async getReactions(
+    @Param('postId') postId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ): Promise<ReactionDto[]> {
     try {
-      return await this.postsService.getReactions(postId);
+      return await this.postsService.getReactions(postId, page, limit);
     } catch (error) {
       console.error(
         `Error in getReactions controller for postId ${postId}:`,
         error,
       );
       throw new InternalServerErrorException('Failed to fetch reactions');
+    }
+  }
+
+  @Get(':postId/comments')
+  async getComments(
+    @Param('postId') postId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ): Promise<GetCommentDto[]> {
+    try {
+      return await this.postsService.getComments(postId, page, limit);
+    } catch (error) {
+      console.error(
+        `Error in getComments controller for postId ${postId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to fetch comments');
     }
   }
 
@@ -167,19 +191,6 @@ export class PostsController {
         error,
       );
       throw new InternalServerErrorException('Failed to add comment');
-    }
-  }
-
-  @Get(':postId/comments')
-  async getComments(@Param('postId') postId: string): Promise<GetCommentDto[]> {
-    try {
-      return await this.postsService.getComments(postId);
-    } catch (error) {
-      console.error(
-        `Error in getComments controller for postId ${postId}:`,
-        error,
-      );
-      throw new InternalServerErrorException('Failed to fetch comments');
     }
   }
 }

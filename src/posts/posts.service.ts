@@ -105,9 +105,10 @@ export class PostsService {
     return { message: 'Post added successfully' };
   }
 
-  async getAllPosts(): Promise<GetPostDto[]> {
+  async getAllPosts(page: number, limit: number): Promise<GetPostDto[]> {
+    const skip = (page - 1) * limit;
     try {
-      const posts = await this.postModel.find().exec();
+      const posts = await this.postModel.find().skip(skip).limit(limit).exec();
       return Promise.all(posts.map((post) => this.mapToGetPostDto(post)));
     } catch (error) {
       console.error('Error fetching all posts:', error);
@@ -358,11 +359,18 @@ export class PostsService {
     return returned;
   }
 
-  async getReactions(postId: string): Promise<ReactionDto[]> {
+  async getReactions(
+    postId: string,
+    page: number,
+    limit: number,
+  ): Promise<ReactionDto[]> {
     try {
+      const skip = (page - 1) * limit;
       const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
       const reactions = await this.reactModel
         .find({ post_id: objectIdPostId })
+        .skip(skip)
+        .limit(limit)
         .exec();
       if (!reactions || reactions.length === 0) {
         throw new NotFoundException('Reactions not found');
@@ -520,9 +528,16 @@ export class PostsService {
     return newComment;
   }
 
-  async getComments(postId: string): Promise<GetCommentDto[]> {
+  async getComments(
+    postId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetCommentDto[]> {
+    const skip = (page - 1) * limit;
     const comments = await this.commentModel
       .find({ post_id: new Types.ObjectId(postId) })
+      .skip(skip)
+      .limit(limit)
       .exec();
     if (!comments || comments.length === 0) {
       throw new NotFoundException('No comments found');
