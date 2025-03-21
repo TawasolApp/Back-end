@@ -2,9 +2,6 @@ import { IsString, IsOptional, IsArray, IsEnum } from 'class-validator';
 
 export class CreatePostDto {
   @IsString()
-  readonly authorId: string; // Add userId field
-
-  @IsString()
   readonly content: string;
 
   @IsOptional()

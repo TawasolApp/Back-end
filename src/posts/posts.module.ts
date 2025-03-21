@@ -29,6 +29,7 @@ import {
 } from '../profiles/infrastructure/database/profile.schema';
 import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
 import { UsersModule } from '../users/users.module';
+import { JwtModule } from '@nestjs/jwt';
 
 @Module({
   imports: [
@@ -45,6 +46,10 @@ import { UsersModule } from '../users/users.module';
     CompaniesModule,
     ProfilesModule, // Add ProfilesModule to imports
     UsersModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'default_secret',
+      signOptions: { expiresIn: '1h' },
+    }),
   ],
   providers: [
     PostSeeder,

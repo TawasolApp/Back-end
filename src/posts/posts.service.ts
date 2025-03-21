@@ -3,6 +3,7 @@ import {
   NotFoundException,
   InternalServerErrorException,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -40,10 +41,14 @@ export class PostsService {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>, // Inject Comment model
   ) {}
 
-  async editPost(id: string, editPostDto: EditPostDto): Promise<Post> {
-    const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
-    if (!post) {
-      throw new NotFoundException('Post not found');
+  async editPost(
+    id: string,
+    editPostDto: EditPostDto,
+    userId: string,
+  ): Promise<Post> {
+    const post = await this.findPostById(id);
+    if (post.author_id.toString() !== userId) {
+      throw new UnauthorizedException('User not authorized to edit this post');
     }
 
     if (editPostDto.authorId) {
@@ -72,16 +77,19 @@ export class PostsService {
     return post;
   }
 
-  async addPost(createPostDto: CreatePostDto): Promise<{ message: string }> {
+  async addPost(
+    createPostDto: CreatePostDto,
+    author_id: string,
+  ): Promise<{ message: string }> {
     let authorType: 'User' | 'Company';
     const authorProfile = await this.profileModel
-      .find({ _id: new Types.ObjectId(createPostDto.authorId) })
+      .find({ _id: new Types.ObjectId(author_id) })
       .exec();
     if (authorProfile) {
       authorType = 'User';
     } else {
       const authorCompany = await this.companyModel
-        .find({ _id: new Types.ObjectId(createPostDto.authorId) })
+        .find({ _id: new Types.ObjectId(author_id) })
         .exec();
       if (authorCompany) {
         authorType = 'Company';
@@ -98,18 +106,24 @@ export class PostsService {
         (tag) => new Types.ObjectId(tag),
       ),
       visibility: createPostDto.visibility,
-      author_id: createPostDto.authorId,
+      author_id: author_id,
       author_type: authorType,
     });
     const savedPost = await createdPost.save();
     return { message: 'Post added successfully' };
   }
 
-  async getAllPosts(page: number, limit: number): Promise<GetPostDto[]> {
+  async getAllPosts(
+    page: number,
+    limit: number,
+    userId: string,
+  ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
     try {
       const posts = await this.postModel.find().skip(skip).limit(limit).exec();
-      return Promise.all(posts.map((post) => this.mapToGetPostDto(post)));
+      return Promise.all(
+        posts.map((post) => this.mapToGetPostDto(post, userId)),
+      );
     } catch (error) {
       console.error('Error fetching all posts:', error);
       if (error.name === 'NetworkError') {
@@ -121,13 +135,13 @@ export class PostsService {
     }
   }
 
-  async getPost(id: string): Promise<GetPostDto> {
+  async getPost(id: string, userId: string): Promise<GetPostDto> {
     try {
-      const post = await this.postModel.findById(id).exec();
+      const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
-      return this.mapToGetPostDto(post); // Use mapToGetPostDto method
+      return this.mapToGetPostDto(post, userId); // Use mapToGetPostDto method
     } catch (error) {
       console.error(`Error fetching post with id ${id}:`, error);
       if (error instanceof NotFoundException) {
@@ -140,33 +154,50 @@ export class PostsService {
     }
   }
 
-  async getUserPosts(userId: string): Promise<GetPostDto[]> {
+  async getUserPosts(
+    searchedUserId: string,
+    userId: string,
+  ): Promise<GetPostDto[]> {
     try {
+      console.log(searchedUserId);
       const posts = await this.postModel
-        .find({ author_id: new Types.ObjectId(userId) })
+        .find({ author_id: searchedUserId })
         .exec();
-      return Promise.all(posts.map((post) => this.mapToGetPostDto(post)));
+      if (!posts) {
+        throw new NotFoundException('No posts found');
+      }
+      console.log(posts);
+      return Promise.all(
+        posts.map((post) => this.mapToGetPostDto(post, userId)),
+      );
     } catch (error) {
-      console.error(`Error fetching posts for user with id ${userId}:`, error);
+      console.error(
+        `Error fetching posts for user with id ${searchedUserId}:`,
+        error,
+      );
       throw new InternalServerErrorException('Failed to fetch user posts');
     }
   }
 
   private async mapToGetPostDto(
     post: PostDocument,
-    userId?: string,
+    userId: string,
   ): Promise<GetPostDto> {
     let authorProfile;
     let authorProfilePicture;
     if (post.author_type === 'User') {
-      authorProfile = await this.profileModel.findById(post.author_id).exec();
+      authorProfile = await this.profileModel
+        .findById(new Types.ObjectId(post.author_id))
+        .exec();
       if (!authorProfile) {
         console.error(`User profile with id ${post.author_id} not found`);
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.profile_picture;
     } else if (post.author_type === 'Company') {
-      authorProfile = await this.companyModel.findById(post.author_id).exec();
+      authorProfile = await this.companyModel
+        .findById(new Types.ObjectId(post.author_id))
+        .exec();
       if (!authorProfile) {
         console.error(`Company profile with id ${post.author_id} not found`);
         throw new NotFoundException('Author profile not found');
@@ -178,8 +209,8 @@ export class PostsService {
     if (userId) {
       const userReaction = await this.reactModel
         .findOne({
-          post: post._id,
-          user: new Types.ObjectId(userId),
+          post_id: post._id, // Ensure the correct field is used
+          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
         })
         .exec();
       userReactionType = userReaction
@@ -206,8 +237,14 @@ export class PostsService {
     };
   }
 
-  async deletePost(id: string): Promise<void> {
+  async deletePost(id: string, userId: string): Promise<void> {
     try {
+      const post = await this.findPostById(id);
+      if (post.author_id.toString() !== userId) {
+        throw new UnauthorizedException(
+          'User not authorized to delete this post',
+        );
+      }
       const result = await this.postModel.deleteOne({ _id: id }).exec();
       if (result.deletedCount === 0) {
         throw new NotFoundException('Post not found');
@@ -363,6 +400,7 @@ export class PostsService {
     postId: string,
     page: number,
     limit: number,
+    userId: string,
   ): Promise<ReactionDto[]> {
     try {
       const skip = (page - 1) * limit;
@@ -457,14 +495,16 @@ export class PostsService {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
         .exec();
-
+      console.log(savedPosts);
       if (!savedPosts || savedPosts.length === 0) {
         throw new NotFoundException('No saved posts found');
       }
 
       return Promise.all(
         savedPosts.map(async (save) => {
-          const post = await this.postModel.findById(save.post_id).exec();
+          const post = await this.postModel
+            .findById(new Types.ObjectId(save.post_id))
+            .exec();
           if (!post) {
             throw new NotFoundException('Post not found');
           }
@@ -532,6 +572,7 @@ export class PostsService {
     postId: string,
     page: number,
     limit: number,
+    userId: string, // Add userId parameter
   ): Promise<GetCommentDto[]> {
     const skip = (page - 1) * limit;
     const comments = await this.commentModel
@@ -544,12 +585,13 @@ export class PostsService {
     }
 
     return Promise.all(
-      comments.map((comment) => this.mapToGetCommentDto(comment)),
+      comments.map((comment) => this.mapToGetCommentDto(comment, userId)), // Pass userId to mapToGetCommentDto
     );
   }
 
   private async mapToGetCommentDto(
     comment: CommentDocument,
+    userId: string, // Add userId parameter
   ): Promise<GetCommentDto> {
     let authorProfile;
     let authorProfilePicture;
@@ -578,6 +620,19 @@ export class PostsService {
       } else {
         console.log(`Company profile with id ${comment.author_id} not found`);
       }
+    }
+
+    let userReactionType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null = null;
+    if (userId) {
+      const userReaction = await this.reactModel
+        .findOne({
+          post_id: comment._id, // Ensure the correct field is used
+          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+        })
+        .exec();
+      userReactionType = userReaction
+        ? (userReaction.react_type as 'Like' | 'Love' | 'Laugh' | 'Clap')
+        : null;
     }
 
     const replies = await Promise.all(
@@ -640,6 +695,24 @@ export class PostsService {
       reactCount: comment.react_count,
       timestamp: comment.commented_at.toISOString(),
       taggedUsers: comment.tags.map((tag) => tag.toString()),
+      reactType: userReactionType, // Add reaction type to DTO
     };
+  }
+
+  private async findPostById(id: string): Promise<PostDocument> {
+    try {
+      const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
+      if (!post) {
+        console.error(`Error finding post with id ${id}`);
+        throw new NotFoundException('Post not found with ');
+      }
+      return post;
+    } catch (error) {
+      console.error(`Error finding post with id ${id}:`, error);
+      if (error.name === 'CastError') {
+        throw new NotFoundException('Invalid post id format');
+      }
+      throw new InternalServerErrorException('Failed to find post');
+    }
   }
 }
