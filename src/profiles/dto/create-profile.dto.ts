@@ -155,10 +155,10 @@ class PlanStatistics {
 }
 
 export class CreateProfileDto {
-  @ApiProperty({ description: 'Username', example: 'johndoe' })
+  @ApiProperty({ description: 'name', example: 'ziad asar' })
   @IsNotEmpty()
   @IsString()
-  username: string;
+  name: string;
 
   @ApiPropertyOptional({ description: 'Profile picture URL', example: 'https://example.com/profile.jpg' })
   @IsOptional()

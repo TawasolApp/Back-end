@@ -117,8 +117,8 @@ export class Profile {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true , default: () => new Types.ObjectId()})
   _id: Types.ObjectId;
   
-  @Prop({ required: true ,unique: true})
-  username: string;
+  @Prop({ required: true })
+  name: string;
 
   @Prop()
   profile_picture: string;

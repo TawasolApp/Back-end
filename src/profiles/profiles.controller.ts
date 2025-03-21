@@ -21,7 +21,7 @@ import { SkillDto } from './dto/skill.dto';
 
 @Controller('profile')
 export class ProfilesController {
-  private _id: Types.ObjectId = new Types.ObjectId('67db6804aa310fcb0bc4da07');
+  private _id: Types.ObjectId = new Types.ObjectId('67dd4df9ac9fdb53ffab78b7');
 
   constructor(private profilesService: ProfilesService) {}
 
@@ -35,7 +35,13 @@ export class ProfilesController {
   @UsePipes(new ValidationPipe())
   getProfile(@Param('id') id: string) {
     // console.log("getProfile controller username  " )
-    const get_id = new Types.ObjectId(id);
+    let get_id: Types.ObjectId;
+    try {
+      get_id = new Types.ObjectId(id);
+    } catch (error) {
+      
+      return { error: "Invalid profile ID" }; // Handle the error case
+    }
     return this.profilesService.getProfile(get_id);
     
   }
