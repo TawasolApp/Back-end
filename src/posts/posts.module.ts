@@ -19,9 +19,16 @@ import { PostsService } from './posts.service';
 import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
-import { Company, CompanySchema } from '../companies/infrastructure/database/company.schema'; // Correct import path
-import { Profile, ProfileSchema } from '../profiles/infrastructure/database/profile.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../companies/infrastructure/database/company.schema'; // Correct import path
+import {
+  Profile,
+  ProfileSchema,
+} from '../profiles/infrastructure/database/profile.schema';
 import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -37,6 +44,7 @@ import { ProfilesModule } from '../profiles/profiles.module'; // Import Profiles
     AuthModule,
     CompaniesModule,
     ProfilesModule, // Add ProfilesModule to imports
+    UsersModule,
   ],
   providers: [
     PostSeeder,

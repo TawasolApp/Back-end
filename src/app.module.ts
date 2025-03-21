@@ -14,9 +14,32 @@ import { AdminModule } from './admin/admin.module';
 import { PaymentsModule } from './payments/payments.module';
 import { ConfigModule } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
+import { PassportModule } from '@nestjs/passport';
+import { UsersModule } from './users/users.module';
 
 @Module({
-  imports: [ConfigModule.forRoot(), MongooseModule.forRoot(process.env.MONGO_URI || ''), AuthModule, ProfilesModule, ConnectionsModule, MessagesModule, NotificationsModule, CompaniesModule, JobsModule, PostsModule, SecurityModule, AdminModule, PaymentsModule],
+  imports: [
+    ConfigModule.forRoot(),
+    MongooseModule.forRoot(process.env.MONGO_URI || ''),
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'default_secret', // Ensure you use environment variables
+      signOptions: { expiresIn: '1h' },
+    }),
+    PassportModule.register({ defaultStrategy: 'jwt' }),
+    AuthModule,
+    ProfilesModule,
+    ConnectionsModule,
+    MessagesModule,
+    NotificationsModule,
+    CompaniesModule,
+    JobsModule,
+    PostsModule,
+    SecurityModule,
+    AdminModule,
+    PaymentsModule,
+    UsersModule,
+  ],
   controllers: [AppController],
   providers: [AppService],
 })
