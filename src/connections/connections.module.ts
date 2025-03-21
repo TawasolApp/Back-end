@@ -6,13 +6,16 @@ import {
 } from './infrastructure/database/user-connection.schema';
 import { UserConnectionSeeder } from './infrastructure/database/user-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
+import { UsersModule } from '../users/users.module'
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: UserConnection.name, schema: UserConnectionSchema },
     ]),
+   
     AuthModule,
+    UsersModule,
   ],
   exports: [MongooseModule, UserConnectionSeeder], // allows other modules to access user schema if needed
   providers: [UserConnectionSeeder],

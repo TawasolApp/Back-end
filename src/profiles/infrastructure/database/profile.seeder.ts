@@ -5,7 +5,7 @@ import { Profile, ProfileDocument } from './profile.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
@@ -16,7 +16,7 @@ export class ProfileSeeder {
   ) {}
 
   async seedProfiles(count: number): Promise<void> {
-    const users = await this.userModel.find().select('_id').lean();
+    const users = await this.userModel.find().lean();
 
     if (users.length === 0) {
       console.log('No users found. Seeding aborted.');
@@ -24,13 +24,12 @@ export class ProfileSeeder {
     }
 
     for (let i = 0; i < count; i++) {
-      const randomUser = faker.helpers.arrayElement(users);
-
+      const randomUser = users[i % users.length]; // Ensure unique user ID by cycling through users
       await this.profileModel.updateOne(
         { _id: randomUser._id },
         {
           _id: randomUser._id,
-          username: faker.internet.username(),
+          name: `${randomUser.first_name} ${randomUser.last_name}`, // Correctly concatenate first and last name
           profile_picture: faker.image.avatar(),
           cover_photo: faker.image.url(),
           resume: faker.internet.url(),

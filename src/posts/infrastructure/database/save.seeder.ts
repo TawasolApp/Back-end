@@ -5,7 +5,7 @@ import { Save, SaveDocument } from './save.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Post,
   PostDocument,
@@ -35,14 +35,23 @@ export class SaveSeeder {
       const user = faker.helpers.arrayElement(users);
       const post = faker.helpers.arrayElement(posts);
 
-      saves.push({
-        user: user._id,
-        post: post._id,
-      });
+      const existingSave = await this.saveModel
+        .findOne({
+          user_id: user._id,
+          post_id: post._id,
+        })
+        .lean();
+
+      if (!existingSave) {
+        saves.push({
+          user_id: user._id,
+          post_id: post._id,
+        });
+      }
     }
 
     await this.saveModel.insertMany(saves);
-    console.log(`${count} saves seeded successfully!`);
+    console.log(`${saves.length} saves seeded successfully!`);
   }
 
   async clearSaves(): Promise<void> {

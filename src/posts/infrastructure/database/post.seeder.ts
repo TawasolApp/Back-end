@@ -1,16 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Post, PostDocument } from './post.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Company,
   CompanyDocument,
 } from '../../../companies/infrastructure/database/company.schema';
 import { faker } from '@faker-js/faker';
+import { React, ReactDocument } from './react.schema';
+import { Comment, CommentDocument } from './comment.schema';
 
 @Injectable()
 export class PostSeeder {
@@ -18,6 +20,8 @@ export class PostSeeder {
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(React.name) private reactModel: Model<ReactDocument>,
+    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
   ) {}
 
   async seedPosts(count: number): Promise<void> {
@@ -47,18 +51,18 @@ export class PostSeeder {
           : [];
 
       posts.push({
-        creator_type: isUser ? 'User' : 'Company',
-        creator: creator._id,
+        author_type: isUser ? 'User' : 'Company',
+        author_id: creator._id,
         text: faker.lorem.paragraph(),
         media: [faker.image.url()],
-        react_count: faker.number.int({ min: 0, max: 100 }),
-        comment_count: faker.number.int({ min: 0, max: 50 }),
-        share_count: faker.number.int({ min: 0, max: 20 }),
+        react_count: 0,
+        comment_count: 0,
+        share_count: 0,
         tags,
         visibility: faker.helpers.arrayElement([
-          'public',
-          'connections',
-          'private',
+          'Public',
+          'Connections',
+          'Private',
         ]),
       });
     }
@@ -70,5 +74,28 @@ export class PostSeeder {
   async clearPosts(): Promise<void> {
     await this.postModel.deleteMany({});
     console.log('Posts collection cleared.');
+  }
+
+  async updatePostCounts() {
+    const posts = await this.postModel.find().exec();
+    for (const post of posts) {
+      const reactCount = await this.reactModel
+        .countDocuments({ post_id: post._id })
+        .exec();
+      post.react_count = reactCount;
+      await post.save();
+    }
+  }
+
+  async updateCommentCounts(): Promise<void> {
+    const posts = await this.postModel.find().exec();
+    for (const post of posts) {
+      const commentCount = await this.commentModel
+        .countDocuments({ post_id: post._id })
+        .exec();
+      post.comment_count = commentCount;
+      await post.save();
+    }
+    console.log('Post comment counts updated.');
   }
 }

@@ -8,11 +8,13 @@ import { ProfileSeeder } from './infrastructure/database/profile.seeder';
 import { AuthModule } from '../auth/auth.module';
 import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
+import { UsersModule } from '../users/users.module'; 
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Profile.name, schema: ProfileSchema }]),
     AuthModule,
+    UsersModule, 
   ],
   providers: [ProfileSeeder, ProfilesService],
   exports: [ProfileSeeder],
