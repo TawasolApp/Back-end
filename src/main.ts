@@ -8,6 +8,8 @@ async function bootstrap() {
 
   app.useGlobalPipes(new ValidationPipe());
 
+  app.enableCors();
+  
   const config = new DocumentBuilder()
     .setTitle('Tawasol API')
     .setDescription('API Documentation for Tawasol App - Linkedin Clone')
