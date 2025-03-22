@@ -80,7 +80,7 @@ export class PostsService {
   async addPost(
     createPostDto: CreatePostDto,
     author_id: string,
-  ): Promise<{ message: string }> {
+  ): Promise<GetPostDto> {
     let authorType: 'User' | 'Company';
     const authorProfile = await this.profileModel
       .find({ _id: new Types.ObjectId(author_id) })
@@ -110,7 +110,7 @@ export class PostsService {
       author_type: authorType,
     });
     const savedPost = await createdPost.save();
-    return { message: 'Post added successfully' };
+    return this.mapToGetPostDto(savedPost, author_id);
   }
 
   async getAllPosts(
@@ -205,7 +205,14 @@ export class PostsService {
       authorProfilePicture = authorProfile.logo;
     }
 
-    let userReactionType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null = null;
+    let userReactionType:
+      | 'Like'
+      | 'Love'
+      | 'Funny'
+      | 'Celebrate'
+      | 'Insightful'
+      | 'Support'
+      | null = null;
     if (userId) {
       const userReaction = await this.reactModel
         .findOne({
@@ -214,7 +221,13 @@ export class PostsService {
         })
         .exec();
       userReactionType = userReaction
-        ? (userReaction.react_type as 'Like' | 'Love' | 'Laugh' | 'Clap')
+        ? (userReaction.react_type as
+            | 'Like'
+            | 'Love'
+            | 'Funny'
+            | 'Celebrate'
+            | 'Insightful'
+            | 'Support')
         : null;
     }
 
@@ -231,7 +244,7 @@ export class PostsService {
       authorBio: authorProfile.bio, // Fetch authorBio from profile
       content: post.text,
       media: post.media,
-      likes: post.react_count,
+      reactCounts: post.react_count, // Use the new reactCounts structure
       comments: post.comment_count,
       shares: post.share_count,
       taggedUsers: post.tags.map((tag) => tag.toString()),
@@ -350,10 +363,9 @@ export class PostsService {
             react_type: reactionType,
             post_type: updateReactionsDto.postType,
           });
-          // await newReaction.save();
           console.log(`Added ${reactionType} reaction`);
           if (post) {
-            post.react_count++;
+            post.react_count[reactionType]++;
             await post.save();
             newReaction.post_type = 'Post';
             await newReaction.save();
@@ -365,10 +377,10 @@ export class PostsService {
             await newReaction.save();
           }
         } else {
-          console.log(`Reaction already exists for post`);
-          throw new InternalServerErrorException(
-            `Reaction already exists for post`,
-          );
+          // Update the existing reaction
+          existingReaction.react_type = reactionType;
+          await existingReaction.save();
+          console.log(`Updated reaction to ${reactionType} for post`);
         }
       } else {
         const existingReaction = await this.reactModel.findOne({
@@ -381,7 +393,7 @@ export class PostsService {
         if (existingReaction) {
           await this.reactModel.deleteOne({ _id: existingReaction._id });
           if (post) {
-            post.react_count--;
+            post.react_count[reactionType]--;
             await post.save();
           }
           if (comment) {
@@ -462,7 +474,13 @@ export class PostsService {
       postId: reaction.post_id.toString(),
       authorId: reaction.user_id.toString(),
       authorType: reaction.user_type as 'User' | 'Company',
-      type: reaction.react_type as 'Like' | 'Love' | 'Laugh' | 'Clap',
+      type: reaction.react_type as
+        | 'Like'
+        | 'Love'
+        | 'Funny'
+        | 'Celebrate'
+        | 'Insightful'
+        | 'Support',
       authorName: authorProfile.name,
       authorPicture: authorProfilePicture,
       authorBio: authorProfile.bio,
@@ -651,7 +669,14 @@ export class PostsService {
       }
     }
 
-    let userReactionType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null = null;
+    let userReactionType:
+      | 'Like'
+      | 'Love'
+      | 'Funny'
+      | 'Celebrate'
+      | 'Insightful'
+      | 'Support'
+      | null = null;
     if (userId) {
       const userReaction = await this.reactModel
         .findOne({
@@ -660,7 +685,13 @@ export class PostsService {
         })
         .exec();
       userReactionType = userReaction
-        ? (userReaction.react_type as 'Like' | 'Love' | 'Laugh' | 'Clap')
+        ? (userReaction.react_type as
+            | 'Like'
+            | 'Love'
+            | 'Funny'
+            | 'Celebrate'
+            | 'Insightful'
+            | 'Support')
         : null;
     }
 

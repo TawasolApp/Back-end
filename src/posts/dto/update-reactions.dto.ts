@@ -1,12 +1,4 @@
-import {
-  IsObject,
-  IsInt,
-  Min,
-  Max,
-  IsBoolean,
-  isEnum,
-  IsEnum,
-} from 'class-validator';
+import { IsObject, IsBoolean, IsEnum } from 'class-validator';
 
 export class Reactions {
   @IsBoolean()
@@ -16,10 +8,16 @@ export class Reactions {
   Love: boolean;
 
   @IsBoolean()
-  Laugh: boolean;
+  Funny: boolean;
 
   @IsBoolean()
-  Clap: boolean;
+  Celebrate: boolean;
+
+  @IsBoolean()
+  Insightful: boolean;
+
+  @IsBoolean()
+  Support: boolean;
 }
 
 export class UpdateReactionsDto {

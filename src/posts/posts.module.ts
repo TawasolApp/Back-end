@@ -15,7 +15,6 @@ import { ReactSeeder } from './infrastructure/database/react.seeder';
 import { SaveSeeder } from './infrastructure/database/save.seeder';
 import { ShareSeeder } from './infrastructure/database/share.seeder';
 import { PostsController } from './posts.controller';
-import { PostsService } from './posts.service';
 import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';

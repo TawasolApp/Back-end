@@ -71,8 +71,10 @@ export class ReactSeeder {
         react_type: faker.helpers.arrayElement([
           'Like',
           'Love',
-          'Laugh',
-          'Clap',
+          'Funny',
+          'Celebrate',
+          'Insightful',
+          'Support',
         ]),
         post_type: 'Post',
       });
@@ -126,8 +128,10 @@ export class ReactSeeder {
         react_type: faker.helpers.arrayElement([
           'Like',
           'Love',
-          'Laugh',
-          'Clap',
+          'Funny',
+          'Celebrate',
+          'Insightful',
+          'Support',
         ]),
         post_type: 'Comment',
       });

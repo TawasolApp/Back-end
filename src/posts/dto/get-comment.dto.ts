@@ -72,6 +72,13 @@ export class GetCommentDto {
   @IsString({ each: true })
   taggedUsers: string[];
 
-  @IsEnum(['Like', 'Love', 'Laugh', 'Clap', null])
-  reactType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null;
+  @IsEnum(['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support', null])
+  reactType:
+    | 'Like'
+    | 'Love'
+    | 'Funny'
+    | 'Celebrate'
+    | 'Insightful'
+    | 'Support'
+    | null;
 }

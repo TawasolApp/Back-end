@@ -7,6 +7,7 @@ import {
   IsISO8601,
   ValidateNested,
   IsOptional,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Repost } from '../infrastructure/database/repost.schema';
@@ -34,8 +35,15 @@ export class GetPostDto {
   @IsString({ each: true })
   media: string[];
 
-  @IsInt()
-  likes: number;
+  @IsObject()
+  reactCounts: {
+    Like: number;
+    Love: number;
+    Funny: number;
+    Celebrate: number;
+    Insightful: number;
+    Support: number;
+  };
 
   @IsInt()
   comments: number;
@@ -53,8 +61,15 @@ export class GetPostDto {
   @IsEnum(['User', 'Company'])
   authorType: 'User' | 'Company';
 
-  @IsEnum(['Like', 'Love', 'Laugh', 'Clap'])
-  reactType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null;
+  @IsEnum(['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support'])
+  reactType:
+    | 'Like'
+    | 'Love'
+    | 'Funny'
+    | 'Celebrate'
+    | 'Insightful'
+    | 'Support'
+    | null;
 
   @IsBoolean()
   isSaved: boolean;

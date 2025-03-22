@@ -8,5 +8,5 @@ export class ReactionDto {
   authorName: string;
   authorPicture: string;
   authorBio: string;
-  type: 'Like' | 'Love' | 'Laugh' | 'Clap';
+  type: 'Like' | 'Love' | 'Funny' | 'Celebrate' | 'Insightful' | 'Support';
 }
