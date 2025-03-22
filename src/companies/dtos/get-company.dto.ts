@@ -9,6 +9,7 @@ import {
   Min,
   IsEnum,
   Max,
+  isNotEmpty,
 } from 'class-validator';
 import { CompanyType } from '../infrastructure/company-type.enum';
 import { CompanySize } from '../infrastructure/company-size.enum';
@@ -22,8 +23,12 @@ export class GetCompanyDto {
   name: string;
 
   @IsBoolean()
+  @IsNotEmpty()
+  isFollowing: boolean
+
+  @IsBoolean()
   @IsOptional()
-  verified?: boolean;
+  isVerified?: boolean;
 
   @IsUrl()
   @IsOptional()

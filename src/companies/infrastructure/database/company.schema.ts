@@ -48,7 +48,7 @@ export class Company {
   @Prop()
   founded: number;
 
-  @Prop()
+  @Prop({ unique: true })
   website: string;
 
   @Prop()
@@ -57,10 +57,10 @@ export class Company {
   @Prop()
   location: string;
 
-  @Prop()
+  @Prop({ unique: true })
   email: string;
 
-  @Prop()
+  @Prop({ unique: true })
   contact_number: string;
 }
 

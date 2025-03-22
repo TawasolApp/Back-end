@@ -28,7 +28,7 @@ export function toUpdateCompanySchema(
 ): Partial<Company> {
   return {
     name: updateCompanyDto.name,
-    verified: updateCompanyDto.verified,
+    verified: updateCompanyDto.isVerified,
     logo: updateCompanyDto.logo,
     description: updateCompanyDto.description,
     company_size: updateCompanyDto.companySize,
@@ -49,7 +49,7 @@ export function toGetCompanyDto(company: Partial<Company>): GetCompanyDto {
 
   if (company._id) dto.companyId = company._id.toString();
   if (company.name) dto.name = company.name;
-  if (company.verified !== undefined) dto.verified = company.verified;
+  if (company.verified !== undefined) dto.isVerified = company.verified;
   if (company.logo) dto.logo = company.logo;
   if (company.description) dto.description = company.description;
   if (company.followers != undefined) dto.followers = company.followers;

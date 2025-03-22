@@ -19,7 +19,7 @@ export class UpdateCompanyDto {
 
   @IsBoolean()
   @IsOptional()
-  readonly verified?: boolean;
+  readonly isVerified?: boolean;
 
   @IsUrl()
   @IsOptional()

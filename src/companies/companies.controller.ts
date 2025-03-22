@@ -16,16 +16,10 @@ import {
 } from '@nestjs/common';
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dtos/create-company.dto';
+import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { GetCompanyDto } from './dtos/get-company.dto';
 import { GetFollowerDto } from './dtos/get-follower.dto';
-import {
-  toCreateCompanySchema,
-  toUpdateCompanySchema,
-  toGetCompanyDto,
-} from './dtos/company.mapper';
-import { toGetFollowerDto } from './dtos/get-follower.mapper';
 import { Types } from 'mongoose';
-import { UpdateCompanyDto } from './dtos/update-company.dto';
 
 @Controller('companies')
 export class CompaniesController {
@@ -35,10 +29,9 @@ export class CompaniesController {
   @HttpCode(HttpStatus.CREATED)
   async createCompany(@Body() createCompanyDto: CreateCompanyDto) {
     try {
-      const newCompany = await this.companiesService.createCompany(
-        toCreateCompanySchema(createCompanyDto),
-      );
-      return toGetCompanyDto(newCompany);
+      const newCompanyDto =
+        await this.companiesService.createCompany(createCompanyDto);
+      return newCompanyDto;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -60,11 +53,11 @@ export class CompaniesController {
       if (!updateCompanyDto || !Object.keys(updateCompanyDto).length) {
         throw new BadRequestException('No update data provided.');
       }
-      const updatedCompany = await this.companiesService.updateCompany(
+      const updatedCompanyDto = await this.companiesService.updateCompany(
         companyId,
-        toUpdateCompanySchema(updateCompanyDto),
+        updateCompanyDto,
       );
-      return toGetCompanyDto(updatedCompany);
+      return updatedCompanyDto;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -91,9 +84,11 @@ export class CompaniesController {
     }
   }
 
-  @Get()
+  // remove user ID from parameters, will be passed in token
+  @Get('/:userId')
   @HttpCode(HttpStatus.OK)
   async filterCompanies(
+    @Param('userId') userId: string,
     @Query('name') name?: string,
     @Query('industry') industry?: string,
   ): Promise<GetCompanyDto[]> {
@@ -105,11 +100,11 @@ export class CompaniesController {
       }
       name = name?.trim();
       industry = industry?.trim();
-      const companies = await this.companiesService.filterCompanies(
+      const companiesDto = await this.companiesService.filterCompanies(userId,
         name,
         industry,
       );
-      return companies.map((company) => toGetCompanyDto(company));
+      return companiesDto;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -120,17 +115,22 @@ export class CompaniesController {
     }
   }
 
-  @Get('/:companyId')
+  // remove user ID from parameters, will be passed in token
+  @Get('/:companyId/:userId')
   @HttpCode(HttpStatus.OK)
   async getCompanyDetails(
     @Param('companyId') companyId: string,
+    @Param('userId') userId: string,
   ): Promise<GetCompanyDto> {
     try {
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
       }
-      const company = await this.companiesService.getCompanyDetails(companyId);
-      return toGetCompanyDto(company);
+      const companyDto = await this.companiesService.getCompanyDetails(
+        companyId,
+        userId,
+      );
+      return companyDto;
     } catch (error) {
       if (error instanceof HttpException) {
         throw error;
@@ -139,30 +139,31 @@ export class CompaniesController {
     }
   }
 
-  @Get('/:companyId/followers')
-  @HttpCode(HttpStatus.OK)
-  async getCompanyFollowers(
-    @Param('companyId') companyId: string,
-  ): Promise<GetFollowerDto[]> {
-    try {
-      if (!Types.ObjectId.isValid(companyId)) {
-        throw new BadRequestException('Invalid company ID format.');
-      }
-      const followers =
-        await this.companiesService.getCompanyFollowers(companyId);
-      return followers.map(toGetFollowerDto);
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Failed to get company followers.',
-      );
-    }
-  }
+  // @Get('/:companyId/followers')
+  // @HttpCode(HttpStatus.OK)
+  // async getCompanyFollowers(
+  //   @Param('companyId') companyId: string,
+  // ): Promise<GetFollowerDto[]> {
+  //   try {
+  //     if (!Types.ObjectId.isValid(companyId)) {
+  //       throw new BadRequestException('Invalid company ID format.');
+  //     }
+  //     const followersDto =
+  //       await this.companiesService.getCompanyFollowers(companyId);
+  //     return followersDto;
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to get company followers.',
+  //     );
+  //   }
+  // }
 
+  // remove user ID from parameters, will be passed in token
   @Post('/:companyId/:userId/follow')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.CREATED)
   async followCompany(
     @Param('companyId') companyId: string,
     @Param('userId') userId: string,
@@ -180,6 +181,7 @@ export class CompaniesController {
     }
   }
 
+  // remove user ID from parameters, will be passed in token
   @Delete('/:companyId/:userId/unfollow')
   @HttpCode(HttpStatus.NO_CONTENT)
   async unfollowCompany(
