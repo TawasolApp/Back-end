@@ -8,6 +8,7 @@ import {
   IsOptional,
   Min,
   IsEnum,
+  Max,
 } from 'class-validator';
 import { CompanyType } from '../infrastructure/company-type.enum';
 import { CompanySize } from '../infrastructure/company-size.enum';
@@ -47,6 +48,8 @@ export class UpdateCompanyDto {
 
   @IsNumber()
   @IsOptional()
+  @Min(1900, { message: 'Founded year must be valid' })
+  @Max(new Date().getFullYear(), { message: 'Founded year must be valid' })
   readonly founded?: number;
 
   @IsUrl()
