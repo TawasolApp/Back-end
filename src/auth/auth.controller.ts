@@ -11,10 +11,10 @@ export class AuthController {
     return this.authService.login(loginDto.email, loginDto.password);
   }
 
-  @Get('verify')
-  async verify(@Headers('Authorization') token: string) {
-    const tokenWithoutBearer = token.split(' ')[1]; 
-    const decoded = await this.authService.verifyToken(tokenWithoutBearer);
-    return decoded;
-  }
+  // @Get('verify')
+  // async verify(@Headers('Authorization') token: string) {
+  //   const tokenWithoutBearer = token.split(' ')[1]; 
+  //   const decoded = await this.authService.verifyToken(tokenWithoutBearer);
+  //   return decoded;
+  // }
 }

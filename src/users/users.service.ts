@@ -45,31 +45,38 @@ export class UsersService {
 
   async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
     console.log("🔹 Password Update Request for User ID:", userId);
-
+  
     const { currentPassword, newPassword } = updatePasswordDto;
     const user = await this.userModel.findById(new Types.ObjectId(userId));
-
+  
     if (!user) {
       console.log("❌ User not found for ID:", userId);
       throw new NotFoundException('User not found');
     }
-
+  
     console.log("✅ User Found:", user.email);
-
+  
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isPasswordValid) {
       console.log("❌ Incorrect current password");
       throw new BadRequestException('Incorrect current password');
     }
-
+  
+    // 🔹 Check if the new password is the same as the current password
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+    if (isSamePassword) {
+      console.log("❌ New password cannot be the same as the current password");
+      throw new BadRequestException('New password must be different from the current password');
+    }
+  
     const hashedNewPassword = await bcrypt.hash(newPassword, 10);
     user.password = hashedNewPassword;
     await user.save();
-
+  
     console.log("✅ Password updated successfully");
     return { message: 'Password updated successfully' };
   }
-
+  
   async findByEmail(email: string): Promise<UserDocument | null> {
     return this.userModel.findOne({ email });
   }
