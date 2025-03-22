@@ -1,10 +1,13 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
   HttpCode,
+  HttpException,
   HttpStatus,
+  InternalServerErrorException,
   Param,
   Patch,
   Post,
@@ -15,10 +18,15 @@ import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { GetCompanyDto } from './dtos/get-company.dto';
 import { GetFollowerDto } from './dtos/get-follower.dto';
-import { toDto, toSchema } from './dtos/get-company.mapper';
-import { toFollowerDto } from './dtos/get-follower.mapper';
+import {
+  toCreateCompanySchema,
+  toUpdateCompanySchema,
+  toGetCompanyDto,
+} from './dtos/company.mapper';
+import { toGetFollowerDto } from './dtos/get-follower.mapper';
+import { Types } from 'mongoose';
+import { UpdateCompanyDto } from './dtos/update-company.dto';
 
-// id and valid data checks should be here
 @Controller('companies')
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
@@ -26,30 +34,90 @@ export class CompaniesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createCompany(@Body() createCompanyDto: CreateCompanyDto) {
-    return await this.companiesService.createCompany(
-      toSchema(createCompanyDto),
-    );
+    try {
+      const newCompany = await this.companiesService.createCompany(
+        toCreateCompanySchema(createCompanyDto),
+      );
+      return toGetCompanyDto(newCompany);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to create company.');
+    }
   }
 
-  @Put('/:companyId')
+  @Patch('/:companyId')
   @HttpCode(HttpStatus.OK)
   async updateCompany(
     @Param('companyId') companyId: string,
-    @Body() createCompanyDto: CreateCompanyDto,
+    @Body() updateCompanyDto: UpdateCompanyDto,
   ) {
-    return await this.companiesService.updateCompany(
-      companyId,
-      toSchema(createCompanyDto),
-    );
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      if (!updateCompanyDto || !Object.keys(updateCompanyDto).length) {
+        throw new BadRequestException('No update data provided.');
+      }
+      const updatedCompany = await this.companiesService.updateCompany(
+        companyId,
+        toUpdateCompanySchema(updateCompanyDto),
+      );
+      return toGetCompanyDto(updatedCompany);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to update company details.',
+      );
+    }
+  }
+
+  @Delete('/:companyId')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCompany(@Param('companyId') companyId: string) {
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      await this.companiesService.deleteCompany(companyId);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to delete company.');
+    }
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
-  async getCompanies(
-    @Query('industry') industry: string,
+  async filterCompanies(
+    @Query('name') name?: string,
+    @Query('industry') industry?: string,
   ): Promise<GetCompanyDto[]> {
-    const companies = await this.companiesService.getCompanies(industry);
-    return companies.map((company) => toDto(company));
+    try {
+      if (!name && !industry) {
+        throw new BadRequestException(
+          'At least one filter (name or industry) must be provided.',
+        );
+      }
+      name = name?.trim();
+      industry = industry?.trim();
+      const companies = await this.companiesService.filterCompanies(
+        name,
+        industry,
+      );
+      return companies.map((company) => toGetCompanyDto(company));
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of companies.',
+      );
+    }
   }
 
   @Get('/:companyId')
@@ -57,8 +125,18 @@ export class CompaniesController {
   async getCompanyDetails(
     @Param('companyId') companyId: string,
   ): Promise<GetCompanyDto> {
-    const company = await this.companiesService.getCompanyDetails(companyId);
-    return toDto(company);
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const company = await this.companiesService.getCompanyDetails(companyId);
+      return toGetCompanyDto(company);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to get company details.');
+    }
   }
 
   @Get('/:companyId/followers')
@@ -66,18 +144,58 @@ export class CompaniesController {
   async getCompanyFollowers(
     @Param('companyId') companyId: string,
   ): Promise<GetFollowerDto[]> {
-    const followers =
-      await this.companiesService.getCompanyFollowers(companyId);
-    return followers.map((follower) => toFollowerDto(follower));
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const followers =
+        await this.companiesService.getCompanyFollowers(companyId);
+      return followers.map(toGetFollowerDto);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to get company followers.',
+      );
+    }
   }
 
-  @Post('/:companyId/follow')
-  @HttpCode(HttpStatus.OK)
-  async followCompany(@Param('companyId') companyId: string) {
+  @Post('/:companyId/:userId/follow')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async followCompany(
+    @Param('companyId') companyId: string,
+    @Param('userId') userId: string,
+  ) {
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      await this.companiesService.followCompany(userId, companyId);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to follow company.');
+    }
   }
 
-  @Delete('/:companyId/follow')
-  @HttpCode(HttpStatus.OK)
-  async unfollowCompany(@Param('companyId') companyId: string) {
+  @Delete('/:companyId/:userId/unfollow')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unfollowCompany(
+    @Param('companyId') companyId: string,
+    @Param('userId') userId: string,
+  ) {
+    try {
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      await this.companiesService.unfollowCompany(userId, companyId);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to unfollow company.');
+    }
   }
 }

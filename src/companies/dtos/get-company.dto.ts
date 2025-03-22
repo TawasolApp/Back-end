@@ -8,10 +8,11 @@ import {
   IsOptional,
   Min,
   IsEnum,
+  Max,
 } from 'class-validator';
 import { CompanyType } from '../infrastructure/company-type.enum';
+import { CompanySize } from '../infrastructure/company-size.enum';
 
-// add followers
 export class GetCompanyDto {
   @IsString()
   companyId: string;
@@ -32,17 +33,17 @@ export class GetCompanyDto {
   @IsOptional()
   description?: string;
 
-  @IsNumber()
-  @Min(1, { message: 'Employee count must be positive' })
+  @IsEnum(CompanySize)
   @IsOptional()
-  employees?: number;
+  companySize?: CompanySize;
 
   @IsNumber()
-  @IsOptional()
-  followers?: number;
+  @IsNotEmpty()
+  followers: number;
 
   @IsEnum(CompanyType)
-  companyType: CompanyType;
+  @IsOptional()
+  companyType?: CompanyType;
 
   @IsString()
   @IsNotEmpty()
@@ -54,7 +55,9 @@ export class GetCompanyDto {
 
   @IsNumber()
   @Min(1900, { message: 'Founded year must be valid' })
-  founded: number;
+  @Max(new Date().getFullYear(), { message: 'Founded year must be valid' })
+  @IsOptional()
+  founded?: number;
 
   @IsUrl()
   @IsOptional()
@@ -65,10 +68,12 @@ export class GetCompanyDto {
   address?: string;
 
   @IsUrl()
-  location: string;
+  @IsOptional()
+  location?: string;
 
   @IsEmail()
-  email: string;
+  @IsOptional()
+  email?: string;
 
   @IsString()
   @IsOptional()

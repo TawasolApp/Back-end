@@ -8,15 +8,18 @@ import {
   IsOptional,
   Min,
   IsEnum,
-  Max,
 } from 'class-validator';
 import { CompanyType } from '../infrastructure/company-type.enum';
 import { CompanySize } from '../infrastructure/company-size.enum';
 
-export class CreateCompanyDto {
+export class UpdateCompanyDto {
   @IsString()
-  @IsNotEmpty()
-  readonly name: string;
+  @IsOptional()
+  readonly name?: string;
+
+  @IsBoolean()
+  @IsOptional()
+  readonly verified?: boolean;
 
   @IsUrl()
   @IsOptional()
@@ -27,16 +30,16 @@ export class CreateCompanyDto {
   readonly description?: string;
 
   @IsEnum(CompanySize)
-  @IsNotEmpty()
-  readonly companySize: CompanySize;
+  @IsOptional()
+  readonly companySize?: CompanySize;
 
   @IsEnum(CompanyType)
-  @IsNotEmpty()
-  readonly companyType: CompanyType;
+  @IsOptional()
+  readonly companyType?: CompanyType;
 
   @IsString()
-  @IsNotEmpty()
-  readonly industry: string;
+  @IsOptional()
+  readonly industry?: string;
 
   @IsString()
   @IsOptional()
@@ -44,8 +47,6 @@ export class CreateCompanyDto {
 
   @IsNumber()
   @IsOptional()
-  @Min(1900, { message: 'Founded year must be valid' })
-  @Max(new Date().getFullYear(), { message: 'Founded year must be valid' })
   readonly founded?: number;
 
   @IsUrl()

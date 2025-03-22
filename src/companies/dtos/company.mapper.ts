@@ -1,16 +1,16 @@
 import { Company } from '../infrastructure/database/company.schema';
 import { CreateCompanyDto } from './create-company.dto';
 import { GetCompanyDto } from './get-company.dto';
+import { UpdateCompanyDto } from './update-company.dto';
 
-export function toSchema(
+export function toCreateCompanySchema(
   createCompanyDto: Partial<CreateCompanyDto>,
 ): Partial<Company> {
   return {
     name: createCompanyDto.name,
-    verified: createCompanyDto.verified,
     logo: createCompanyDto.logo,
     description: createCompanyDto.description,
-    employees: createCompanyDto.employees,
+    company_size: createCompanyDto.companySize,
     company_type: createCompanyDto.companyType,
     industry: createCompanyDto.industry,
     overview: createCompanyDto.overview,
@@ -23,7 +23,28 @@ export function toSchema(
   };
 }
 
-export function toDto(company: Partial<Company>): GetCompanyDto {
+export function toUpdateCompanySchema(
+  updateCompanyDto: Partial<UpdateCompanyDto>,
+): Partial<Company> {
+  return {
+    name: updateCompanyDto.name,
+    verified: updateCompanyDto.verified,
+    logo: updateCompanyDto.logo,
+    description: updateCompanyDto.description,
+    company_size: updateCompanyDto.companySize,
+    company_type: updateCompanyDto.companyType,
+    industry: updateCompanyDto.industry,
+    overview: updateCompanyDto.overview,
+    founded: updateCompanyDto.founded,
+    website: updateCompanyDto.website,
+    address: updateCompanyDto.address,
+    location: updateCompanyDto.location,
+    email: updateCompanyDto.email,
+    contact_number: updateCompanyDto.contactNumber,
+  };
+}
+
+export function toGetCompanyDto(company: Partial<Company>): GetCompanyDto {
   const dto: Partial<GetCompanyDto> = {};
 
   if (company._id) dto.companyId = company._id.toString();
@@ -31,7 +52,8 @@ export function toDto(company: Partial<Company>): GetCompanyDto {
   if (company.verified !== undefined) dto.verified = company.verified;
   if (company.logo) dto.logo = company.logo;
   if (company.description) dto.description = company.description;
-  if (company.employees !== undefined) dto.employees = company.employees;
+  if (company.followers != undefined) dto.followers = company.followers;
+  if (company.company_size) dto.companySize = company.company_size;
   if (company.company_type) dto.companyType = company.company_type;
   if (company.industry) dto.industry = company.industry;
   if (company.overview) dto.overview = company.overview;

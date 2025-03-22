@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -33,65 +34,85 @@ export class CompaniesService {
 
   async createCompany(companyData: Partial<Company>) {
     try {
+      const existingName = await this.companyModel
+        .findOne({ name: companyData.name })
+        .lean();
+      if (existingName) {
+        throw new ConflictException(
+          `The name "${companyData.name}" is already in use by another company.`,
+        );
+      }
       const newCompany = new this.companyModel({
         _id: new Types.ObjectId(),
+        followers: 0,
+        verified: false,
         ...companyData,
       });
       return await newCompany.save();
     } catch (error) {
-      throw new InternalServerErrorException('Failed to create company.');
+      throw error;
     }
   }
 
   async updateCompany(companyId: string, updateData: Partial<Company>) {
     try {
-      if (!Types.ObjectId.isValid(companyId)) {
-        console.log('ID');
-        throw new BadRequestException('Invalid company ID format.');
-      }
-      if (!Object.keys(updateData).length) {
-        throw new BadRequestException('No update data provided.');
-      }
       const existingCompany = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
-      console.log('exist');
       if (!existingCompany) {
-        console.log('not found');
         throw new NotFoundException('Company not found.');
+      }
+      const existingName = await this.companyModel
+        .findOne({ name: updateData.name })
+        .lean();
+      if (existingName) {
+        throw new ConflictException(
+          `The name "${updateData.name}" is already in use by another company.`,
+        );
       }
       const updatedCompany = await this.companyModel.findByIdAndUpdate(
         companyId,
         { $set: updateData },
         { new: true },
       );
-      console.log('update');
+      if (!updatedCompany) {
+        throw new InternalServerErrorException(
+          'Failed to update company details.',
+        );
+      }
       return updatedCompany;
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Failed to update company details.',
-      );
+      throw error;
     }
   }
 
-  async getCompanies(industry: string): Promise<CompanyDocument[]> {
+  async deleteCompany(companyId: string) {
+    await this.companyModel
+      .findByIdAndDelete(new Types.ObjectId(companyId))
+      .lean();
+    return;
+  }
+
+  async filterCompanies(
+    name?: string,
+    industry?: string,
+  ): Promise<CompanyDocument[]> {
+    const filter: any = {};
+    if (name) {
+      filter.name = { $regex: name, $options: 'i' };
+    }
+    if (industry) {
+      filter.industry = { $regex: industry, $options: 'i' };
+    }
     const companies = await this.companyModel
-      .find({
-        industry: industry,
-      })
-      .select('_id name logo followers description')
+      .find(filter)
+      .select('_id name logo industry followers')
       .lean();
     return companies;
   }
 
   async getCompanyDetails(companyId: string): Promise<CompanyDocument> {
     try {
-      if (!Types.ObjectId.isValid(companyId)) {
-        throw new BadRequestException('Invalid company ID format.');
-      }
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
@@ -100,18 +121,12 @@ export class CompaniesService {
       }
       return company;
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to get company details.');
+      throw error;
     }
   }
 
   async getCompanyFollowers(companyId: string): Promise<any[]> {
     try {
-      if (!Types.ObjectId.isValid(companyId)) {
-        throw new BadRequestException('Invalid company ID format.');
-      }
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
@@ -129,7 +144,7 @@ export class CompaniesService {
 
           const profile = await this.profileModel
             .findById(userId)
-            .select('name profile_picture headline')
+            .select('_id name profile_picture headline')
             .lean();
 
           return {
@@ -142,12 +157,7 @@ export class CompaniesService {
       );
       return result;
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Failed to get company followers.',
-      );
+      throw error;
     }
   }
 
@@ -158,9 +168,85 @@ export class CompaniesService {
         user_id: new Types.ObjectId(userId),
         company_id: new Types.ObjectId(companyId),
       });
-      return await newFollow.save();
+      await newFollow.save();
+      await this.companyModel.findByIdAndUpdate(
+        companyId,
+        { $inc: { followers: 1 } },
+        { new: true },
+      );
     } catch (error) {
-      throw new InternalServerErrorException('Failed to create company.');
+      throw error;
     }
   }
+
+  async unfollowCompany(userId: string, companyId: string) {
+    try {
+      const deletedFollow = await this.companyConnectionModel.findOneAndDelete({
+        user_id: new Types.ObjectId(userId),
+        company_id: new Types.ObjectId(companyId),
+      });
+      if (!deletedFollow) {
+        throw new NotFoundException(
+          'Follow record not found. User is not following this company.',
+        );
+      }
+      await this.companyModel.findByIdAndUpdate(
+        companyId,
+        { $inc: { followers: -1 } },
+        { new: true },
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // async followCompany(userId: string, companyId: string): Promise<Company> {
+  //   try {
+  //     const newFollow = new this.companyConnectionModel({
+  //       _id: new Types.ObjectId(),
+  //       user_id: new Types.ObjectId(userId),
+  //       company_id: new Types.ObjectId(companyId),
+  //     });
+  //     await newFollow.save();
+  //     const followedCompany = await this.companyModel.findByIdAndUpdate(
+  //       companyId,
+  //       { $inc: { followers: 1 } },
+  //       { new: true },
+  //     );
+  //     if (!followedCompany) {
+  //       throw new InternalServerErrorException('Failed to follow company.');
+  //     }
+  //     return followedCompany;
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
+
+  // async unfollowCompany(userId: string, companyId: string): Promise<Company> {
+  //   try {
+  //     const deletedFollow = await this.companyConnectionModel.findOneAndDelete({
+  //       user_id: new Types.ObjectId(userId),
+  //       company_id: new Types.ObjectId(companyId),
+  //     });
+
+  //     if (!deletedFollow) {
+  //       throw new NotFoundException(
+  //         'Follow record not found. User is not following this company.',
+  //       );
+  //     }
+  //     const unfollowedCompany = await this.companyModel.findByIdAndUpdate(
+  //       companyId,
+  //       { $inc: { followers: -1 } },
+  //       { new: true },
+  //     );
+
+  //     if (!unfollowedCompany) {
+  //       throw new InternalServerErrorException('Failed to unfollow company.');
+  //     }
+
+  //     return unfollowedCompany;
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
 }

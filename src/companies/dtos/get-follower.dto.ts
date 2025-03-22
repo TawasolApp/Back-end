@@ -2,15 +2,16 @@ import { IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class GetFollowerDto {
   @IsString()
-  userId: string;
+  readonly userId: string;
 
   @IsString()
-  username: string;
+  readonly username: string;
 
-  @IsOptional()
   @IsUrl()
-  profilePicture?: string;
+  @IsOptional()
+  readonly profilePicture?: string;
 
   @IsString()
-  headline: string;
+  @IsOptional()
+  readonly headline?: string;
 }
