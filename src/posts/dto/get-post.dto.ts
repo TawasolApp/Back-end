@@ -1,4 +1,13 @@
-import { IsString, IsArray, IsInt, IsBoolean, IsEnum, IsISO8601, ValidateNested, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  IsInt,
+  IsBoolean,
+  IsEnum,
+  IsISO8601,
+  ValidateNested,
+  IsOptional,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { Repost } from '../infrastructure/database/repost.schema';
 
@@ -44,8 +53,11 @@ export class GetPostDto {
   @IsEnum(['User', 'Company'])
   authorType: 'User' | 'Company';
 
-  @IsEnum(['Like', 'Love' , 'Laugh', 'Clap'])
-  reactType : 'Like' | 'Love' | 'Laugh' | 'Clap' | null;
+  @IsEnum(['Like', 'Love', 'Laugh', 'Clap'])
+  reactType: 'Like' | 'Love' | 'Laugh' | 'Clap' | null;
+
+  @IsBoolean()
+  isSaved: boolean;
 
   @IsOptional()
   @ValidateNested()
@@ -55,5 +67,3 @@ export class GetPostDto {
   @IsISO8601()
   timestamp: string; // ISO 8601 format
 }
-
-

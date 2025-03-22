@@ -30,6 +30,7 @@ import {
 import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
+import { PostsService } from './posts.service';
 
 @Module({
   imports: [

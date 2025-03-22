@@ -286,4 +286,26 @@ export class PostsController {
       throw new InternalServerErrorException('Failed to fetch user posts');
     }
   }
+
+  @Delete('save/:postId')
+  @UseGuards(JwtAuthGuard)
+  async unsavePost(@Param('postId') postId: string, @Req() req: Request) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userIdFromToken = req.user['sub'];
+    try {
+      const unsaveResult = await this.postsService.unsavePost(
+        postId,
+        userIdFromToken,
+      );
+      return unsaveResult;
+    } catch (error) {
+      console.error(
+        `Error in unsavePost controller for postId ${postId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to unsave post');
+    }
+  }
 }

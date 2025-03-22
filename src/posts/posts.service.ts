@@ -218,6 +218,11 @@ export class PostsService {
         : null;
     }
 
+    const isSaved = await this.saveModel.exists({
+      post_id: post._id,
+      user_id: new Types.ObjectId(userId),
+    });
+
     return {
       id: post.id.toString(),
       authorId: post.author_id.toString(),
@@ -234,6 +239,7 @@ export class PostsService {
       authorType: post.author_type as 'User' | 'Company',
       reactType: userReactionType, // Add logic to determine if the post is liked
       timestamp: post.posted_at,
+      isSaved: !!isSaved || false, // Add isSaved property, return false if not saved
     };
   }
 
@@ -488,6 +494,29 @@ export class PostsService {
 
     await save.save();
     return { message: 'Post saved successfully' };
+  }
+
+  async unsavePost(
+    postId: string,
+    userId: string,
+  ): Promise<{ message: string }> {
+    const post = await this.postModel
+      .findById(new Types.ObjectId(postId))
+      .exec();
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    const save = await this.saveModel.findOneAndDelete({
+      post_id: new Types.ObjectId(postId),
+      user_id: new Types.ObjectId(userId),
+    });
+
+    if (!save) {
+      throw new NotFoundException('Saved post not found');
+    }
+
+    return { message: 'Post unsaved successfully' };
   }
 
   async getSavedPosts(userId: string): Promise<GetPostDto[]> {
