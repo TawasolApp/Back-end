@@ -1,12 +1,15 @@
-import { IsString, IsOptional, IsArray, IsEnum } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsArray,
+  IsEnum,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class EditPostDto {
   @IsOptional()
   @IsString()
-  readonly authorId?: string;
-
-  @IsOptional()
-  @IsString()
+  @IsNotEmpty()
   readonly content?: string;
 
   @IsOptional()

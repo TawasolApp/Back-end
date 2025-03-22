@@ -1,7 +1,14 @@
-import { IsString, IsArray, ArrayNotEmpty, IsOptional } from 'class-validator';
+import {
+  IsString,
+  IsArray,
+  ArrayNotEmpty,
+  IsOptional,
+  IsNotEmpty,
+} from 'class-validator';
 
 export class CreateCommentDto {
   @IsString()
+  @IsNotEmpty()
   content: string;
 
   @IsArray()

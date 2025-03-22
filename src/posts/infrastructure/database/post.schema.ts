@@ -8,7 +8,7 @@ export type PostDocument = Post & Document;
   versionKey: false,
 })
 export class Post {
-  @Prop({ type: Types.ObjectId, auto: true })
+  // @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })

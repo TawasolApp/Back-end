@@ -25,6 +25,7 @@ import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EditCommentDto } from './dto/edit-comment.dto';
 
 @Controller('posts')
 export class PostsController {
@@ -306,6 +307,56 @@ export class PostsController {
         error,
       );
       throw new InternalServerErrorException('Failed to unsave post');
+    }
+  }
+
+  @Patch('comment/:commentId')
+  @UsePipes(new ValidationPipe())
+  @UseGuards(JwtAuthGuard)
+  async editComment(
+    @Param('commentId') commentId: string,
+    @Body() editCommentDto: EditCommentDto,
+    @Req() req: Request,
+  ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userIdFromToken = req.user['sub'];
+    try {
+      const updatedComment = await this.postsService.editComment(
+        commentId,
+        editCommentDto,
+        userIdFromToken,
+      );
+      return updatedComment;
+    } catch (error) {
+      console.error(
+        `Error in editComment controller for commentId ${commentId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to edit comment');
+    }
+  }
+
+  @Delete('comment/:commentId')
+  @UseGuards(JwtAuthGuard)
+  async deleteComment(
+    @Param('commentId') commentId: string,
+    @Req() req: Request,
+  ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userIdFromToken = req.user['sub'];
+    try {
+      await this.postsService.deleteComment(commentId, userIdFromToken);
+      return { message: 'Comment deleted successfully' };
+    } catch (error) {
+      console.error(
+        `Error in deleteComment controller for commentId ${commentId}:`,
+        error,
+      );
+      throw new InternalServerErrorException('Failed to delete comment');
     }
   }
 }

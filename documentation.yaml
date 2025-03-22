@@ -1,0 +1,685 @@
+openapi: 3.0.0
+info:
+  title: Post API Documentation
+  version: 1.0.0
+  description: API documentation for Module 4 (News Feed & Posts).
+servers:
+  - url: https://api.example.com/v1
+    description: Production Server
+  - url: http://localhost:3000
+    description: Local Development Server
+security:
+  - BearerAuth: []
+paths:
+  /posts:
+    get:
+      summary: Get news feed
+      description: Fetches latest posts from connections and followed users in chronological order.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          description: Number of posts per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: A list of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetPostDto'
+        '500':
+          description: Failed to fetch posts
+
+    post:
+      summary: Create a new post
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostDto'
+      responses:
+        '201':
+          description: Post created successfully
+        '500':
+          description: Failed to create post.
+  /posts/user/{userId}:
+    get:
+      summary: Get user's posts
+      description: Fetches latest posts from users.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          description: Id of the User you want to get their posts.
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: A list of posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetPostDto'
+        '500':
+          description: Failed to fetch posts
+
+  /posts/{postId}:
+    get:
+      summary: Get a post by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPostDto'
+        '404':
+          description: Post not found
+        '500':
+          description: Failed to fetch post
+    patch:
+      summary: Edit a post by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditPostDto'
+      responses:
+        '200':
+          description: Post updated successfully
+        '404':
+          description: Post not found
+        '500':
+          description: Failed to edit post
+    delete:
+      summary: Delete a post by ID
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Post deleted successfully
+        '404':
+          description: Post not found
+        '500':
+          description: Failed to delete post
+  /posts/react/{postId}:
+    post:
+      summary: Update reactions for a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReactionsDto'
+      responses:
+        '200':
+          description: Reactions updated successfully
+        '404':
+          description: Post or user not found
+        '500':
+          description: Failed to update reactions
+  /posts/reactions/{postId}:
+    get:
+      summary: Get reactions for a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of reactions per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of reactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReactionDto'
+        '404':
+          description: Reactions not found
+        '500':
+          description: Failed to fetch reactions
+  /posts/save/{postId}:
+    post:
+      summary: Save a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Post saved successfully
+        '400':
+          description: Post already saved
+        '404':
+          description: Post not found
+        '500':
+          description: Failed to save post
+    delete:
+      summary: Delete a save
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: save delete successfully
+        '404':
+          description: save not found
+        '500':
+          description: Failed to delete save
+  /posts/saved:
+    get:
+      summary: Get saved posts for a user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of saved posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetPostDto'
+        '404':
+          description: No saved posts found
+        '500':
+          description: Failed to fetch saved posts
+
+  /posts/comment/{postId}:
+    post:
+      summary: Add a comment to a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentDto'
+      responses:
+        '200':
+          description: Comment added successfully
+        '404':
+          description: Post or user not found
+        '500':
+          description: Failed to add comment
+  /posts/{postId}/reply/{commentId}:
+    post:
+      summary: Reply to a comment
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentDto'
+      responses:
+        '201':
+          description: Reply added successfully
+  /posts/{postId}/repost:
+    post:
+      summary: Repost a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Repost'
+      responses:
+        '201':
+          description: Repost added successfully
+  /posts/{postId}/reposts:
+    get:
+      summary: Get reposts for a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of UserId who reposted the post
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Repost'
+  /posts/comments/{postId}:
+    get:
+      summary: Get comments for a post
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of comments per page
+          required: false
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of comments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetCommentDto'
+        '404':
+          description: Comments not found
+        '500':
+          description: Failed to fetch comments
+  /posts/comments/{commentId}:
+    patch:
+      summary: Edit a comment
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentDto'
+      responses:
+        '200':
+          description: Comment updated successfully
+        '404':
+          description: Comment not found
+        '500':
+          description: Failed to update comment
+    delete:
+      summary: Delete a comment
+      security:
+        - BearerAuth: []
+      parameters:
+        - in: path
+          name: postId
+          required: true
+          schema:
+            type: string
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Comment deleted successfully
+        '404':
+          description: Comment not found
+        '500':
+          description: Failed to delete comment
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreatePostDto:
+      type: object
+      properties:
+        authorId:
+          type: string
+        content:
+          type: string
+        media:
+          type: array
+          items:
+            type: string
+        taggedUsers:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: ['Public', 'Connections', 'Private']
+    GetPostDto:
+      type: object
+      properties:
+        id:
+          type: string
+        authorId:
+          type: string
+        authorName:
+          type: string
+        authorPicture:
+          type: string
+        authorBio:
+          type: string
+        content:
+          type: string
+        media:
+          type: array
+          items:
+            type: string
+        reactCounts:
+          type: object
+          properties:
+            Like:
+              type: integer
+            Love:
+              type: integer
+            Funny:
+              type: integer
+            Celebrate:
+              type: integer
+            Insightful:
+              type: integer
+            Support:
+              type: integer
+        comments:
+          type: integer
+        shares:
+          type: integer
+        taggedUsers:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: ['Public', 'Connections', 'Private']
+        authorType:
+          type: string
+          enum: ['User', 'Company']
+        reactType:
+          type: string
+          enum:
+            [
+              'Like',
+              'Love',
+              'Funny',
+              'Celebrate',
+              'Insightful',
+              'Support',
+              'null',
+            ]
+        timestamp:
+          type: string
+          format: date-time
+        isSaved:
+          type: boolean
+    EditPostDto:
+      type: object
+      properties:
+        authorId:
+          type: string
+        content:
+          type: string
+        media:
+          type: array
+          items:
+            type: string
+        taggedUsers:
+          type: array
+          items:
+            type: string
+        visibility:
+          type: string
+          enum: ['Public', 'Connections', 'Private']
+    UpdateReactionsDto:
+      type: object
+      properties:
+        reactions:
+          type: object
+          properties:
+            Like:
+              type: boolean
+            Love:
+              type: boolean
+            Funny:
+              type: boolean
+            Celebrate:
+              type: boolean
+            Insightful:
+              type: boolean
+            Support:
+              type: boolean
+        postType:
+          type: string
+          enum: ['Post', 'Comment']
+    ReactionDto:
+      type: object
+      properties:
+        likeId:
+          type: string
+        postId:
+          type: string
+        authorId:
+          type: string
+        authorType:
+          type: string
+          enum: ['User', 'Company']
+        type:
+          type: string
+          enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support']
+        authorName:
+          type: string
+        authorPicture:
+          type: string
+        authorBio:
+          type: string
+    CreateCommentDto:
+      type: object
+      properties:
+        content:
+          type: string
+        tagged:
+          type: array
+          items:
+            type: string
+    GetCommentDto:
+      type: object
+      properties:
+        id:
+          type: string
+        postId:
+          type: string
+        authorId:
+          type: string
+        authorName:
+          type: string
+        authorPicture:
+          type: string
+        authorBio:
+          type: string
+        authorType:
+          type: string
+          enum: ['User', 'Company']
+        content:
+          type: string
+        replies:
+          type: array
+          items:
+            type: object
+            properties:
+              authorId:
+                type: string
+              authorName:
+                type: string
+              authorPicture:
+                type: string
+              authorBio:
+                type: string
+              text:
+                type: string
+              reactCount:
+                type: integer
+              taggedUsers:
+                type: array
+                items:
+                  type: string
+        reactCount:
+          type: integer
+        reactType:
+          type: string
+          enum:
+            [
+              'Like',
+              'Love',
+              'Funny',
+              'Celebrate',
+              'Insightful',
+              'Support',
+              'null',
+            ]
+        timestamp:
+          type: string
+          format: date-time
+        taggedUsers:
+          type: array
+          items:
+            type: string
+    Repost:
+      type: object
+      properties:
+        authorId:
+          type: string
+        postId:
+          type: string
+        content:
+          type: string
+          nullable: true
+        taggedUsers:
+          type: array
+          items:
+            type: string
+          nullable: true
+        visibility:
+          type: string
+          enum: ['Public', 'Connections', 'Private']
+        authorType:
+          type: string
+          enum: ['User', 'Company']

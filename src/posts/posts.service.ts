@@ -29,6 +29,7 @@ import {
 } from './infrastructure/database/comment.schema';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
+import { EditCommentDto } from './dto/edit-comment.dto';
 
 @Injectable()
 export class PostsService {
@@ -51,16 +52,16 @@ export class PostsService {
       throw new UnauthorizedException('User not authorized to edit this post');
     }
 
-    if (editPostDto.authorId) {
+    if (userId) {
       let authorType: 'User' | 'Company';
       const authorProfile = await this.profileModel
-        .find({ _id: new Types.ObjectId(editPostDto.authorId) })
+        .find({ _id: new Types.ObjectId(userId) })
         .exec();
       if (authorProfile) {
         authorType = 'User';
       } else {
         const authorCompany = await this.companyModel
-          .find({ _id: new Types.ObjectId(editPostDto.authorId) })
+          .find({ _id: new Types.ObjectId(userId) })
           .exec();
         if (authorCompany) {
           authorType = 'Company';
@@ -68,7 +69,7 @@ export class PostsService {
           throw new NotFoundException('Author not found');
         }
       }
-      post.author_id = new Types.ObjectId(editPostDto.authorId);
+      post.author_id = new Types.ObjectId(userId);
       post.author_type = authorType;
     }
 
@@ -268,6 +269,12 @@ export class PostsService {
       if (result.deletedCount === 0) {
         throw new NotFoundException('Post not found');
       }
+
+      // Delete related data
+      await this.reactModel.deleteMany({ post_id: id }).exec();
+      await this.commentModel.deleteMany({ post_id: id }).exec();
+      await this.saveModel.deleteMany({ post_id: id }).exec();
+      // await this.shareModel.deleteMany({ post_id: id }).exec();
     } catch (error) {
       console.error(`Error deleting post with id ${id}:`, error);
       if (error instanceof NotFoundException) {
@@ -774,5 +781,45 @@ export class PostsService {
       }
       throw new InternalServerErrorException('Failed to find post');
     }
+  }
+
+  async editComment(
+    commentId: string,
+    editCommentDto: EditCommentDto,
+    userId: string,
+  ): Promise<Comment> {
+    const comment = await this.commentModel.findById(
+      new Types.ObjectId(commentId),
+    );
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+    const authorId = comment.author_id.toString();
+    if (authorId !== userId) {
+      throw new UnauthorizedException(
+        'User not authorized to edit this comment',
+      );
+    }
+    Object.assign(comment, editCommentDto);
+    return await comment.save();
+  }
+
+  async deleteComment(commentId: string, userId: string): Promise<void> {
+    const comment = await this.commentModel.findById(commentId);
+    if (!comment) {
+      throw new NotFoundException('Comment not found');
+    }
+    const authorId = comment.author_id.toString();
+    if (authorId !== userId) {
+      throw new UnauthorizedException(
+        'User not authorized to edit this comment',
+      );
+    }
+
+    const reactions = await this.reactModel.find({ post_id: commentId });
+    for (const reaction of reactions) {
+      await reaction.deleteOne();
+    }
+    await comment.deleteOne();
   }
 }
