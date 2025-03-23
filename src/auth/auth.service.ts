@@ -14,7 +14,8 @@ import { User, UserDocument } from '../users/infrastructure/database/user.schema
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
-
+import { OAuth2Client } from 'google-auth-library';
+const googleClient = new OAuth2Client();
 @Injectable()
 export class AuthService {
   constructor(
@@ -61,6 +62,8 @@ export class AuthService {
     };
   }
 
+  
+
   async login(email: string, password: string) {
     const user = await this.userModel.findOne({ email });
     if (!user) {
@@ -85,6 +88,45 @@ export class AuthService {
     };
     
   }
+
+
+  async googleLogin(idToken: string) {
+    const ticket = await googleClient.verifyIdToken({
+      idToken,
+      // audience: not provided for now
+    });
+
+    const payload = ticket.getPayload();
+    if (!payload || !payload.email) {
+      throw new BadRequestException('Invalid Google token');
+    }
+
+    const email = payload.email;
+    const firstName = payload.given_name;
+    const lastName = payload.family_name;
+
+    let user = await this.userModel.findOne({ email });
+
+   
+    if (!user) {
+      user = new this.userModel({
+        first_name: firstName || '',
+        last_name: lastName || '',
+        email,
+        password: '', 
+        isVerified: true,
+      });
+      await user.save();
+    }
+
+    const token = this.jwtService.sign({ sub: user._id });
+
+    return {
+      access_token: token,
+      message: 'Login successful',
+    };
+  }
+
 
   private async verifyCaptcha(token: string): Promise<boolean> {
     // Allow test token for local testing (Postman etc.)
@@ -161,6 +203,50 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired token');
     }
   }
+  
+  async forgotPassword(email: string) {
+    const user = await this.userModel.findOne({ email });
+  
+    if (!user) {
+      throw new NotFoundException('Email not found');
+    }
+  
+    if (!user.isVerified) {
+      throw new BadRequestException('Email not verified');
+    }
+  
+    const token = this.jwtService.sign({ sub: user._id }, { expiresIn: '15m' });
+  
+    await this.mailerService.sendPasswordResetEmail(user.email, token);
+  
+    return { message: 'Password reset email sent' };
+  }
+  
+
+  async resetPassword(token: string, newPassword: string) {
+    try {
+      const { sub: userId } = await this.jwtService.verify(token);
+  
+      const user = await this.userModel.findById(userId);
+      if (!user) throw new NotFoundException('User not found');
+  
+      const isSame = await bcrypt.compare(newPassword, user.password);
+      if (isSame) {
+        throw new BadRequestException('New password cannot be the same as the old password');
+      }
+  
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+      user.password = hashedPassword;
+  
+      await user.save();
+  
+      return { message: 'Password reset successfully' };
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+  }
+
+
   
   
   
