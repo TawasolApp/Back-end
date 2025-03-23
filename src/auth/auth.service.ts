@@ -123,5 +123,23 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired token');
     }
   }
+
+  async resendConfirmationEmail(email: string): Promise<string> {
+    const user = await this.userModel.findOne({ email });
+  
+    if (!user) {
+      throw new NotFoundException('Email not found');
+    }
+  
+    if (user.isVerified) {
+      return 'Email is already verified';
+    }
+  
+    const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
+    await this.mailerService.sendVerificationEmail(email, token);
+  
+    return 'Confirmation email resent';
+  }
+  
   
 }
