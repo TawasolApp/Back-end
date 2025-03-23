@@ -99,4 +99,29 @@ export class AuthService {
 
     return response.data.success && (!response.data.score || response.data.score > 0.5);
   }
+
+  async verifyEmail(token: string): Promise<string> {
+    try {
+      const decoded = this.jwtService.verify(token);
+      const email = decoded.email;
+  
+      const user = await this.userModel.findOne({ email });
+  
+      if (!user) {
+        throw new BadRequestException('Invalid token or user does not exist');
+      }
+  
+      if (user.isVerified) {
+        return 'Email is already verified.';
+      }
+  
+      user.isVerified = true;
+      await user.save();
+  
+      return 'Email verified successfully.';
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+  }
+  
 }
