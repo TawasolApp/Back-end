@@ -1,6 +1,6 @@
 import { GetConnectionDto } from './get-connection.dto';
 
-export function mapToGetConnectionDto(connection: any): GetConnectionDto {
+export function toGetConnectionDto(connection: any): GetConnectionDto {
   return {
     userId: connection.userId?.toString(),
     username: connection.username,

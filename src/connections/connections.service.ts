@@ -16,6 +16,8 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/profile.schema';
 import { ConnectionStatus } from './infrastructure/connection-status.enum';
+import { RequestConnectionDto } from './dtos/request-connection.dto';
+import { UpdateConnectionDto } from './dtos/update-connection.dto';
 
 @Injectable()
 export class ConnectionsService {
@@ -33,14 +35,7 @@ export class ConnectionsService {
           'Cannot request a connection with yourself.',
         );
       }
-      // TODO: check if valid user id
       // TODO: check if connection exists and status is blocked
-      if (
-        !Types.ObjectId.isValid(sendingParty) ||
-        !Types.ObjectId.isValid(receivingParty)
-      ) {
-        throw new BadRequestException('Invalid user ID format.');
-      }
       const newConnection = new this.userConnectionModel({
         _id: new Types.ObjectId(),
         sending_party: new Types.ObjectId(sendingParty),
@@ -50,18 +45,16 @@ export class ConnectionsService {
       await newConnection.save();
       return newConnection;
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to save connection.');
+      throw error;
     }
   }
 
-  async updateConnection(connectionId: string, isAccept: boolean) {
+  async updateConnection(
+    connectionId: string,
+    updateConnectionDto: UpdateConnectionDto,
+  ) {
     try {
-      if (!Types.ObjectId.isValid(connectionId)) {
-        throw new BadRequestException('Invalid connection ID format.');
-      }
+      const { isAccept } = updateConnectionDto;
       const existingConnection = await this.userConnectionModel
         .findById(new Types.ObjectId(connectionId))
         .lean();
@@ -82,6 +75,18 @@ export class ConnectionsService {
           { status: status, created_at: new Date().toISOString() },
           { new: true },
         );
+      if (status === ConnectionStatus.Connected) {
+        await this.profileModel.findByIdAndUpdate(
+          updatedConnection?.sending_party,
+          { $inc: { connection_count: 1 } },
+          { new: true },
+        );
+        await this.profileModel.findByIdAndUpdate(
+          updatedConnection?.receiving_party,
+          { $inc: { connection_count: 1 } },
+          { new: true },
+        );
+      }
       return updatedConnection;
     } catch (error) {
       if (error instanceof HttpException) {
@@ -95,21 +100,25 @@ export class ConnectionsService {
 
   async removeConnection(connectionId: string) {
     try {
-      if (!Types.ObjectId.isValid(connectionId)) {
-        throw new BadRequestException('Invalid connection ID format.');
-      }
-      const connection = this.userConnectionModel.findByIdAndDelete(
-        new Types.ObjectId(connectionId),
-      );
-      if (!connection) {
+      const deletedConnection =
+        await this.userConnectionModel.findByIdAndDelete(
+          new Types.ObjectId(connectionId),
+        );
+      if (!deletedConnection) {
         throw new NotFoundException('Connection not found.');
       }
-      return connection;
+      await this.profileModel.findByIdAndUpdate(
+        deletedConnection?.sending_party,
+        { $inc: { connection_count: 1 } },
+        { new: true },
+      );
+      await this.profileModel.findByIdAndUpdate(
+        deletedConnection?.receiving_party,
+        { $inc: { connection_count: 1 } },
+        { new: true },
+      );
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to remove connection.');
+      throw error;
     }
   }
 
@@ -118,7 +127,6 @@ export class ConnectionsService {
       if (sendingParty === receivingParty) {
         throw new BadRequestException('Cannot follow yourself.');
       }
-      // TODO: check if valid user id
       // TODO: check if connection exists and status is blocked
       if (
         !Types.ObjectId.isValid(sendingParty) ||

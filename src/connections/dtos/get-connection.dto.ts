@@ -7,12 +7,13 @@ export class GetConnectionDto {
   @IsString()
   readonly username: string;
 
-  @IsOptional()
   @IsUrl()
+  @IsOptional()
   readonly profilePicture?: string;
 
   @IsString()
-  readonly headline: string;
+  @IsOptional()
+  readonly headline?: string;
 
   @IsISO8601()
   readonly createdAt: string;

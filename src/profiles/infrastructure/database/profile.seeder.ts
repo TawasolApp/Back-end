@@ -7,12 +7,16 @@ import {
   UserDocument,
 } from '../../../users/infrastructure/database/user.schema';
 import { faker } from '@faker-js/faker';
+import { UserConnection, UserConnectionDocument } from '../../../connections/infrastructure/database/user-connection.schema';
+
 
 @Injectable()
 export class ProfileSeeder {
   constructor(
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(UserConnection.name)
+    private userConnectionModel: Model<UserConnection>,
   ) {}
 
   async seedProfiles(count: number): Promise<void> {
@@ -94,7 +98,7 @@ export class ProfileSeeder {
             'private',
             'connections_only',
           ]),
-          connection_count: faker.number.int({ min: 0, max: 500 }),
+          connection_count: 0,
           plan_details: {
             plan_type: faker.helpers.arrayElement(['monthly', 'yearly']),
             start_date: faker.date.past({ years: 1 }),
@@ -119,5 +123,22 @@ export class ProfileSeeder {
   async clearProfiles(): Promise<void> {
     await this.profileModel.deleteMany({});
     console.log('Profiles collection cleared.');
+  }
+
+  async updateConnectionCounts(): Promise<void> {
+    const profiles = await this.profileModel.find().exec();
+    for (const profile of profiles) {
+      const connectionCount = await this.userConnectionModel
+        .countDocuments({
+          $or: [
+            { sending_party: profile._id },
+            { receiving_party: profile._id },
+          ],
+        })
+        .exec();
+      profile.connection_count = connectionCount;
+      await profile.save();
+    }
+    console.log('Profile connection counts updated.');
   }
 }
