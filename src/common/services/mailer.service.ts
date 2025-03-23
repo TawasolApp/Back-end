@@ -27,4 +27,15 @@ export class MailerService {
 
     console.log(`✅ Verification email sent to ${email}`);
   }
+
+  async sendEmailChangeConfirmation(to: string, token: string) {
+    const link = `http://localhost:3000/users/confirm-email-change?token=${token}`;
+    await this.transporter.sendMail({
+      to,
+      from: '"TawasolApp" <noreply@tawasolapp.com>',
+      subject: 'Confirm Your Email Change',
+      html: `<p>Click <a href="${link}">here</a> to confirm your email change.</p>`,
+    });
+  }
+  
 }
