@@ -30,7 +30,11 @@ export class AuthController {
   async resendConfirmation(@Body() { email }: ResendConfirmationDto) {
   const message = await this.authService.resendConfirmationEmail(email);
   return { message };
-
-
 }
+
+  @Post('refresh-token')
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refreshToken(refreshToken);
+  }
+
 }

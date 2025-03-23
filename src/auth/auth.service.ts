@@ -77,8 +77,13 @@ export class AuthService {
     }
 
     const payload = { sub: user._id };
-    const token = this.jwtService.sign(payload);
-    return { access_token: token };
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+    return {
+      token: accessToken,
+      refreshToken,
+    };
+    
   }
 
   private async verifyCaptcha(token: string): Promise<boolean> {
@@ -140,6 +145,23 @@ export class AuthService {
   
     return 'Confirmation email resent';
   }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const decoded = this.jwtService.verify(refreshToken); // throws if invalid
+      const payload = { sub: decoded.sub };
+  
+      const newAccessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+  
+      return {
+        token: newAccessToken,
+        refreshToken, // reuse or regenerate if you want
+      };
+    } catch (error) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+  }
+  
   
   
 }
