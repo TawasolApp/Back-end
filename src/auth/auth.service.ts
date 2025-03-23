@@ -1,40 +1,102 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '../users/users.service';
+import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
+import { User, UserDocument } from '../users/infrastructure/database/user.schema';
 import * as bcrypt from 'bcrypt';
+import axios from 'axios';
+import { MailerService } from '../common/services/mailer.service';
 
 @Injectable()
 export class AuthService {
   constructor(
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
     private readonly jwtService: JwtService,
-    private readonly userService: UsersService,
+    private readonly mailerService: MailerService,
   ) {}
 
-  async login(email: string, password: string) {
-    const user = await this.userService.findByEmail(email);
-    if (!user) {
-      throw new Error('User not found');
+  async register(registerDto: RegisterDto) {
+    const { first_name, last_name, email, password, captchaToken } = registerDto;
+
+    const isCaptchaValid = await this.verifyCaptcha(captchaToken);
+    if (!isCaptchaValid) {
+      throw new BadRequestException('Invalid CAPTCHA');
     }
-  
-    // Compare the provided password with stored hashed password
+
+    const existingUser = await this.userModel.findOne({ email });
+    if (existingUser) {
+      throw new ConflictException('Email is already in use');
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = new this.userModel({
+      first_name,
+      last_name,
+      email,
+      password: hashedPassword,
+      isVerified: false,
+    });
+    // 👇 ADD THIS
+  console.log('🧪 Is user instance of model:', user instanceof this.userModel);
+  console.log('🆔 Pre-save _id value:', user._id);
+    await user.save();
+
+    const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
+    console.log('📧 Email User:', process.env.EMAIL_USER);
+    console.log('🔐 Email Pass:', process.env.EMAIL_PASS);
+
+    await this.mailerService.sendVerificationEmail(email, token);
+
+    return {
+      message: 'Registration successful. Please check your email to verify your account.',
+    };
+  }
+
+  async login(email: string, password: string) {
+    const user = await this.userModel.findOne({ email });
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw new UnauthorizedException('Invalid credentials');
     }
-  
+
+    if (!user.isVerified) {
+      throw new BadRequestException('Email not verified');
+    }
+
     const payload = { sub: user._id };
     const token = this.jwtService.sign(payload);
     return { access_token: token };
   }
-  
-  async verifyToken(token: string) {
-    try {
-      return await this.jwtService.verifyAsync(token);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
+
+  private async verifyCaptcha(token: string): Promise<boolean> {
+    // Allow test token for local testing (Postman etc.)
+    if (token === 'test-token') return true;
+
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    const response = await axios.post(
+      `https://www.google.com/recaptcha/api/siteverify`,
+      null,
+      {
+        params: {
+          secret: secretKey,
+          response: token,
+        },
+      }
+    );
+
+    return response.data.success && (!response.data.score || response.data.score > 0.5);
   }
-  
-  
 }

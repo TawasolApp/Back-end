@@ -2,10 +2,10 @@ import { IsEmail, IsNotEmpty, MinLength, Matches } from 'class-validator';
 
 export class RegisterDto {
   @IsNotEmpty()
-  firstName: string;
+  first_name: string;
 
   @IsNotEmpty()
-  lastName: string;
+  last_name: string;
 
   @IsEmail()
   email: string;
@@ -13,7 +13,7 @@ export class RegisterDto {
   @IsNotEmpty()
   @MinLength(6)
   @Matches(/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{6,}$/, {
-    message: 'Password must be at least 6 characters long and contain at least one uppercase letter, one lowercase letter, and one number.',
+    message: 'Password must include uppercase, lowercase, and a number',
   })
   password: string;
 

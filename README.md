@@ -33,7 +33,10 @@ Create a `.env` file in the root directory and add the following:
 ```env
 PORT=3000
 MONGO_URI=mongodb://localhost:27017/tawasolapp
-JWT_SECRET=your-secret-key
+JWT_SECRET=4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4
+EMAIL_USER=noreply.tawasolapp@gmail.com
+EMAIL_PASS=gspsneuhdjcymexv
+RECAPTCHA_SECRET_KEY= 6LdMDv0qAAAAAH2f77XnX3AN3RO01m26yTNTUUWR
 ```
 
 ### 4. Run the application:
