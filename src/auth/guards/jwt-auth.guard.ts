@@ -23,6 +23,7 @@ export class JwtAuthGuard implements CanActivate {
     try {
       const decoded = this.jwtService.verify(token);
       request.user = decoded; 
+      console.log('🔐 Decoded User ID:', decoded.sub);
       return true;
     } catch (error) {
       throw new UnauthorizedException('Token verification failed');
