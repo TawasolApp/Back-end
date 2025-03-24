@@ -28,13 +28,5 @@ export class AuthService {
     return { access_token: token };
   }
   
-  async verifyToken(token: string) {
-    try {
-      return await this.jwtService.verifyAsync(token);
-    } catch (error) {
-      throw new UnauthorizedException('Invalid or expired token');
-    }
-  }
-  
   
 }
