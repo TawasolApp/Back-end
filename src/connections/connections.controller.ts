@@ -14,6 +14,8 @@ import {
   Req,
   UnauthorizedException,
   Body,
+  ValidationPipe,
+  UsePipes,
 } from '@nestjs/common';
 import { ConnectionsService } from './connections.service';
 import { Types } from 'mongoose';
@@ -24,6 +26,7 @@ import { CreateRequestDto } from './dtos/create-request.dto';
 import { UpdateRequestDto } from './dtos/update-request.dto';
 
 @UseGuards(JwtAuthGuard)
+@UsePipes(new ValidationPipe())
 @Controller('connections')
 export class ConnectionsController {
   constructor(private readonly connectionsService: ConnectionsService) {}
@@ -59,7 +62,7 @@ export class ConnectionsController {
   @Patch('/:userId')
   @HttpCode(HttpStatus.OK)
   async updateConnection(
-    @Param('userId') receivingUserId: string,
+    @Param('userId') sendingUserId: string,
     @Body() updateRequestDto: UpdateRequestDto,
     @Req() request: Request,
   ) {
@@ -67,14 +70,14 @@ export class ConnectionsController {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      if (!Types.ObjectId.isValid(receivingUserId)) {
+      if (!Types.ObjectId.isValid(sendingUserId)) {
         throw new BadRequestException('Invalid connection ID format.');
       }
       const { isAccept } = updateRequestDto;
       const status = isAccept
         ? ConnectionStatus.Connected
         : ConnectionStatus.Ignored;
-      const sendingUserId = request.user['sub'];
+      const receivingUserId = request.user['sub'];
       return await this.connectionsService.updateConnection(
         sendingUserId,
         receivingUserId,
@@ -200,7 +203,7 @@ export class ConnectionsController {
     }
   }
 
-  @Post('/unfollow/:userId')
+  @Delete('/unfollow/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async unfollow(
     @Param('userId') receivingUserId: string,
@@ -264,23 +267,21 @@ export class ConnectionsController {
     }
   }
 
-  // @Post('/request/:userId')
+  loggedIn: string = '67e1ef2116628c8fa94188b0';
+
+  // @Post()
   // @HttpCode(HttpStatus.CREATED)
-  // async requestConnection(
-  //   @Param('userId') requestUserId: string,
-  //   @Req() request: Request,
-  // ) {
+  // async requestConnection(@Body() createRequestDto: CreateRequestDto) {
   //   try {
-  //     if (!request.user) {
-  //       throw new UnauthorizedException('User not authenticated');
-  //     }
-  //     if (!Types.ObjectId.isValid(requestUserId)) {
+  //     const { userId } = createRequestDto;
+  //     const receivingUserId = userId;
+  //     if (!Types.ObjectId.isValid(receivingUserId)) {
   //       throw new BadRequestException('Invalid user ID format.');
   //     }
-  //     const userId = request.user['sub'];
+  //     const sendingUserId = this.loggedIn;
   //     return await this.connectionsService.requestConnection(
-  //       userId,
-  //       requestUserId,
+  //       sendingUserId,
+  //       receivingUserId,
   //     );
   //   } catch (error) {
   //     if (error instanceof HttpException) {
@@ -290,57 +291,45 @@ export class ConnectionsController {
   //   }
   // }
 
-  // @Patch('/:connectionId')
+  // @Patch('/:userId')
   // @HttpCode(HttpStatus.OK)
-  // async acceptConnection(
-  //   @Param('connectionId') connectionId: string,
-  //   @Body() updateConnectionDto: UpdateConnectionDto,
+  // async updateConnection(
+  //   @Param('userId') sendingUserId: string,
+  //   @Body() updateRequestDto: UpdateRequestDto,
   // ) {
   //   try {
-  //     if (!Types.ObjectId.isValid(connectionId)) {
+  //     if (!Types.ObjectId.isValid(sendingUserId)) {
   //       throw new BadRequestException('Invalid connection ID format.');
   //     }
+  //     const { isAccept } = updateRequestDto;
+  //     const status = isAccept
+  //       ? ConnectionStatus.Connected
+  //       : ConnectionStatus.Ignored;
+  //     const receivingUserId = this.loggedIn;
   //     return await this.connectionsService.updateConnection(
-  //       connectionId,
-  //       updateConnectionDto,
+  //       sendingUserId,
+  //       receivingUserId,
+  //       status,
   //     );
   //   } catch (error) {
   //     if (error instanceof HttpException) {
   //       throw error;
   //     }
   //     throw new InternalServerErrorException(
-  //       'Failed to update connection request status.',
+  //       'Failed to accept connection request.',
   //     );
   //   }
   // }
 
-  // @Delete('/:connectionId')
+  // @Delete('/:userId')
   // @HttpCode(HttpStatus.NO_CONTENT)
-  // async removeConnection(@Param('connectionId') connectionId: string) {
+  // async removeConnection(@Param('userId') requestUserId: string) {
   //   try {
-  //     if (!Types.ObjectId.isValid(connectionId)) {
+  //     if (!Types.ObjectId.isValid(requestUserId)) {
   //       throw new BadRequestException('Invalid connection ID format.');
   //     }
-  //     await this.connectionsService.removeConnection(connectionId);
-  //   } catch (error) {
-  //     if (error instanceof HttpException) {
-  //       throw error;
-  //     }
-  //     throw new InternalServerErrorException('Failed to remove connection.');
-  //   }
-  // }
-
-  // // remove temp user ID later, will extract from token
-  // // make userId route param
-  // @Post('/follow')
-  // @HttpCode(HttpStatus.CREATED)
-  // async follow(@Body() requestConnectionDto: RequestConnectionDto) {
-  //   try {
-  //     const { userId, tempUserId } = requestConnectionDto;
-  //     if (!Types.ObjectId.isValid(userId)) {
-  //       throw new BadRequestException('Invalid user ID format.');
-  //     }
-  //     return await this.connectionsService.follow(tempUserId, userId);
+  //     const userId = this.loggedIn;
+  //     await this.connectionsService.removeConnection(userId, requestUserId);
   //   } catch (error) {
   //     if (error instanceof HttpException) {
   //       throw error;
@@ -350,21 +339,126 @@ export class ConnectionsController {
   // }
 
   // @Get('/list')
-  // async getConnections(@Query('userId') userId: string) {
-  //   const connections = await this.connectionsService.getConnections(userId);
-  //   return connections.map(toGetConnectionDto);
+  // async getConnections() {
+  //   try {
+  //     const userId = this.loggedIn;
+  //     const connections = await this.connectionsService.getConnections(userId);
+  //     return connections;
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to retrieve list of connections.',
+  //     );
+  //   }
   // }
 
   // @Get('/pending')
-  // async getPendingRequests(@Query('userId') userId: string) {
-  //   const pendingRequests =
-  //     await this.connectionsService.getPendingRequests(userId);
-  //   return pendingRequests.map(toGetConnectionDto);
+  // async getPendingRequests() {
+  //   try {
+  //     const userId = this.loggedIn;
+  //     const pendingRequests =
+  //       await this.connectionsService.getPendingRequests(userId);
+  //     return pendingRequests;
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to retrieve list of pending connection requests.',
+  //     );
+  //   }
   // }
 
   // @Get('/sent')
-  // async getSentRequests(@Query('userId') userId: string) {
-  //   const sentRequests = await this.connectionsService.getSentRequests(userId);
-  //   return sentRequests.map(toGetConnectionDto);
+  // async getSentRequests() {
+  //   try {
+  //     const userId = this.loggedIn;
+  //     const sentRequests =
+  //       await this.connectionsService.getSentRequests(userId);
+  //     return sentRequests;
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to retrieve list of sent connection requests.',
+  //     );
+  //   }
+  // }
+
+  // @Post('/follow')
+  // @HttpCode(HttpStatus.CREATED)
+  // async follow(@Body() createRequestDto: CreateRequestDto) {
+  //   try {
+  //     const { userId } = createRequestDto;
+  //     const receivingUserId = userId;
+  //     if (!Types.ObjectId.isValid(receivingUserId)) {
+  //       throw new BadRequestException('Invalid connection ID format.');
+  //     }
+  //     const sendingUserId = this.loggedIn;
+  //     return await this.connectionsService.follow(
+  //       sendingUserId,
+  //       receivingUserId,
+  //     );
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException('Failed to follow user.');
+  //   }
+  // }
+
+  // @Delete('/unfollow/:userId')
+  // @HttpCode(HttpStatus.NO_CONTENT)
+  // async unfollow(@Param('userId') receivingUserId: string) {
+  //   try {
+  //     if (!Types.ObjectId.isValid(receivingUserId)) {
+  //       throw new BadRequestException('Invalid connection ID format.');
+  //     }
+  //     const sendingUserId = this.loggedIn;
+  //     return await this.connectionsService.unfollow(
+  //       sendingUserId,
+  //       receivingUserId,
+  //     );
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException('Failed to unfollow user.');
+  //   }
+  // }
+
+  // @Get('/followers')
+  // async getFollowers() {
+  //   try {
+  //     const userId = this.loggedIn;
+  //     const followers = await this.connectionsService.getFollowers(userId);
+  //     return followers;
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to retrieve list of followers.',
+  //     );
+  //   }
+  // }
+
+  // @Get('/following')
+  // async getFollowing() {
+  //   try {
+  //     const userId = this.loggedIn;
+  //     const following = await this.connectionsService.getFollowing(userId);
+  //     return following;
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to retrieve list of followed users.',
+  //     );
+  //   }
   // }
 }

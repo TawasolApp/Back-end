@@ -1,14 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model } from 'mongoose';
 import { Profile, ProfileDocument } from './profile.schema';
 import {
   User,
   UserDocument,
 } from '../../../users/infrastructure/database/user.schema';
+import {
+  UserConnection,
+  UserConnectionDocument,
+} from '../../../connections/infrastructure/database/user-connection.schema';
 import { faker } from '@faker-js/faker';
-import { UserConnection, UserConnectionDocument } from '../../../connections/infrastructure/database/user-connection.schema';
-
+import { ConnectionStatus } from '../../../connections/infrastructure/connection-status.enum';
 
 @Injectable()
 export class ProfileSeeder {
@@ -19,105 +22,99 @@ export class ProfileSeeder {
     private userConnectionModel: Model<UserConnectionDocument>,
   ) {}
 
-  async seedProfiles(count: number): Promise<void> {
-    const users = await this.userModel.find().lean();
+  async seedProfiles(): Promise<void> {
+    const users = await this.userModel.find({ role: 'customer' }).lean();
 
     if (users.length === 0) {
-      console.log('No users found. Seeding aborted.');
+      console.log('No customer users found. Seeding aborted.');
       return;
     }
 
-    for (let i = 0; i < count; i++) {
-      const randomUser = users[i % users.length]; // Ensure unique user ID by cycling through users
-      await this.profileModel.updateOne(
-        { _id: randomUser._id },
+    const profiles: Partial<ProfileDocument>[] = users.map((user) => ({
+      _id: user._id, // Ensure 1-to-1 mapping
+      name: `${user.first_name} ${user.last_name}`,
+      profile_picture: faker.image.avatar(),
+      cover_photo: faker.image.url(),
+      resume: faker.internet.url(),
+      headline: faker.person.jobTitle(),
+      bio: faker.lorem.sentence(),
+      location: faker.location.city(),
+      industry: faker.commerce.department(),
+      skill: [
         {
-          _id: randomUser._id,
-          name: `${randomUser.first_name} ${randomUser.last_name}`, // Correctly concatenate first and last name
-          profile_picture: faker.image.avatar(),
-          cover_photo: faker.image.url(),
-          resume: faker.internet.url(),
-          headline: faker.person.jobTitle(),
-          bio: faker.lorem.sentence(),
-          location: faker.location.city(),
-          industry: faker.commerce.department(),
-          skill: [
-            {
-              skill_name: faker.person.jobType(),
-              endorsements: [faker.helpers.arrayElement(users)._id],
-            },
-          ],
-          education: [
-            {
-              school: faker.company.name(),
-              degree: faker.person.jobTitle(),
-              field: faker.commerce.department(),
-              start_date: faker.date.past({ years: 10 }),
-              end_date: faker.datatype.boolean()
-                ? faker.date.past({ years: 5 })
-                : undefined,
-              grade: faker.helpers.arrayElement(['A', 'B', 'C']),
-              description: faker.lorem.sentence(),
-            },
-          ],
-          certification: [
-            {
-              name: faker.person.jobTitle(),
-              company: faker.company.name(),
-              issue_date: faker.date.past({ years: 3 }),
-            },
-          ],
-          work_experience: [
-            {
-              title: faker.person.jobTitle(),
-              employment_type: faker.helpers.arrayElement([
-                'full_time',
-                'part_time',
-                'self_employed',
-                'freelance',
-                'contract',
-                'internship',
-                'apprenticeship',
-              ]),
-              company: faker.company.name(),
-              start_date: faker.date.past({ years: 5 }),
-              end_date: faker.datatype.boolean()
-                ? faker.date.past({ years: 2 })
-                : undefined,
-              location: faker.location.city(),
-              location_type: faker.helpers.arrayElement([
-                'on_site',
-                'hybrid',
-                'remote',
-              ]),
-              description: faker.lorem.sentence(),
-            },
-          ],
-          visibility: faker.helpers.arrayElement([
-            'public',
-            'private',
-            'connections_only',
-          ]),
-          connection_count: 0,
-          plan_details: {
-            plan_type: faker.helpers.arrayElement(['monthly', 'yearly']),
-            start_date: faker.date.past({ years: 1 }),
-            expiry_date: faker.date.future({ years: 1 }),
-            auto_renewal: faker.datatype.boolean(),
-            cancel_date: faker.datatype.boolean()
-              ? faker.date.past({ years: 1 })
-              : undefined,
-          },
-          plan_statistics: {
-            message_count: faker.number.int({ min: 0, max: 1000 }),
-            application_count: faker.number.int({ min: 0, max: 100 }),
-          },
+          skill_name: faker.person.jobType(),
+          endorsements: [faker.helpers.arrayElement(users)._id],
         },
-        { upsert: true },
-      );
-    }
+      ],
+      education: [
+        {
+          school: faker.company.name(),
+          degree: faker.person.jobTitle(),
+          field: faker.commerce.department(),
+          start_date: faker.date.past({ years: 10 }),
+          end_date: faker.datatype.boolean()
+            ? faker.date.past({ years: 5 })
+            : undefined,
+          grade: faker.helpers.arrayElement(['A', 'B', 'C']),
+          description: faker.lorem.sentence(),
+        },
+      ],
+      certification: [
+        {
+          name: faker.person.jobTitle(),
+          company: faker.company.name(),
+          issue_date: faker.date.past({ years: 3 }),
+        },
+      ],
+      work_experience: [
+        {
+          title: faker.person.jobTitle(),
+          employment_type: faker.helpers.arrayElement([
+            'full_time',
+            'part_time',
+            'self_employed',
+            'freelance',
+            'contract',
+            'internship',
+            'apprenticeship',
+          ]),
+          company: faker.company.name(),
+          start_date: faker.date.past({ years: 5 }),
+          end_date: faker.datatype.boolean()
+            ? faker.date.past({ years: 2 })
+            : undefined,
+          location: faker.location.city(),
+          location_type: faker.helpers.arrayElement([
+            'on_site',
+            'hybrid',
+            'remote',
+          ]),
+          description: faker.lorem.sentence(),
+        },
+      ],
+      visibility: faker.helpers.arrayElement([
+        'public',
+        'private',
+        'connections_only',
+      ]),
+      connection_count: 0,
+      plan_details: {
+        plan_type: faker.helpers.arrayElement(['monthly', 'yearly']),
+        start_date: faker.date.past({ years: 1 }),
+        expiry_date: faker.date.future({ years: 1 }),
+        auto_renewal: faker.datatype.boolean(),
+        cancel_date: faker.datatype.boolean()
+          ? faker.date.past({ years: 1 })
+          : undefined,
+      },
+      plan_statistics: {
+        message_count: faker.number.int({ min: 0, max: 1000 }),
+        application_count: faker.number.int({ min: 0, max: 100 }),
+      },
+    }));
 
-    console.log(`${count} profiles seeded successfully!`);
+    await this.profileModel.insertMany(profiles, { ordered: false });
+    console.log(`${profiles.length} profiles seeded successfully!`);
   }
 
   async clearProfiles(): Promise<void> {
@@ -128,14 +125,14 @@ export class ProfileSeeder {
   async updateConnectionCounts(): Promise<void> {
     const profiles = await this.profileModel.find().exec();
     for (const profile of profiles) {
-      const connectionCount = await this.userConnectionModel
-        .countDocuments({
-          $or: [
-            { sending_party: profile._id },
-            { receiving_party: profile._id },
-          ],
-        })
-        .exec();
+      const connectionCount = await this.userConnectionModel.countDocuments({
+        status: ConnectionStatus.Connected,
+        $or: [
+          { sending_party: profile._id },
+          { receiving_party: profile._id },
+        ],
+      }).exec();
+
       profile.connection_count = connectionCount;
       await profile.save();
     }

@@ -8,6 +8,7 @@ export class GetConnectionDto {
   @IsString()
   readonly username: string;
 
+  @Expose({ name: 'profile_picture' })
   @IsUrl()
   @IsOptional()
   readonly profilePicture?: string;
@@ -19,5 +20,6 @@ export class GetConnectionDto {
   @Expose({ name: 'created_at' })
   @Transform(({ value }) => new Date(value).toISOString(), { toClassOnly: true })
   @IsISO8601()
+  @IsOptional()
   readonly createdAt?: string;
 }

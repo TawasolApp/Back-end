@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   HttpException,
   Injectable,
   InternalServerErrorException,
@@ -42,6 +43,12 @@ export class ConnectionsService {
 
   async requestConnection(sendingParty: string, receivingParty: string) {
     try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
       if (sendingParty === receivingParty) {
         throw new BadRequestException(
           'Cannot request a connection with yourself.',
@@ -50,7 +57,7 @@ export class ConnectionsService {
       const record1 = await this.getConnectionId(sendingParty, receivingParty);
       const record2 = await this.getConnectionId(receivingParty, sendingParty);
       if (record1 || record2) {
-        throw new BadRequestException(
+        throw new ConflictException(
           'Connection instance already estbalished between users.',
         );
       }
@@ -72,6 +79,12 @@ export class ConnectionsService {
     status: ConnectionStatus,
   ) {
     try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(sendingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
       const connectionId = await this.getConnectionId(
         sendingParty,
         receivingParty,
@@ -118,6 +131,12 @@ export class ConnectionsService {
 
   async removeConnection(sendingParty: string, receivingParty: string) {
     try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
       const connectionId1 = await this.getConnectionId(
         sendingParty,
         receivingParty,
@@ -127,7 +146,7 @@ export class ConnectionsService {
         sendingParty,
       );
       let deletedConnection;
-      if (!connectionId1 || !connectionId2) {
+      if (!connectionId1 && !connectionId2) {
         throw new NotFoundException('Connection not found.');
       } else if (connectionId1) {
         deletedConnection = await this.userConnectionModel.findByIdAndDelete(
@@ -140,12 +159,12 @@ export class ConnectionsService {
       }
       await this.profileModel.findByIdAndUpdate(
         deletedConnection?.sending_party,
-        { $inc: { connection_count: 1 } },
+        { $inc: { connection_count: -1 } },
         { new: true },
       );
       await this.profileModel.findByIdAndUpdate(
         deletedConnection?.receiving_party,
-        { $inc: { connection_count: 1 } },
+        { $inc: { connection_count: -1 } },
         { new: true },
       );
     } catch (error) {
@@ -155,13 +174,19 @@ export class ConnectionsService {
 
   async follow(sendingParty: string, receivingParty: string) {
     try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
       if (sendingParty === receivingParty) {
         throw new BadRequestException('Cannot follow yourself.');
       }
       const record1 = await this.getConnectionId(sendingParty, receivingParty);
       const record2 = await this.getConnectionId(receivingParty, sendingParty);
       if (record1 || record2) {
-        throw new BadRequestException(
+        throw new ConflictException(
           'Connection instance already estbalished between users.',
         );
       }
@@ -182,6 +207,12 @@ export class ConnectionsService {
 
   async unfollow(sendingParty: string, receivingParty: string) {
     try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
       const connectionId1 = await this.getConnectionId(
         sendingParty,
         receivingParty,
@@ -191,7 +222,7 @@ export class ConnectionsService {
         sendingParty,
       );
       let deletedConnection;
-      if (!connectionId1 || !connectionId2) {
+      if (!connectionId1 && !connectionId2) {
         throw new NotFoundException('Connection not found.');
       } else if (connectionId1) {
         deletedConnection = await this.userConnectionModel.findByIdAndDelete(
@@ -239,160 +270,25 @@ export class ConnectionsService {
         };
       }),
     );
-    return result.map((connection) =>
-      plainToInstance(GetConnectionDto, connection, {
-        excludeExtraneousValues: true,
-      }),
-    );
+    return result;
   }
 
-  // async getPendingRequests(userId: string) {
-  //   const pendingRequests = await this.userConnectionModel
-  //     .find({
-  //       receiving_party: new Types.ObjectId(userId),
-  //       status: ConnectionStatus.Pending,
-  //     })
-  //     .sort({ created_at: -1 })
-  //     .select('sending_party receiving_party created_at')
-  //     .lean();
-
-  //   const result = await Promise.all(
-  //     pendingRequests.map(async (connection) => {
-  //       const senderUserId = connection.sending_party;
-
-  //       const profile = await this.profileModel
-  //         .findById(senderUserId)
-  //         .select('name profile_picture headline')
-  //         .lean();
-
-  //       return {
-  //         userId: profile?._id,
-  //         username: profile?.name,
-  //         profilePicture: profile?.profile_picture,
-  //         headline: profile?.headline,
-  //         createdAt: connection.created_at,
-  //       };
-  //     }),
-  //   );
-  //   return result;
-  // }
-
-  // async getSentRequests(userId: string) {
-  //   const sentRequests = await this.userConnectionModel
-  //     .find({
-  //       sending_party: new Types.ObjectId(userId),
-  //       status: ConnectionStatus.Pending,
-  //     })
-  //     .sort({ created_at: -1 })
-  //     .select('sending_party receiving_party created_at')
-  //     .lean();
-
-  //   const result = await Promise.all(
-  //     sentRequests.map(async (connection) => {
-  //       const receiverUserId = connection.receiving_party;
-
-  //       const profile = await this.profileModel
-  //         .findById(receiverUserId)
-  //         .select('name profile_picture headline')
-  //         .lean();
-
-  //       return {
-  //         userId: profile?._id,
-  //         username: profile?.name,
-  //         profilePicture: profile?.profile_picture,
-  //         headline: profile?.headline,
-  //         createdAt: connection.created_at,
-  //       };
-  //     }),
-  //   );
-  //   return result;
-  // }
-
-  // async getFollowers(userId: string) {
-  //   const pendingRequests = await this.userConnectionModel
-  //     .find({
-  //       receiving_party: new Types.ObjectId(userId),
-  //       status: ConnectionStatus.Following,
-  //     })
-  //     .sort({ created_at: -1 })
-  //     .select('sending_party receiving_party created_at')
-  //     .lean();
-
-  //   const result = await Promise.all(
-  //     pendingRequests.map(async (connection) => {
-  //       const senderUserId = connection.sending_party;
-
-  //       const profile = await this.profileModel
-  //         .findById(senderUserId)
-  //         .select('name profile_picture headline')
-  //         .lean();
-
-  //       return {
-  //         userId: profile?._id,
-  //         username: profile?.name,
-  //         profilePicture: profile?.profile_picture,
-  //         headline: profile?.headline,
-  //         createdAt: connection.created_at,
-  //       };
-  //     }),
-  //   );
-  //   return result;
-  // }
-
-  // async getFollowing(userId: string) {
-  //   const sentRequests = await this.userConnectionModel
-  //     .find({
-  //       sending_party: new Types.ObjectId(userId),
-  //       status: ConnectionStatus.Following,
-  //     })
-  //     .sort({ created_at: -1 })
-  //     .select('sending_party receiving_party created_at')
-  //     .lean();
-
-  //   const result = await Promise.all(
-  //     sentRequests.map(async (connection) => {
-  //       const receiverUserId = connection.receiving_party;
-
-  //       const profile = await this.profileModel
-  //         .findById(receiverUserId)
-  //         .select('name profile_picture headline')
-  //         .lean();
-
-  //       return {
-  //         userId: profile?._id,
-  //         username: profile?.name,
-  //         profilePicture: profile?.profile_picture,
-  //         headline: profile?.headline,
-  //         createdAt: connection.created_at,
-  //       };
-  //     }),
-  //   );
-  //   return result;
-  // }
-
-  private async getFilteredUsers(
-    userId: string,
-    isSender: boolean,
-    status: ConnectionStatus,
-  ) {
-    const filterField = isSender ? 'sending_party' : 'receiving_party';
-    const targetField = isSender ? 'receiving_party' : 'sending_party';
-
-    const connections = await this.userConnectionModel
+  async getPendingRequests(userId: string) {
+    const pendingRequests = await this.userConnectionModel
       .find({
-        [filterField]: new Types.ObjectId(userId),
-        status,
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Pending,
       })
       .sort({ created_at: -1 })
-      .select(`${filterField} ${targetField} created_at`)
+      .select('sending_party receiving_party created_at')
       .lean();
 
     const result = await Promise.all(
-      connections.map(async (connection) => {
-        const targetUserId = connection[targetField];
+      pendingRequests.map(async (connection) => {
+        const senderUserId = connection.sending_party;
 
         const profile = await this.profileModel
-          .findById(targetUserId)
+          .findById(senderUserId)
           .select('name profile_picture headline')
           .lean();
 
@@ -405,26 +301,99 @@ export class ConnectionsService {
         };
       }),
     );
-    return result.map((connection) =>
-      plainToInstance(GetConnectionDto, connection, {
-        excludeExtraneousValues: true,
-      }),
-    );
-  }
-
-  async getPendingRequests(userId: string) {
-    return this.getFilteredUsers(userId, false, ConnectionStatus.Pending);
+    return result;
   }
 
   async getSentRequests(userId: string) {
-    return this.getFilteredUsers(userId, true, ConnectionStatus.Pending);
+    const sentRequests = await this.userConnectionModel
+      .find({
+        sending_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Pending,
+      })
+      .sort({ created_at: -1 })
+      .select('sending_party receiving_party created_at')
+      .lean();
+
+    const result = await Promise.all(
+      sentRequests.map(async (connection) => {
+        const receiverUserId = connection.receiving_party;
+
+        const profile = await this.profileModel
+          .findById(receiverUserId)
+          .select('name profile_picture headline')
+          .lean();
+
+        return {
+          userId: profile?._id,
+          username: profile?.name,
+          profilePicture: profile?.profile_picture,
+          headline: profile?.headline,
+          createdAt: connection.created_at,
+        };
+      }),
+    );
+    return result;
   }
 
   async getFollowers(userId: string) {
-    return this.getFilteredUsers(userId, false, ConnectionStatus.Following);
+    const pendingRequests = await this.userConnectionModel
+      .find({
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      })
+      .sort({ created_at: -1 })
+      .select('sending_party receiving_party created_at')
+      .lean();
+
+    const result = await Promise.all(
+      pendingRequests.map(async (connection) => {
+        const senderUserId = connection.sending_party;
+
+        const profile = await this.profileModel
+          .findById(senderUserId)
+          .select('name profile_picture headline')
+          .lean();
+
+        return {
+          userId: profile?._id,
+          username: profile?.name,
+          profilePicture: profile?.profile_picture,
+          headline: profile?.headline,
+          createdAt: connection.created_at,
+        };
+      }),
+    );
+    return result;
   }
 
   async getFollowing(userId: string) {
-    return this.getFilteredUsers(userId, true, ConnectionStatus.Following);
+    const sentRequests = await this.userConnectionModel
+      .find({
+        sending_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      })
+      .sort({ created_at: -1 })
+      .select('sending_party receiving_party created_at')
+      .lean();
+
+    const result = await Promise.all(
+      sentRequests.map(async (connection) => {
+        const receiverUserId = connection.receiving_party;
+
+        const profile = await this.profileModel
+          .findById(receiverUserId)
+          .select('name profile_picture headline')
+          .lean();
+
+        return {
+          userId: profile?._id,
+          username: profile?.name,
+          profilePicture: profile?.profile_picture,
+          headline: profile?.headline,
+          createdAt: connection.created_at,
+        };
+      }),
+    );
+    return result;
   }
 }
