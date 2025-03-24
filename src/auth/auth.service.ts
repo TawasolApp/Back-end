@@ -62,6 +62,15 @@ export class AuthService {
     };
   }
 
+  async checkEmailAvailability(email: string) {
+    const existingUser = await this.userModel.findOne({ email });
+    if (existingUser) {
+      throw new ConflictException('Email is already in use');
+    }
+  
+    return { message: 'Email is available' };
+  }
+
   
 
   async login(email: string, password: string) {
@@ -69,25 +78,32 @@ export class AuthService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
-
+  
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
       throw new UnauthorizedException('Invalid credentials');
     }
-
+  
     if (!user.isVerified) {
       throw new BadRequestException('Email not verified');
     }
-
-    const payload = { sub: user._id };
+  
+    // 🔐 Add role to token payload
+    const payload = {
+      sub: user._id,
+      email: user.email,
+      role: user.role,
+    };
+  
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+  
     return {
       token: accessToken,
       refreshToken,
     };
-    
   }
+  
 
 
   async googleLogin(idToken: string) {
