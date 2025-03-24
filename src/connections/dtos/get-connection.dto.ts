@@ -1,4 +1,5 @@
-import { IsString, IsUrl, IsOptional, IsNotEmpty, IsISO8601 } from 'class-validator';
+import { Expose, Transform } from 'class-transformer';
+import { IsDate, IsISO8601, IsOptional, IsString, IsUrl } from 'class-validator';
 
 export class GetConnectionDto {
   @IsString()
@@ -15,6 +16,8 @@ export class GetConnectionDto {
   @IsOptional()
   readonly headline?: string;
 
+  @Expose({ name: 'created_at' })
+  @Transform(({ value }) => new Date(value).toISOString(), { toClassOnly: true })
   @IsISO8601()
-  readonly createdAt: string;
+  readonly createdAt?: string;
 }

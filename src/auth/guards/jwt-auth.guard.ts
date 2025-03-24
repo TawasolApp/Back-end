@@ -20,7 +20,8 @@ export class JwtAuthGuard implements CanActivate {
 
     const token = authHeader.split(' ')[1]; // Extract token after "Bearer"
     try {
-      request.user = this.jwtService.verify(token); // Decode and verify token
+      const decoded = this.jwtService.verify(token);
+      request.user = decoded; // Decode and verify token
       return true;
     } catch (error) {
       throw new UnauthorizedException('Token verification failed');

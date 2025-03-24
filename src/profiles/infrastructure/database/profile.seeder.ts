@@ -16,7 +16,7 @@ export class ProfileSeeder {
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(UserConnection.name)
-    private userConnectionModel: Model<UserConnection>,
+    private userConnectionModel: Model<UserConnectionDocument>,
   ) {}
 
   async seedProfiles(count: number): Promise<void> {
