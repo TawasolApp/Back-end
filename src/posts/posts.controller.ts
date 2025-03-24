@@ -47,7 +47,7 @@ export class PostsController {
       return post;
     } catch (error) {
       console.error('Error in addPost controller:', error);
-      throw new InternalServerErrorException('Failed to create post');
+      throw error;
     }
   }
 
@@ -65,7 +65,7 @@ export class PostsController {
       return await this.postsService.getAllPosts(page, limit, req.user['sub']);
     } catch (error) {
       console.error('Error in getAllPosts controller:', error);
-      throw new InternalServerErrorException('Failed to fetch posts');
+      throw error;
     }
   }
 
@@ -93,7 +93,7 @@ export class PostsController {
         `Error in updateReactions controller for postId ${postId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to update reactions');
+      throw error;
     }
   }
 
@@ -116,7 +116,7 @@ export class PostsController {
         `Error in getReactions controller for postId ${postId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to fetch reactions');
+      throw error;
     }
   }
 
@@ -139,7 +139,7 @@ export class PostsController {
         `Error in getComments controller for postId ${postId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to fetch comments');
+      throw error;
     }
   }
 
@@ -161,7 +161,7 @@ export class PostsController {
         `Error in savePost controller for postId ${postId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to save post');
+      throw error;
     }
   }
 
@@ -179,7 +179,7 @@ export class PostsController {
         `Error in getSavedPosts controller for userId ${userIdFromToken}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to fetch saved posts');
+      throw error;
     }
   }
 
@@ -207,7 +207,7 @@ export class PostsController {
         `Error in addComment controller for postId ${postId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to add comment');
+      throw error;
     }
   }
   @Get(':id')
@@ -262,7 +262,7 @@ export class PostsController {
       return updatedPost;
     } catch (error) {
       console.error(`Error in editPost controller for id ${id}:`, error);
-      throw new InternalServerErrorException('Failed to edit post');
+      throw error;
     }
   }
 
@@ -284,7 +284,7 @@ export class PostsController {
         `Error in getUserPosts controller for userId ${userId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to fetch user posts');
+      throw error;
     }
   }
 
@@ -306,7 +306,7 @@ export class PostsController {
         `Error in unsavePost controller for postId ${postId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to unsave post');
+      throw error;
     }
   }
 
@@ -334,7 +334,7 @@ export class PostsController {
         `Error in editComment controller for commentId ${commentId}:`,
         error,
       );
-      throw new InternalServerErrorException('Failed to edit comment');
+      throw error;
     }
   }
 

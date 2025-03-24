@@ -4,6 +4,8 @@ import {
   InternalServerErrorException,
   BadRequestException,
   UnauthorizedException,
+  ConflictException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -13,14 +15,14 @@ import { GetPostDto } from './dto/get-post.dto';
 import {
   Profile,
   ProfileDocument,
-} from '../profiles/infrastructure/database/profile.schema'; // Import Profile schema
+} from '../profiles/infrastructure/database/profile.schema';
 import {
   Company,
   CompanyDocument,
-} from '../companies/infrastructure/database/company.schema'; // Import Company schema
+} from '../companies/infrastructure/database/company.schema';
 import { React, ReactDocument } from './infrastructure/database/react.schema';
 import { Reactions, UpdateReactionsDto } from './dto/update-reactions.dto';
-import { ReactionDto } from './dto/get-reactions.dto'; // Import ReactionDto
+import { ReactionDto } from './dto/get-reactions.dto';
 import { Save, SaveDocument } from './infrastructure/database/save.schema';
 import { EditPostDto } from './dto/edit-post.dto';
 import {
@@ -30,16 +32,17 @@ import {
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { EditCommentDto } from './dto/edit-comment.dto';
+import { th } from '@faker-js/faker/.';
 
 @Injectable()
 export class PostsService {
   constructor(
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
-    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>, // Inject Profile model
-    @InjectModel(Company.name) private companyModel: Model<CompanyDocument>, // Inject Company model
-    @InjectModel(React.name) private reactModel: Model<ReactDocument>, // Inject React model
-    @InjectModel(Save.name) private saveModel: Model<SaveDocument>, // Inject Save model
-    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>, // Inject Comment model
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
+    @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(React.name) private reactModel: Model<ReactDocument>,
+    @InjectModel(Save.name) private saveModel: Model<SaveDocument>,
+    @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
   ) {}
 
   async editPost(
@@ -47,15 +50,32 @@ export class PostsService {
     editPostDto: EditPostDto,
     userId: string,
   ): Promise<Post> {
-    const post = await this.findPostById(id);
-    if (post.author_id.toString() !== userId) {
-      throw new UnauthorizedException('User not authorized to edit this post');
-    }
+    try {
+      // Validate post ID format
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException('Invalid post ID format');
+      }
 
-    if (userId) {
+      const post = await this.findPostById(id);
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+
+      // Check if the user is authorized to edit the post
+      if (post.author_id.toString() !== userId) {
+        throw new UnauthorizedException(
+          'User not authorized to edit this post',
+        );
+      }
+
+      // Validate user ID format
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
+
       let authorType: 'User' | 'Company';
       const authorProfile = await this.profileModel
-        .find({ _id: new Types.ObjectId(userId) })
+        .findById(new Types.ObjectId(userId))
         .exec();
       if (authorProfile) {
         authorType = 'User';
@@ -71,47 +91,80 @@ export class PostsService {
       }
       post.author_id = new Types.ObjectId(userId);
       post.author_type = authorType;
-    }
 
-    Object.assign(post, editPostDto);
-    await post.save();
-    return post;
+      Object.assign(post, editPostDto);
+      await post.save();
+      return post;
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException ||
+        error instanceof UnauthorizedException
+      ) {
+        throw error;
+      }
+      console.error('Internal server error:', error);
+      throw new InternalServerErrorException('Failed to edit post');
+    }
   }
 
   async addPost(
     createPostDto: CreatePostDto,
     author_id: string,
   ): Promise<GetPostDto> {
-    let authorType: 'User' | 'Company';
-    const authorProfile = await this.profileModel
-      .find({ _id: new Types.ObjectId(author_id) })
-      .exec();
-    if (authorProfile) {
-      authorType = 'User';
-    } else {
-      const authorCompany = await this.companyModel
-        .find({ _id: new Types.ObjectId(author_id) })
-        .exec();
-      if (authorCompany) {
-        authorType = 'Company';
-      } else {
-        throw new NotFoundException('Author not found');
+    try {
+      // Validate author ID format
+      if (!Types.ObjectId.isValid(author_id)) {
+        throw new BadRequestException('Invalid author ID format');
       }
-    }
 
-    const createdPost = new this.postModel({
-      _id: new Types.ObjectId(),
-      text: createPostDto.content,
-      media: createPostDto.media,
-      tags: (createPostDto.taggedUsers ?? []).map(
-        (tag) => new Types.ObjectId(tag),
-      ),
-      visibility: createPostDto.visibility,
-      author_id: author_id,
-      author_type: authorType,
-    });
-    const savedPost = await createdPost.save();
-    return this.mapToGetPostDto(savedPost, author_id);
+      let authorType: 'User' | 'Company';
+      // Check if the author is a User
+      const authorProfile = await this.profileModel
+        .findById(new Types.ObjectId(author_id))
+        .exec();
+      if (authorProfile) {
+        authorType = 'User';
+      } else {
+        // Check if the author is a Company
+        const authorCompany = await this.companyModel
+          .findById(new Types.ObjectId(author_id))
+          .exec();
+        if (authorCompany) {
+          authorType = 'Company';
+        } else {
+          throw new NotFoundException('Author not found');
+        }
+      }
+
+      // Create a new post
+      const createdPost = new this.postModel({
+        _id: new Types.ObjectId(),
+        text: createPostDto.content,
+        media: createPostDto.media,
+        tags: (createPostDto.taggedUsers ?? []).map(
+          (tag) => new Types.ObjectId(tag),
+        ),
+        visibility: createPostDto.visibility,
+        author_id: new Types.ObjectId(author_id),
+        author_type: authorType,
+      });
+
+      // Save the post to the database
+      const savedPost = await createdPost.save();
+      return this.mapToGetPostDto(savedPost, author_id);
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      console.error('Internal server error:', error);
+      throw new InternalServerErrorException('Failed to add post');
+    }
   }
 
   async getAllPosts(
@@ -122,11 +175,17 @@ export class PostsService {
     const skip = (page - 1) * limit;
     try {
       const posts = await this.postModel.find().skip(skip).limit(limit).exec();
+      if (posts.length === 0) {
+        throw new NotFoundException('No posts found for the requested page');
+      }
       return Promise.all(
         posts.map((post) => this.mapToGetPostDto(post, userId)),
       );
     } catch (error) {
       console.error('Error fetching all posts:', error);
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       if (error.name === 'NetworkError') {
         throw new InternalServerErrorException(
           'Network error occurred while fetching posts',
@@ -204,6 +263,8 @@ export class PostsService {
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.logo;
+    } else {
+      throw new Error('Invalid author type');
     }
 
     let userReactionType:
@@ -276,7 +337,7 @@ export class PostsService {
       await this.saveModel.deleteMany({ post_id: id }).exec();
       // await this.shareModel.deleteMany({ post_id: id }).exec();
     } catch (error) {
-      console.error(`Error deleting post with id ${id}:`, error);
+      // console.error(`Error deleting post with id ${id}:`, error);
       if (error instanceof NotFoundException) {
         throw error;
       }
@@ -356,11 +417,13 @@ export class PostsService {
         }
       }
       if (value === true) {
-        const existingReaction = await this.reactModel.findOne({
-          post_id: objectIdPostId, // Use converted ObjectId
-          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
-          user_type: reactorType,
-        });
+        const existingReaction = await this.reactModel
+          .findOne({
+            post_id: objectIdPostId, // Use converted ObjectId
+            user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            user_type: reactorType,
+          })
+          .exec();
         if (!existingReaction) {
           const newReaction = new this.reactModel({
             _id: new Types.ObjectId(),
@@ -372,7 +435,8 @@ export class PostsService {
           });
           console.log(`Added ${reactionType} reaction`);
           if (post) {
-            post.react_count[reactionType]++;
+            post.react_count[reactionType] =
+              (post.react_count[reactionType] || 0) + 1;
             await post.save();
             newReaction.post_type = 'Post';
             await newReaction.save();
@@ -385,20 +449,30 @@ export class PostsService {
           }
         } else {
           // Update the existing reaction
-          existingReaction.react_type = reactionType;
-          await existingReaction.save();
-          console.log(`Updated reaction to ${reactionType} for post`);
+          if (existingReaction.react_type !== reactionType) {
+            if (post) {
+              post.react_count[existingReaction.react_type]--;
+              post.react_count[reactionType] =
+                (post.react_count[reactionType] || 0) + 1;
+              await post.save();
+            }
+            existingReaction.react_type = reactionType;
+            await existingReaction.save();
+            console.log(`Updated reaction to ${reactionType} for post`);
+          }
         }
       } else {
-        const existingReaction = await this.reactModel.findOne({
-          post_id: objectIdPostId, // Use converted ObjectId
-          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
-          user_type: reactorType,
-          react_type: reactionType,
-        });
+        const existingReaction = await this.reactModel
+          .findOne({
+            post_id: objectIdPostId, // Use converted ObjectId
+            user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            user_type: reactorType,
+            react_type: reactionType,
+          })
+          .exec();
         console.log(`Existing reaction: ${existingReaction}`);
         if (existingReaction) {
-          await this.reactModel.deleteOne({ _id: existingReaction._id });
+          await this.reactModel.deleteOne({ _id: existingReaction._id }).exec();
           if (post) {
             post.react_count[reactionType]--;
             await post.save();
@@ -438,7 +512,7 @@ export class PostsService {
       if (!reactions || reactions.length === 0) {
         throw new NotFoundException('Reactions not found');
       }
-
+      console.log(reactions);
       return Promise.all(
         reactions.map((reaction) => this.mapToReactionDto(reaction)),
       );
@@ -475,7 +549,7 @@ export class PostsService {
       }
       authorProfilePicture = authorProfile.logo;
     }
-
+    console.log(authorProfile);
     return {
       likeId: reaction._id.toString(),
       postId: reaction.post_id.toString(),
@@ -615,6 +689,8 @@ export class PostsService {
       replies: [],
     });
 
+    console.log(newComment);
+
     await newComment.save();
     post.comment_count++;
     await post.save();
@@ -635,7 +711,7 @@ export class PostsService {
       .limit(limit)
       .exec();
     if (!comments || comments.length === 0) {
-      throw new NotFoundException('No comments found');
+      throw new NotFoundException('No comments found for the requested page');
     }
 
     return Promise.all(
@@ -775,7 +851,7 @@ export class PostsService {
       }
       return post;
     } catch (error) {
-      console.error(`Error finding post with id ${id}:`, error);
+      // console.error(`Error finding post with id ${id}:`, error);
       if (error.name === 'CastError') {
         throw new NotFoundException('Invalid post id format');
       }
@@ -816,10 +892,7 @@ export class PostsService {
       );
     }
 
-    const reactions = await this.reactModel.find({ post_id: commentId });
-    for (const reaction of reactions) {
-      await reaction.deleteOne();
-    }
-    await comment.deleteOne();
+    await this.reactModel.deleteMany({ post_id: commentId }).exec();
+    const result = await this.commentModel.deleteOne({ _id: commentId }).exec();
   }
 }
