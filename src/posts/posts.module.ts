@@ -47,7 +47,7 @@ import { PostsService } from './posts.service';
     ProfilesModule, // Add ProfilesModule to imports
     UsersModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'default_secret',
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
   ],
