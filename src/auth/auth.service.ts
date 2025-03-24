@@ -223,19 +223,15 @@ export class AuthService {
   async forgotPassword(email: string) {
     const user = await this.userModel.findOne({ email });
   
-    if (!user) {
-      throw new NotFoundException('Email not found');
+    if (user && user.isVerified) {
+      const token = this.jwtService.sign({ sub: user._id }, { expiresIn: '15m' });
+      await this.mailerService.sendPasswordResetEmail(user.email, token);
     }
   
-    if (!user.isVerified) {
-      throw new BadRequestException('Email not verified');
-    }
-  
-    const token = this.jwtService.sign({ sub: user._id }, { expiresIn: '15m' });
-  
-    await this.mailerService.sendPasswordResetEmail(user.email, token);
-  
-    return { message: 'Password reset email sent' };
+    // 👇 Always return a success message (even if no email was found or verified)
+    return {
+      message: 'If an account with that email exists, a password reset link has been sent.',
+    };
   }
   
 
