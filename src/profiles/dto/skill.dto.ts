@@ -9,8 +9,8 @@ export class SkillDto {
   })
   @IsNotEmpty()
   @IsString()
-  skill_name: string;
+  skillName: string;
 
   @IsEmpty()
-  endpoints?: Types.ObjectId[];
+  endorsements?: Types.ObjectId[];
 }

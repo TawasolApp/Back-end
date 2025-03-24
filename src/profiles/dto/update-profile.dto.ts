@@ -10,12 +10,12 @@ export class UpdateProfileDto {
     @ApiPropertyOptional({ description: 'Profile picture URL', example: 'https://example.com/profile.jpg' })
     @IsOptional()
     @IsString()
-    profile_picture?: string;
+    profilePicture?: string;
   
     @ApiPropertyOptional({ description: 'Cover photo URL', example: 'https://example.com/cover.jpg' })
     @IsOptional()
     @IsString()
-    cover_photo?: string;
+    coverPhoto?: string;
   
     @ApiPropertyOptional({ description: 'Resume URL', example: 'https://example.com/resume.pdf' })
     @IsOptional()
@@ -41,5 +41,11 @@ export class UpdateProfileDto {
     @IsOptional()
     @IsString()
     industry?: string;
+
+    @ApiPropertyOptional({ description: 'Visibility', example: 'public' })
+    @IsOptional()
+    @IsString()
+    visibility?: string;
+    
     
 }

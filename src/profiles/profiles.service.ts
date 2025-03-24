@@ -1,13 +1,12 @@
-import { BadRequestException, ConflictException, Injectable, Type } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/profile.schema';
-import { get, Model, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { pick } from 'lodash';
 import { CreateProfileDto } from './dto/create-profile.dto';
-import { NotFoundException } from '@nestjs/common';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
-import { ne } from '@faker-js/faker/.';
+import { toCreateProfileSchema, toGetProfileDto, toUpdateProfileSchema } from './dto/profile.mapper';
 
 @Injectable()
 export class ProfilesService {
@@ -16,259 +15,113 @@ export class ProfilesService {
   ) {}
 
   async createProfile(createProfileDto: CreateProfileDto) {
-    
-    const newProfile = new this.profileModel(createProfileDto);
-    const savedProfile = await newProfile.save();
-  
-    // Dynamically pick fields from the DTO
-    return pick(savedProfile.toObject(), Object.keys(createProfileDto));
-  
-
+    const profileData = toCreateProfileSchema(createProfileDto);
+    const createdProfile = new this.profileModel(profileData);
+    await createdProfile.save();
+    return toGetProfileDto(createdProfile);
   }
-
-  async getProfile(_id:Types.ObjectId) {
-    const createProfileDto= new CreateProfileDto();
-    if (!Types.ObjectId.isValid(_id)) {
-        throw new NotFoundException('Invalid profile ID');
-    }
-
-    // console.log('getProfile id : ' + _id);
-    const getProfile= await this.profileModel.findOne({ _id: _id }).exec();
-   // console.log('getProfile ' + getProfile);
-    if (!getProfile) {
+  
+  async getProfile(_id: Types.ObjectId) {
+    const profile = await this.profileModel.findById(_id).exec();
+    if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-    return  pick(getProfile.toObject(), Object.keys(createProfileDto));
-   
+    return toGetProfileDto(profile);
   }
 
-  async updateProfile(updateProfileDto: UpdateProfileDto, _id) {
-    const createProfileDto= new CreateProfileDto();
+  async updateProfile(updateProfileDto: UpdateProfileDto, _id: Types.ObjectId) {
+    const updateData = toUpdateProfileSchema(updateProfileDto);
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
-        { _id: _id }, // Find by id
-        { $set: updateProfileDto }, // Only update specified fields
-        { new: true, runValidators: true }, // Return updated document & apply validators
-      )
-      .exec();
-
-    if (!updatedProfile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-
-    return  pick(updatedProfile.toObject(), Object.keys(createProfileDto));
-  }
-
-  async deleteProfilePicture(_id) {
-    const createProfileDto = new CreateProfileDto();
-    const profile = await this.profileModel.findOne({ _id: _id }).exec();
-    if (!profile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    if (!profile.profile_picture) {
-      throw new BadRequestException(`Profile-Picture is already unset or does not exist`);
-    }
-    const updatedProfile = await this.profileModel
-      .findOneAndUpdate(
-        { _id: _id },
-        { $unset: { profile_picture: '' } },
+        { _id },
+        { $set: updateData },
         { new: true, runValidators: true },
       )
       .exec();
-  
+
     if (!updatedProfile) {
       throw new NotFoundException(`Profile not found`);
     }
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
+
+    return toGetProfileDto(updatedProfile);
   }
 
-  async deleteCoverPhoto(_id) {
-    const createProfileDto = new CreateProfileDto();
-    const profile = await this.profileModel.findOne({ _id: _id }).exec();
+  async deleteProfileField(_id: Types.ObjectId, field: string) {
+    const profile = await this.profileModel.findById(_id).exec();
     if (!profile) {
       throw new NotFoundException(`Profile not found`);
     }
-    if (!profile.cover_photo) {
-      throw new BadRequestException(`Cover-Photo is already unset or does not exist`);
+    if (!profile[field]) {
+      throw new BadRequestException(`${field} is already unset or does not exist`);
     }
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
-        { _id: _id },
-        { $unset: { cover_photo: '' } },
+        { _id },
+        { $unset: { [field]: '' } },
         { new: true, runValidators: true },
       )
       .exec();
-  
+
     if (!updatedProfile) {
       throw new NotFoundException(`Profile not found`);
     }
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
+    return toGetProfileDto(updatedProfile);
   }
 
-  async deleteResume(_id) {
-    const createProfileDto = new CreateProfileDto();
-    const profile = await this.profileModel.findOne({ _id: _id }).exec();
-    if (!profile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    if (!profile.resume) {
-      throw new BadRequestException(`Resume is already unset or does not exist`);
-    }
-    const updatedProfile = await this.profileModel
-      .findOneAndUpdate(
-        { _id: _id },
-        { $unset: { resume: '' } },
-        { new: true, runValidators: true },
-      )
-      .exec();
+  async deleteHeadline(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'headline');
+  }
+
+  async deleteBio(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'bio');
+  }
+
+  async deleteLocation(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'location');
+  }
+
+  async deleteIndustry(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'industry');
+  }
+  async deleteProfilePicture(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'profile_picture');
+  }
+  async deleteCoverPhoto(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'cover_photo');
+  }
+  async deleteResume(_id: Types.ObjectId) {
+    return this.deleteProfileField(_id, 'resume');
+  }
   
-    if (!updatedProfile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
-  }
 
-  async deleteHeadline(_id) {
-    const createProfileDto = new CreateProfileDto();
-    const profile = await this.profileModel.findOne({ _id: _id }).exec();
-    if (!profile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    if (!profile.headline) {
-      throw new BadRequestException(`Headline is already unset or does not exist`);
-    }
-    const updatedProfile = await this.profileModel
-      .findOneAndUpdate(
-        { _id: _id },
-        { $unset: { headline: '' } },
-        { new: true, runValidators: true },
-      )
-      .exec();
-  
-    if (!updatedProfile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
-  }
-
-  async deleteBio(_id) {
-    const createProfileDto = new CreateProfileDto();
-    const profile = await this.profileModel.findOne({ _id: _id }).exec();
-    if (!profile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    if (!profile.bio) {
-      throw new BadRequestException(`Bio is already unset or does not exist`);
-    }
-    const updatedProfile = await this.profileModel
-      .findOneAndUpdate(
-        { _id: _id },
-        { $unset: { bio: '' } },
-        { new: true, runValidators: true },
-      )
-      .exec();
-  
-    if (!updatedProfile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
-  }
-
-  async deleteLocation(_id) {
-    const createProfileDto = new CreateProfileDto();
-    const profile = await this.profileModel.findOne({ _id: _id }).exec();
-    if (!profile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    if (!profile.location) {
-      throw new BadRequestException(`Location is already unset or does not exist`);
-    }
-    const updatedProfile = await this.profileModel
-      .findOneAndUpdate(
-        { _id: _id },
-        { $unset: { location: '' } },
-        { new: true, runValidators: true },
-      )
-      .exec();
-  
-    if (!updatedProfile) {
-      throw new NotFoundException(`Profile not found`);
-    }
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
-    }
-
-  async deleteIndustry(_id) {
-    const createProfileDto = new CreateProfileDto();
-
-  // Step 1: Find the profile and check if the industry exists
-  const profile = await this.profileModel.findOne({ _id: _id }).exec();
-  if (!profile) {
-    throw new NotFoundException(`Profile not found`);
-  }
-
-  if (!profile.industry) {
-    throw new BadRequestException(`Industry is already unset or does not exist`);
-    
-  }
-
-  // Step 2: Proceed to unset the industry field
-  const updatedProfile = await this.profileModel
-    .findOneAndUpdate(
-      { _id: _id },
-      { $unset: { industry: '' } },
-      { new: true, runValidators: true },
-    )
-    .exec();
-
-  if (!updatedProfile) {
-    throw new NotFoundException(`Profile not found`);
-  }
-  return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
-}
-
-  async addSkill(skill: SkillDto, _id) {
-    //  Fetch the profile to check existing skills
-    const createProfileDto = new CreateProfileDto();
+  async addSkill(skill: SkillDto, _id: Types.ObjectId) {
     const profile = await this.profileModel.findById(_id);
-
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-
-    // Check if the skill already exists
-    const skillExists = (profile.skills ?? []).some(
-      (existingSkill) => existingSkill.skill_name.toLowerCase() === skill.skill_name.toLowerCase(),
-    );
-
-    if (skillExists) {
-      throw new BadRequestException(`Skill '${skill.skill_name}' already exists`);
+    if ((profile.skills ?? []).some(s => s.skill_name.toLowerCase() === skill.skillName.toLowerCase())) {
+      throw new BadRequestException(`Skill '${skill.skillName}' already exists`);
     }
-
-   //Add skill and update profile
     const updatedProfile = await this.profileModel.findByIdAndUpdate(
       _id,
-      { $push: { skills: skill } }, // Using `$push` since we already ensured uniqueness
+      { $addToSet: { skills: { skill_name: skill.skillName, endorsements: [] } } },
       { new: true, runValidators: true },
     );
     if (!updatedProfile) {
       throw new NotFoundException('Profile not found');
     }
-
-    return  pick(updatedProfile.toObject(), Object.keys(createProfileDto));
+    return toGetProfileDto(updatedProfile);
   }
 
-  async deleteSkill(skillName: string, id): Promise<Profile> {
-    const createProfileDto = new CreateProfileDto();
+  async deleteSkill(skillName: string, _id: Types.ObjectId) {
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      { _id: id, 'skills.skill_name': skillName }, // Ensure the skill exists before updating
-      { $pull: { skills: { skill_name: skillName } } }, // Remove the skill
+      { _id, 'skills.skill_name': skillName },
+      { $pull: { skills: { skill_name: skillName } } },
       { new: true }
     );
-  
     if (!updatedProfile) {
-      throw new NotFoundException(`Skill "${skillName}" not found in profile`);
+      throw new NotFoundException(`Skill '${skillName}' not found in profile`);
     }
-  
-    return pick(updatedProfile.toObject(), Object.keys(createProfileDto));
+    return toGetProfileDto(updatedProfile);
   }
 }

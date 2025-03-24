@@ -21,13 +21,18 @@ import { SkillDto } from './dto/skill.dto';
 
 @Controller('profile')
 export class ProfilesController {
-  private _id: Types.ObjectId = new Types.ObjectId('67dd4df9ac9fdb53ffab78b7');
+  private _id: Types.ObjectId = new Types.ObjectId('67dd609b223693c58b562372');
 
   constructor(private profilesService: ProfilesService) {}
 
   @Post()
   @UsePipes(new ValidationPipe())
   createProfile(@Body() createProfileDto:CreateProfileDto) {
+    if (createProfileDto.skills && createProfileDto.skills.length > 0) {
+      console.log("createProfile controller: " + createProfileDto.skills[0].skillName);
+    } else {
+      console.log("createProfile controller: No skills provided");
+    }
     return this.profilesService.createProfile(createProfileDto);
   }
 
@@ -99,6 +104,7 @@ export class ProfilesController {
   @Patch('skills')
   @UsePipes(new ValidationPipe())
   addSkill(@Body() skill: SkillDto) {
+    console.log("addSkill controller: " + skill.skillName);
     return this.profilesService.addSkill(skill,this._id);
   }
 

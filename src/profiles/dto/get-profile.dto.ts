@@ -13,6 +13,7 @@ import { Types } from 'mongoose';
 // }
 
 class Education {
+    _id: Types.ObjectId;
   @ApiProperty({ description: 'Name of the educational institution', example: 'Harvard University' })
   @IsNotEmpty()
   @IsString()
@@ -67,6 +68,9 @@ class Certification {
 }
 
 class WorkExperience {
+
+    _id: Types.ObjectId;
+
   @ApiProperty({ description: 'Job title', example: 'Software Engineer' })
   @IsNotEmpty()
   @IsString()
@@ -157,7 +161,7 @@ class PlanStatistics {
   applicationCount: number;
 }
 
-export class CreateProfileDto {
+export class GetProfileDto {
 
   _id: Types.ObjectId;
   
@@ -238,19 +242,9 @@ export class CreateProfileDto {
   @IsEnum(['public', 'private', 'connections_only'])
   visibility?: string;
 
-  // @ApiPropertyOptional({ description: 'Connection count', example: 50 })
-  // @IsOptional()
-  // connectionCount?: number;
+  @ApiPropertyOptional({ description: 'Connection count', example: 50 })
+  @IsOptional()
+  connectionCount?: number;
 
-  // @ApiPropertyOptional({ description: 'Plan details', type: PlanDetails })
-  // @IsOptional()
-  // @ValidateNested()
-  // @Type(() => PlanDetails)
-  // planDetails?: PlanDetails;
-
-  // @ApiProperty({ description: 'Plan statistics', type: PlanStatistics })
-  
-  // @ValidateNested()
-  // @Type(() => PlanStatistics)
-  // planStatistics: PlanStatistics;
+ 
 }
