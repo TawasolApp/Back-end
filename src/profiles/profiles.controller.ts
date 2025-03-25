@@ -78,6 +78,7 @@ export class ProfilesController {
   @Delete('resume')
   @UsePipes(new ValidationPipe())
   deleteResume(@Req() req) {
+    
     return this.profilesService.deleteResume(req.user.sub);
   }
 

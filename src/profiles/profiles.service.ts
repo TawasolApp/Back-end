@@ -22,7 +22,7 @@ export class ProfilesService {
   }
   
   async getProfile(_id: Types.ObjectId) {
-    const profile = await this.profileModel.findById(_id).exec();
+    const profile = await this.profileModel.findById( new Types.ObjectId(_id)).exec();
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
@@ -33,7 +33,7 @@ export class ProfilesService {
     const updateData = toUpdateProfileSchema(updateProfileDto);
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
-        { _id },
+        { _id: new Types.ObjectId(_id) },
         { $set: updateData },
         { new: true, runValidators: true },
       )
@@ -47,9 +47,9 @@ export class ProfilesService {
   }
 
   async deleteProfileField(_id: Types.ObjectId, field: string) {
-    const id: Types.ObjectId = new Types.ObjectId(_id);
+    
     console.log("deleteProfile service: " + _id);
-    const profile = await this.profileModel.findById(new Types.ObjectId(id)).exec();
+    const profile = await this.profileModel.findById(new Types.ObjectId(_id)).exec();
     console.log("deleteProfile service profile: " + profile);
     if (!profile) {
       throw new NotFoundException(`Profile not found`);
@@ -59,14 +59,14 @@ export class ProfilesService {
     }
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
-        { _id },
+        { _id: new Types.ObjectId(_id) },
         { $unset: { [field]: '' } },
         { new: true, runValidators: true },
       )
       .exec();
-
+      console.log("deleteProfile service profile: " + updatedProfile);
     if (!updatedProfile) {
-      throw new NotFoundException(`Profile not found`);
+      throw new NotFoundException(`updated Profile not found`);
     }
     return toGetProfileDto(updatedProfile);
   }
@@ -98,27 +98,28 @@ export class ProfilesService {
   
 
   async addSkill(skill: SkillDto, _id: Types.ObjectId) {
-    const profile = await this.profileModel.findById(_id);
+    const profile = await this.profileModel.findById( new Types.ObjectId(_id));
+    console.log("addSkill service: " + profile);
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
     if ((profile.skills ?? []).some(s => s.skill_name.toLowerCase() === skill.skillName.toLowerCase())) {
       throw new BadRequestException(`Skill '${skill.skillName}' already exists`);
     }
-    const updatedProfile = await this.profileModel.findByIdAndUpdate(
-      _id,
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      {_id: new Types.ObjectId(_id)},
       { $addToSet: { skills: { skill_name: skill.skillName, endorsements: [] } } },
       { new: true, runValidators: true },
     );
     if (!updatedProfile) {
-      throw new NotFoundException('Profile not found');
+      throw new NotFoundException('updated Profile not found');
     }
     return toGetProfileDto(updatedProfile);
   }
 
   async deleteSkill(skillName: string, _id: Types.ObjectId) {
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      { _id, 'skills.skill_name': skillName },
+      { _id: new Types.ObjectId(_id), 'skills.skill_name': skillName },
       { $pull: { skills: { skill_name: skillName } } },
       { new: true }
     );
