@@ -61,6 +61,44 @@ describe('ConnectionsService', () => {
     expect(service).toBeDefined();
   });
 
+  it('should return the connection ID when a match is found (id3 → id4)', async () => {
+    const sendingParty = mockProfiles[2]._id.toString(); 
+    const receivingParty = mockProfiles[4]._id.toString(); 
+
+    const expectedConnection = mockConnections.find(
+      (conn) =>
+        conn.sending_party.equals(sendingParty) &&
+        conn.receiving_party.equals(receivingParty),
+    );
+
+    userConnectionModel.findOne.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(expectedConnection),
+    });
+
+    const result = await service.getConnectionId(sendingParty, receivingParty);
+    expect(result?.toString()).toEqual(expectedConnection?._id.toString());
+    expect(userConnectionModel.findOne).toHaveBeenCalledWith({
+      sending_party: expect.any(Types.ObjectId),
+      receiving_party: expect.any(Types.ObjectId),
+    });
+  });
+
+  it('should return null when no connection is found (id2 → id5)', async () => {
+    const sendingParty = mockProfiles[1]._id.toString(); 
+    const receivingParty = mockProfiles[4]._id.toString(); 
+
+    userConnectionModel.findOne.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(null),
+    });
+
+    const result = await service.getConnectionId(sendingParty, receivingParty);
+    expect(result).toBeNull();
+    expect(userConnectionModel.findOne).toHaveBeenCalledWith({
+      sending_party: expect.any(Types.ObjectId),
+      receiving_party: expect.any(Types.ObjectId),
+    });
+  });
+
   it('should return all 5 profiles when filtering by name = "test"', async () => {
     profileModel.find.mockReturnValueOnce({
       select: jest.fn().mockReturnValueOnce({
@@ -359,6 +397,41 @@ describe('ConnectionsService', () => {
     );
     expect(profileModel.findByIdAndUpdate).toHaveBeenCalledTimes(2);
   });
+
+  it('should remove a connection through connectionId2 path (id4 → id2)', async () => {
+    const sendingParty = mockProfiles[3]._id.toString();
+    const receivingParty = mockProfiles[1]._id.toString();
+  
+    const connection = mockConnections.find(
+      (conn) =>
+        conn.sending_party.equals(receivingParty) &&
+        conn.receiving_party.equals(sendingParty) &&
+        conn.status === ConnectionStatus.Connected,
+    );
+  
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
+    });
+    jest
+      .spyOn(service, 'getConnectionId')
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(connection?._id!);
+  
+    userConnectionModel.findById.mockResolvedValueOnce(connection);
+  
+    userConnectionModel.findByIdAndDelete.mockResolvedValueOnce(connection);
+  
+    profileModel.findByIdAndUpdate.mockResolvedValueOnce({});
+  
+    await expect(
+      service.removeConnection(sendingParty, receivingParty),
+    ).resolves.not.toThrow();
+  
+    expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
+      connection?._id,
+    );
+  });
+  
 
   it('should throw NotFoundException if no connection exists (id3 → id5)', async () => {
     const sendingParty = mockProfiles[2]._id.toString();
@@ -741,7 +814,7 @@ describe('ConnectionsService', () => {
       }),
     });
   
-    const result = await service.getPendingRequests(userId);
+    const result = await service.getFollowers(userId);
     expect(result).toHaveLength(1);
     expect(result[0].userId?.toString()).toEqual(mockProfiles[2]._id.toString());
   });
@@ -757,7 +830,7 @@ describe('ConnectionsService', () => {
       }),
     });
   
-    const result = await service.getFollowers(userId);
+    const result = await service.getFollowing(userId);
     expect(result).toEqual([]);
   });
   
@@ -784,7 +857,7 @@ describe('ConnectionsService', () => {
       }),
     });
   
-    const result = await service.getPendingRequests(userId);
+    const result = await service.getFollowing(userId);
     expect(result).toHaveLength(1);
     expect(result[0].userId?.toString()).toEqual(mockProfiles[0]._id.toString());
   });
