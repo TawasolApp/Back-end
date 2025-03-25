@@ -1,8 +1,7 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
-import { Query, Get } from '@nestjs/common';
 import { ResendConfirmationDto } from './dtos/resend-confirmation.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
@@ -33,16 +32,15 @@ export class AuthController {
 
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
-  const message = await this.authService.verifyEmail(token);
-  return { message };
-
+    const message = await this.authService.verifyEmail(token);
+    return { message };
   }
 
   @Post('resend-confirmation')
   async resendConfirmation(@Body() { email }: ResendConfirmationDto) {
-  const message = await this.authService.resendConfirmationEmail(email);
-  return { message };
-}
+    const message = await this.authService.resendConfirmationEmail(email);
+    return { message };
+  }
 
   @Post('refresh-token')
   async refresh(@Body('refreshToken') refreshToken: string) {
@@ -51,16 +49,16 @@ export class AuthController {
 
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return this.authService.forgotPassword(dto.email);
+    const message = await this.authService.forgotPassword(dto.email);
+    return { message };
   }
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-  return this.authService.resetPassword(dto.token, dto.newPassword);
-}
-
-
-
-
-
+    const message = await this.authService.resetPassword(
+      dto.token,
+      dto.newPassword,
+    );
+    return { message };
+  }
 }
