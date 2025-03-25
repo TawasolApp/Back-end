@@ -31,7 +31,7 @@ export class ProfileSeeder {
     }
 
     const profiles: Partial<ProfileDocument>[] = users.map((user) => ({
-      _id: user._id, // Ensure 1-to-1 mapping
+      _id: user._id,
       name: `${user.first_name} ${user.last_name}`,
       profile_picture: faker.image.avatar(),
       cover_photo: faker.image.url(),

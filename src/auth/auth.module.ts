@@ -6,7 +6,7 @@ import { AuthController } from './auth.controller';
 import { UsersModule } from '../users/users.module';
 import { MailerModule } from '../common/services/mailer.module';
 import { MongooseModule } from '@nestjs/mongoose';
-import { User, UserSchema } from '../users/infrastructure/database/user.schema'; // ✅
+import { User, UserSchema } from '../users/infrastructure/database/user.schema';
 
 @Module({
   imports: [

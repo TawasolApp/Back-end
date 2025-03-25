@@ -18,8 +18,8 @@ import {
 } from '../profiles/infrastructure/database/profile.schema';
 import { ConnectionStatus } from './infrastructure/connection-status.enum';
 import { plainToInstance } from 'class-transformer';
-import { GetConnectionDto } from './dtos/get-connection.dto';
-import { send } from 'process';
+import { GetUserDto } from './dtos/get-user.dto';
+import { toGetUserDto } from './dtos/user.mapper';
 
 @Injectable()
 export class ConnectionsService {
@@ -39,6 +39,24 @@ export class ConnectionsService {
       .lean<{ _id: Types.ObjectId }>();
 
     return connectionRecord?._id || null;
+  }
+
+  async searchUsers(name?: string, company?: string, industry?: string) {
+    const filter: any = {};
+    if (name) {
+      filter.name = { $regex: name, $options: 'i' };
+    }
+    if (company) {
+      filter.industry = { $regex: company, $options: 'i' };
+    }
+    if (industry) {
+      filter.industry = { $regex: industry, $options: 'i' };
+    }
+    const users = await this.profileModel
+      .find(filter)
+      .select('_id name profile_picture headline')
+      .lean();
+    return users.map(toGetUserDto);
   }
 
   async requestConnection(sendingParty: string, receivingParty: string) {
