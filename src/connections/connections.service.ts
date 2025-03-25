@@ -18,6 +18,8 @@ import {
 } from '../profiles/infrastructure/database/profile.schema';
 import { ConnectionStatus } from './infrastructure/connection-status.enum';
 import { toGetUserDto } from './dtos/user.mapper';
+import { CreateRequestDto } from './dtos/create-request.dto';
+import { UpdateRequestDto } from './dtos/update-request.dto';
 
 @Injectable()
 export class ConnectionsService {
@@ -57,8 +59,13 @@ export class ConnectionsService {
     return users.map(toGetUserDto);
   }
 
-  async requestConnection(sendingParty: string, receivingParty: string) {
+  async requestConnection(
+    sendingParty: string,
+    createRequestDto: CreateRequestDto,
+  ) {
     try {
+      const { userId } = createRequestDto;
+      const receivingParty = userId;
       const exisitngUser = await this.profileModel
         .findById(new Types.ObjectId(receivingParty))
         .lean();
@@ -92,7 +99,7 @@ export class ConnectionsService {
   async updateConnection(
     sendingParty: string,
     receivingParty: string,
-    status: ConnectionStatus,
+    updateRequestDto: UpdateRequestDto,
   ) {
     try {
       const exisitngUser = await this.profileModel
@@ -116,6 +123,10 @@ export class ConnectionsService {
           'Only pending connections can be accepted/ignored.',
         );
       }
+      const { isAccept } = updateRequestDto;
+      const status = isAccept
+        ? ConnectionStatus.Connected
+        : ConnectionStatus.Ignored;
       const updatedConnection =
         await this.userConnectionModel.findByIdAndUpdate(
           new Types.ObjectId(connectionId),
@@ -188,8 +199,10 @@ export class ConnectionsService {
     }
   }
 
-  async follow(sendingParty: string, receivingParty: string) {
+  async follow(sendingParty: string, createRequestDto: CreateRequestDto) {
     try {
+      const { userId } = createRequestDto;
+      const receivingParty = userId;
       const exisitngUser = await this.profileModel
         .findById(new Types.ObjectId(receivingParty))
         .lean();

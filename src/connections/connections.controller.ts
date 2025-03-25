@@ -73,15 +73,10 @@ export class ConnectionsController {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      const { userId } = createRequestDto;
-      const receivingUserId = userId;
-      if (!Types.ObjectId.isValid(receivingUserId)) {
-        throw new BadRequestException('Invalid user ID format.');
-      }
       const sendingUserId = request.user['sub'];
       return await this.connectionsService.requestConnection(
         sendingUserId,
-        receivingUserId,
+        createRequestDto,
       );
     } catch (error) {
       if (error instanceof HttpException) {
@@ -105,15 +100,12 @@ export class ConnectionsController {
       if (!Types.ObjectId.isValid(sendingUserId)) {
         throw new BadRequestException('Invalid connection ID format.');
       }
-      const { isAccept } = updateRequestDto;
-      const status = isAccept
-        ? ConnectionStatus.Connected
-        : ConnectionStatus.Ignored;
+
       const receivingUserId = request.user['sub'];
       return await this.connectionsService.updateConnection(
         sendingUserId,
         receivingUserId,
-        status,
+        updateRequestDto,
       );
     } catch (error) {
       if (error instanceof HttpException) {
@@ -217,15 +209,10 @@ export class ConnectionsController {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      const { userId } = createRequestDto;
-      const receivingUserId = userId;
-      if (!Types.ObjectId.isValid(receivingUserId)) {
-        throw new BadRequestException('Invalid connection ID format.');
-      }
       const sendingUserId = request.user['sub'];
       return await this.connectionsService.follow(
         sendingUserId,
-        receivingUserId,
+        createRequestDto,
       );
     } catch (error) {
       if (error instanceof HttpException) {
