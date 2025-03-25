@@ -17,10 +17,9 @@ import { Types } from 'mongoose';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 import { CreateProfileDto } from './dto/create-profile.dto';
-import { Skill } from './infrastructure/database/profile.schema';
 import { SkillDto } from './dto/skill.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
+@UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
   private _id: Types.ObjectId = new Types.ObjectId('67e215fc3f9cdc8e6040a90a');
@@ -55,68 +54,69 @@ export class ProfilesController {
 
   @Patch()
   @UsePipes(new ValidationPipe())
-  updateProfile(@Body() updateProfileDto: UpdateProfileDto) {
-    return this.profilesService.updateProfile( updateProfileDto,this._id);
+  updateProfile(@Req() req, @Body() updateProfileDto: UpdateProfileDto) {
+    return this.profilesService.updateProfile( updateProfileDto,req.user.sub);
   }
 
 
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
-  // @UseGuards(JwtAuthGuard)
+  
   deleteProfilePicture(@Req() req) {
     console.log("deleteProfilePicture controller: " + req.user.sub);
-    return this.profilesService.deleteProfilePicture(this._id);
+    return this.profilesService.deleteProfilePicture(req.user.sub);
   }
 
+  
   @Delete('cover-photo')
   @UsePipes(new ValidationPipe())
-  // @UseGuards(JwtAuthGuard)
-  deleteCoverPhoto() {
-    return this.profilesService.deleteCoverPhoto(this._id);
+  
+  deleteCoverPhoto(@Req() req) {
+    return this.profilesService.deleteCoverPhoto(req.user.sub);
   }
 
   @Delete('resume')
   @UsePipes(new ValidationPipe())
-  deleteResume() {
-    return this.profilesService.deleteResume(this._id);
+  deleteResume(@Req() req) {
+    return this.profilesService.deleteResume(req.user.sub);
   }
 
   @Delete('headline')
   @UsePipes(new ValidationPipe())
-  deleteHeadline() {
-    return this.profilesService.deleteHeadline(this._id);
+  deleteHeadline(@Req() req) {
+    return this.profilesService.deleteHeadline(req.user.sub);
   }
 
   @Delete('bio')
   @UsePipes(new ValidationPipe())
-  deleteBio() {
-    return this.profilesService.deleteBio(this._id);
+  deleteBio(@Req() req) {
+    return this.profilesService.deleteBio(req.user.sub);
   }
 
   @Delete('location')
   @UsePipes(new ValidationPipe())
-  deleteLocation() {
-    return this.profilesService.deleteLocation(this._id);
+  deleteLocation(@Req() req) {
+    return this.profilesService.deleteLocation(req.user.sub);
   }
 
   @Delete('industry')
   @UsePipes(new ValidationPipe())
-  deleteIndustry() {
-    return this.profilesService.deleteIndustry(this._id);
+  deleteIndustry(@Req() req) {
+    return this.profilesService.deleteIndustry(req.user.sub);
   }
 
 
   @Patch('skills')
   @UsePipes(new ValidationPipe())
-  addSkill(@Body() skill: SkillDto) {
+  addSkill(@Req() req,@Body() skill: SkillDto) {
     console.log("addSkill controller: " + skill.skillName);
-    return this.profilesService.addSkill(skill,this._id);
+    return this.profilesService.addSkill(skill,req.user.sub);
   }
 
   @Delete('skills/:skill_name')
   @UsePipes(new ValidationPipe())
-  deleteSkill(@Param('skill_name') skillName: string, ) {
-    return this.profilesService.deleteSkill(skillName, this._id);
+  deleteSkill(@Req() req,@Param('skill_name') skillName: string, ) {
+    return this.profilesService.deleteSkill(skillName, req.user.sub);
   }
 
 }

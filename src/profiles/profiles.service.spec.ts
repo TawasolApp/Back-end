@@ -5,6 +5,7 @@ import { Profile } from './infrastructure/database/profile.schema';
 import { Model, Types } from 'mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
+import { JwtService } from '@nestjs/jwt';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -25,6 +26,7 @@ describe('ProfilesService', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProfilesController],
       providers: [
+        JwtService,
         
         ProfilesService,
         {
@@ -99,7 +101,7 @@ describe('ProfilesService', () => {
       } as any);
 
       await expect(
-        
+
         service.deleteProfileField(mockProfile._id, 'headline'),
       ).rejects.toThrow(BadRequestException);
     });

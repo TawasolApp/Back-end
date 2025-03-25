@@ -5,6 +5,7 @@ import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { Types } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
 
 describe('ProfilesController', () => {
   let controller: ProfilesController;
@@ -29,6 +30,7 @@ describe('ProfilesController', () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [ProfilesController],
       providers: [
+        JwtService,
         {
           provide: ProfilesService,
           useValue: mockProfilesService,
@@ -68,45 +70,57 @@ describe('ProfilesController', () => {
   describe('updateProfile', () => {
     it('should call updateProfile on the service', async () => {
       const dto: UpdateProfileDto = { headline: 'Updated Headline', name: 'Updated Name' };
-      await controller.updateProfile(dto);
-      expect(service.updateProfile).toHaveBeenCalledWith(dto, expect.any(Types.ObjectId));
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.updateProfile(req, dto);
+      expect(service.updateProfile).toHaveBeenCalledWith(dto, testUserId);
     });
   });
 
   describe('deleteProfilePicture', () => {
     it('should call deleteProfilePicture on the service', async () => {
-      const req = { user: { sub: 'test-user' } };
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+  
       await controller.deleteProfilePicture(req);
-      expect(service.deleteProfilePicture).toHaveBeenCalledWith(expect.any(Types.ObjectId));
-    });
+  
+      expect(service.deleteProfilePicture).toHaveBeenCalledWith(testUserId); });
   });
 
   describe('deleteCoverPhoto', () => {
     it('should call deleteCoverPhoto on the service', async () => {
-      await controller.deleteCoverPhoto();
-      expect(service.deleteCoverPhoto).toHaveBeenCalledWith(expect.any(Types.ObjectId));
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteCoverPhoto(req);
+      expect(service.deleteCoverPhoto).toHaveBeenCalledWith(testUserId);
     });
   });
 
   describe('deleteResume', () => {
     it('should call deleteResume on the service', async () => {
-      await controller.deleteResume();
-      expect(service.deleteResume).toHaveBeenCalledWith(expect.any(Types.ObjectId));
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteResume(req);
+      expect(service.deleteResume).toHaveBeenCalledWith(testUserId);
     });
   });
 
   describe('addSkill', () => {
     it('should call addSkill on the service', async () => {
       const skillDto: SkillDto = { skillName: 'NestJS' };
-      await controller.addSkill(skillDto);
-      expect(service.addSkill).toHaveBeenCalledWith(skillDto, expect.any(Types.ObjectId));
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.addSkill(req, skillDto);
+      expect(service.addSkill).toHaveBeenCalledWith(skillDto, testUserId);
     });
   });
 
   describe('deleteSkill', () => {
     it('should call deleteSkill on the service', async () => {
-      await controller.deleteSkill('NestJS');
-      expect(service.deleteSkill).toHaveBeenCalledWith('NestJS', expect.any(Types.ObjectId));
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteSkill(req, 'NestJS');
+      expect(service.deleteSkill).toHaveBeenCalledWith('NestJS', testUserId);
     });
   });
 });
