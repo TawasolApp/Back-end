@@ -28,10 +28,7 @@ export class ReactSeeder {
   ) {}
 
   async seedReacts(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
+    const users = await this.userModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
     const posts = await this.postModel.find().select('_id').lean();
 

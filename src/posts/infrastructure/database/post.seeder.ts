@@ -25,10 +25,7 @@ export class PostSeeder {
   ) {}
 
   async seedPosts(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
+    const users = await this.userModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
 
     if (users.length === 0 || companies.length === 0) {

@@ -35,32 +35,24 @@ export class UserConnectionSeeder {
       .find()
       .select('sending_party receiving_party')
       .lean();
-
     const existingSet = new Set(
-      existingConnections.flatMap((c) => [
-        `${c.sending_party}-${c.receiving_party}`,
-        `${c.receiving_party}-${c.sending_party}`,
-      ]),
+      existingConnections.map((c) => `${c.sending_party}-${c.receiving_party}`),
     );
 
     const userConnections: Partial<UserConnectionDocument>[] = [];
 
     for (let i = 0; i < count; i++) {
-      let sendingUser, receivingUser, keySendRec, keyRecSend;
-
+      let sendingUser, receivingUser, key;
       do {
         sendingUser = faker.helpers.arrayElement(users);
         receivingUser = faker.helpers.arrayElement(users);
-        keySendRec = `${sendingUser._id}-${receivingUser._id}`;
-        keyRecSend = `${receivingUser._id}-${sendingUser._id}`;
+        key = `${sendingUser._id}-${receivingUser._id}`;
       } while (
         sendingUser._id.equals(receivingUser._id) ||
-        existingSet.has(keySendRec) ||
-        existingSet.has(keyRecSend)
+        existingSet.has(key)
       );
 
-      existingSet.add(keySendRec);
-      existingSet.add(keyRecSend);
+      existingSet.add(key);
       userConnections.push({
         sending_party: sendingUser._id,
         receiving_party: receivingUser._id,
