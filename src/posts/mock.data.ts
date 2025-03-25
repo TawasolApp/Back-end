@@ -1,6 +1,7 @@
 import { Types } from 'mongoose';
 
 export const mockUserId = '60d0fe4f5311236168a109ca';
+export const mockCompanyId = '60d0fe4f5311236168a109ca';
 
 export const mockPostDto = {
   content: 'This is a mock post',
@@ -43,6 +44,27 @@ export const mockPost = {
   posted_at: new Date(),
 };
 
+export const mockCompanyPost = {
+  id: '60d0fe4f5311236168a109cb',
+  author_id: '60d0fe4f5311236168a109ca',
+  text: 'This is a mock post',
+  media: ['http://example.com/image.jpg'],
+  react_count: {
+    Like: 0,
+    Love: 0,
+    Funny: 0,
+    Celebrate: 0,
+    Insightful: 0,
+    Support: 0,
+  },
+  comment_count: 0,
+  share_count: 0,
+  tags: [],
+  visibility: 'Public',
+  author_type: 'Company',
+  posted_at: new Date(),
+};
+
 export const mockProfile = {
   _id: '60d0fe4f5311236168a109cc',
   name: 'Mock User',
@@ -50,17 +72,26 @@ export const mockProfile = {
   bio: 'This is a mock bio',
 };
 
+export const mockCompany = {
+  _id: '60d0fe4f5311236168a109cc',
+  name: 'Mock Company',
+  logo: 'http://example.com/logo.jpg',
+  description: 'This is a mock company',
+};
+
 export const mockComment = {
   _id: '60d0fe4f5311236168a109cd',
   author_id: '60d0fe4f5311236168a109ca',
   post_id: '60d0fe4f5311236168a109cb',
   content: 'This is a mock comment',
-  react_count: 0,
+  react_count: 5,
   replies: [],
+  commented_at: new Date(),
+  tags: [],
 };
 
 export const mockCommentDto = {
-  content: 'This is a mock comment',
+  content: 'This is an edited comment',
 };
 
 export const mockReaction = {
@@ -75,14 +106,6 @@ export const mockSave = {
   _id: '60d0fe4f5311236168a109cf',
   user_id: '60d0fe4f5311236168a109ca',
   post_id: '60d0fe4f5311236168a109cb',
-};
-
-export const mockCompany = {
-  _id: new Types.ObjectId(),
-  name: 'Mock Company',
-  logo: 'http://example.com/logo.jpg',
-  description: 'This is a mock company',
-  followers: 100,
 };
 
 export const mockEditPostDto = {
@@ -118,3 +141,34 @@ export const mockComments = [
     content: 'This is another mock comment',
   },
 ];
+
+// Mock data for new tests
+export const mockPostWithMedia = {
+  ...mockPost,
+  media: ['media1.jpg', 'media2.jpg'],
+};
+
+export const mockPostWithTags = {
+  ...mockPost,
+  tags: [new Types.ObjectId(), new Types.ObjectId()],
+};
+
+export const mockPostWithShares = {
+  ...mockPost,
+  share_count: 5,
+};
+
+export const mockPostWithComments = {
+  ...mockPost,
+  comment_count: 10,
+};
+
+export const mockPostWithReacts = {
+  ...mockPost,
+  react_count: 20,
+};
+
+export const mockCommentWithReacts = {
+  ...mockComment,
+  react_count: 5,
+};

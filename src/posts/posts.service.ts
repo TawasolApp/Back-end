@@ -207,9 +207,13 @@ export class PostsService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      if (error.name === 'CastError') {
+      if (
+        error.message ===
+        'input must be a 24 character hex string, 12 byte Uint8Array, or an integer'
+      ) {
         throw new NotFoundException('Invalid post id format');
       }
+      console.log(error);
       throw new InternalServerErrorException('Failed to fetch post');
     }
   }
@@ -219,23 +223,19 @@ export class PostsService {
     userId: string,
   ): Promise<GetPostDto[]> {
     try {
-      console.log(searchedUserId);
+      //console.log(searchedUserId);
       const posts = await this.postModel
         .find({ author_id: searchedUserId })
         .exec();
-      if (!posts) {
+      if (!posts || posts.length == 0) {
         throw new NotFoundException('No posts found');
       }
-      console.log(posts);
+      //console.log(posts);
       return Promise.all(
         posts.map((post) => this.mapToGetPostDto(post, userId)),
       );
     } catch (error) {
-      console.error(
-        `Error fetching posts for user with id ${searchedUserId}:`,
-        error,
-      );
-      throw new InternalServerErrorException('Failed to fetch user posts');
+      throw error;
     }
   }
 
@@ -372,7 +372,7 @@ export class PostsService {
     let post;
     let comment;
     const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
-    console.log(`Converted postId to ObjectId: ${objectIdPostId}`);
+    //console.log(`Converted postId to ObjectId: ${objectIdPostId}`);
     if (updateReactionsDto.postType === 'Post') {
       post = await this.postModel
         .findById(objectIdPostId) // Use converted ObjectId
@@ -380,20 +380,20 @@ export class PostsService {
 
       if (!post) {
         console.error(`Post with id ${postId} not found`);
-        console.log(`Checking if post exists in the database...`);
+        //console.log(`Checking if post exists in the database...`);
         const postExists = await this.postModel.exists({ _id: objectIdPostId });
-        console.log(`Post exists: ${postExists}`);
+        //console.log(`Post exists: ${postExists}`);
         throw new NotFoundException(`Post with id ${postId} not found`);
       }
     } else {
-      comment = await this.commentModel.findById(objectIdPostId);
+      comment = await this.commentModel.findById(objectIdPostId).exec();
       if (!comment) {
         console.error(`Comment with id ${postId} not found`);
-        console.log(`Checking if comment exists in the database...`);
+        //console.log(`Checking if comment exists in the database...`);
         const commentExists = await this.commentModel.exists({
           _id: objectIdPostId,
         });
-        console.log(`Comment exists: ${commentExists}`);
+        //console.log(`Comment exists: ${commentExists}`);
         throw new NotFoundException(`Comment with id ${postId} not found`);
       }
     }
@@ -433,7 +433,7 @@ export class PostsService {
             react_type: reactionType,
             post_type: updateReactionsDto.postType,
           });
-          console.log(`Added ${reactionType} reaction`);
+          //console.log(`Added ${reactionType} reaction`);
           if (post) {
             post.react_count[reactionType] =
               (post.react_count[reactionType] || 0) + 1;
@@ -458,7 +458,7 @@ export class PostsService {
             }
             existingReaction.react_type = reactionType;
             await existingReaction.save();
-            console.log(`Updated reaction to ${reactionType} for post`);
+            //console.log(`Updated reaction to ${reactionType} for post`);
           }
         }
       } else {
@@ -470,7 +470,7 @@ export class PostsService {
             react_type: reactionType,
           })
           .exec();
-        console.log(`Existing reaction: ${existingReaction}`);
+        //console.log(`Existing reaction: ${existingReaction}`);
         if (existingReaction) {
           await this.reactModel.deleteOne({ _id: existingReaction._id }).exec();
           if (post) {
@@ -481,7 +481,7 @@ export class PostsService {
             comment.react_count--;
             await comment.save();
           }
-          console.log(`Removed ${reactionType} reaction from post`);
+          //console.log(`Removed ${reactionType} reaction from post`);
         }
       }
     }
@@ -512,7 +512,7 @@ export class PostsService {
       if (!reactions || reactions.length === 0) {
         throw new NotFoundException('Reactions not found');
       }
-      console.log(reactions);
+      //console.log(reactions);
       return Promise.all(
         reactions.map((reaction) => this.mapToReactionDto(reaction)),
       );
@@ -524,7 +524,10 @@ export class PostsService {
       if (err instanceof NotFoundException) {
         throw err;
       }
-      if (err.name === 'CastError') {
+      if (
+        err.message ===
+        'input must be a 24 character hex string, 12 byte Uint8Array, or an integer'
+      ) {
         throw new NotFoundException('Invalid post id format');
       }
       throw new InternalServerErrorException('Failed to fetch reactions');
@@ -549,7 +552,7 @@ export class PostsService {
       }
       authorProfilePicture = authorProfile.logo;
     }
-    console.log(authorProfile);
+    //console.log(authorProfile);
     return {
       likeId: reaction._id.toString(),
       postId: reaction.post_id.toString(),
@@ -623,7 +626,7 @@ export class PostsService {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
         .exec();
-      console.log(savedPosts);
+      //console.log(savedPosts);
       if (!savedPosts || savedPosts.length === 0) {
         throw new NotFoundException('No saved posts found');
       }
@@ -689,7 +692,7 @@ export class PostsService {
       replies: [],
     });
 
-    console.log(newComment);
+    // console.log(newComment);
 
     await newComment.save();
     post.comment_count++;
@@ -778,52 +781,52 @@ export class PostsService {
         : null;
     }
 
-    const replies = await Promise.all(
-      comment.replies.map(async (reply) => {
-        let replyAuthorProfile;
-        let replyAuthorProfilePicture;
-        let replyAuthorName = 'Unknown';
-        let replyAuthorBio = '';
+    // const replies = await Promise.all(
+    //   comment.replies.map(async (reply) => {
+    //     let replyAuthorProfile;
+    //     let replyAuthorProfilePicture;
+    //     let replyAuthorName = 'Unknown';
+    //     let replyAuthorBio = '';
 
-        if (reply.author_type === 'User') {
-          replyAuthorProfile = await this.profileModel
-            .findById(reply.author_id)
-            .exec();
-          if (replyAuthorProfile) {
-            replyAuthorProfilePicture = replyAuthorProfile.profile_picture;
-            replyAuthorName = replyAuthorProfile.name;
-            replyAuthorBio = replyAuthorProfile.bio;
-          } else {
-            console.log(
-              `Reply user profile with id ${reply.author_id} not found`,
-            );
-          }
-        } else if (reply.author_type === 'Company') {
-          replyAuthorProfile = await this.companyModel
-            .findById(reply.author_id)
-            .exec();
-          if (replyAuthorProfile) {
-            replyAuthorProfilePicture = replyAuthorProfile.logo;
-            replyAuthorName = replyAuthorProfile.name;
-            replyAuthorBio = replyAuthorProfile.bio;
-          } else {
-            console.log(
-              `Reply company profile with id ${reply.author_id} not found`,
-            );
-          }
-        }
+    //     if (reply.author_type === 'User') {
+    //       replyAuthorProfile = await this.profileModel
+    //         .findById(reply.author_id)
+    //         .exec();
+    //       if (replyAuthorProfile) {
+    //         replyAuthorProfilePicture = replyAuthorProfile.profile_picture;
+    //         replyAuthorName = replyAuthorProfile.name;
+    //         replyAuthorBio = replyAuthorProfile.bio;
+    //       } else {
+    //         console.log(
+    //           `Reply user profile with id ${reply.author_id} not found`,
+    //         );
+    //       }
+    //     } else if (reply.author_type === 'Company') {
+    //       replyAuthorProfile = await this.companyModel
+    //         .findById(reply.author_id)
+    //         .exec();
+    //       if (replyAuthorProfile) {
+    //         replyAuthorProfilePicture = replyAuthorProfile.logo;
+    //         replyAuthorName = replyAuthorProfile.name;
+    //         replyAuthorBio = replyAuthorProfile.bio;
+    //       } else {
+    //         console.log(
+    //           `Reply company profile with id ${reply.author_id} not found`,
+    //         );
+    //       }
+    //     }
 
-        return {
-          authorId: reply.author_id.toString(),
-          authorName: replyAuthorName,
-          authorPicture: replyAuthorProfilePicture,
-          authorBio: replyAuthorBio,
-          text: reply.content,
-          reactCount: reply.reacts.length,
-          taggedUsers: reply.tags.map((tag) => tag.toString()),
-        };
-      }),
-    );
+    //     return {
+    //       authorId: reply.author_id.toString(),
+    //       authorName: replyAuthorName,
+    //       authorPicture: replyAuthorProfilePicture,
+    //       authorBio: replyAuthorBio,
+    //       text: reply.content,
+    //       reactCount: reply.reacts.length,
+    //       taggedUsers: reply.tags.map((tag) => tag.toString()),
+    //     };
+    //   }),
+    // );
 
     return {
       id: comment._id.toString(),
@@ -834,7 +837,7 @@ export class PostsService {
       authorBio: authorBio,
       authorType: comment.author_type as 'User' | 'Company',
       content: comment.content,
-      replies,
+      replies: [], // add replies
       reactCount: comment.react_count,
       timestamp: comment.commented_at.toISOString(),
       taggedUsers: comment.tags.map((tag) => tag.toString()),
@@ -864,12 +867,13 @@ export class PostsService {
     editCommentDto: EditCommentDto,
     userId: string,
   ): Promise<Comment> {
-    const comment = await this.commentModel.findById(
-      new Types.ObjectId(commentId),
-    );
+    const comment = await this.commentModel
+      .findById(new Types.ObjectId(commentId))
+      .exec();
     if (!comment) {
       throw new NotFoundException('Comment not found');
     }
+    console.log(comment);
     const authorId = comment.author_id.toString();
     if (authorId !== userId) {
       throw new UnauthorizedException(
