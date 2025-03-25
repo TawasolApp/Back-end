@@ -62,15 +62,15 @@ export class ProfilesController {
 
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   deleteProfilePicture(@Req() req) {
     console.log("deleteProfilePicture controller: " + req.user.sub);
-    return this.profilesService.deleteProfilePicture(req.user.sub);
+    return this.profilesService.deleteProfilePicture(this._id);
   }
 
   @Delete('cover-photo')
   @UsePipes(new ValidationPipe())
-  @UseGuards(JwtAuthGuard)
+  // @UseGuards(JwtAuthGuard)
   deleteCoverPhoto() {
     return this.profilesService.deleteCoverPhoto(this._id);
   }
