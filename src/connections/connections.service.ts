@@ -147,12 +147,7 @@ export class ConnectionsService {
       }
       return this.getPendingRequests(sendingParty);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Failed to update connection request status.',
-      );
+      throw error;
     }
   }
 
@@ -238,10 +233,7 @@ export class ConnectionsService {
       });
       await newConnection.save();
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to save follow.');
+      throw error;
     }
   }
 

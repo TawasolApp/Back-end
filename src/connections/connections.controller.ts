@@ -22,7 +22,6 @@ import { ConnectionsService } from './connections.service';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
-import { ConnectionStatus } from './infrastructure/connection-status.enum';
 import { CreateRequestDto } from './dtos/create-request.dto';
 import { UpdateRequestDto } from './dtos/update-request.dto';
 
