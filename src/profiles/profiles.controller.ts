@@ -21,7 +21,7 @@ import { SkillDto } from './dto/skill.dto';
 
 @Controller('profile')
 export class ProfilesController {
-  private _id: Types.ObjectId = new Types.ObjectId('67dd609b223693c58b562372');
+  private _id: Types.ObjectId = new Types.ObjectId('67e1f89cdbb929b029dc28af');
 
   constructor(private profilesService: ProfilesService) {}
 

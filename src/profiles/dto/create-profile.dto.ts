@@ -159,7 +159,6 @@ class PlanStatistics {
 
 export class CreateProfileDto {
 
-  _id: Types.ObjectId;
   
   @ApiProperty({ description: 'name', example: 'ziad asar' })
   @IsNotEmpty()

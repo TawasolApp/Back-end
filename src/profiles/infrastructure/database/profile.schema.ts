@@ -14,7 +14,9 @@ export class Skill {
 
 @Schema({ _id: false })
 export class Education {
+  @Prop({ type: Types.ObjectId,  default: () => new Types.ObjectId()})
   _id: Types.ObjectId;
+
   @Prop({ required: true })
   school: string;
 
@@ -39,6 +41,9 @@ export class Education {
 
 @Schema({ _id: false })
 export class Certification {
+  @Prop({ type: Types.ObjectId,  default: () => new Types.ObjectId()})
+  _id: Types.ObjectId;
+
   @Prop({ required: true })
   name: string;
 
@@ -51,10 +56,12 @@ export class Certification {
 
 @Schema({ _id: false })
 export class WorkExperience {
-  @Prop({ required: true })
 
+   
+  @Prop({ type: Types.ObjectId, default: () => new Types.ObjectId()})
   _id: Types.ObjectId;
 
+  @Prop({ required: true })
   title: string;
 
   @Prop({
