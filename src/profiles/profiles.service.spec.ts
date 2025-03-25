@@ -34,7 +34,7 @@ describe('ProfilesService', () => {
           useValue: {
             findById: jest.fn(),
             findOneAndUpdate: jest.fn(),
-            findByIdAndUpdate: jest.fn(),
+            
             save: jest.fn(),
           },
         },
@@ -81,6 +81,7 @@ describe('ProfilesService', () => {
         exec: jest.fn().mockResolvedValue({ ...mockProfile, headline: undefined }),
       } as any);
 
+
       const result = await service.deleteProfileField(mockProfile._id, 'headline');
       expect(result.headline).toBeNull();
     });
@@ -110,7 +111,7 @@ describe('ProfilesService', () => {
   describe('addSkill', () => {
     it('should add a skill to profile', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
-      jest.spyOn(profileModel, 'findByIdAndUpdate').mockResolvedValue({
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
         skills: [...mockProfile.skills, { skill_name: 'NestJS', endorsements: [] }],
       });

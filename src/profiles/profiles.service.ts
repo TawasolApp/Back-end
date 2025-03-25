@@ -22,7 +22,9 @@ export class ProfilesService {
   }
   
   async getProfile(_id: Types.ObjectId) {
+    console.log("getProfile service id : " + _id);
     const profile = await this.profileModel.findById( new Types.ObjectId(_id)).exec();
+    console.log("getProfile service: " + profile);
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
