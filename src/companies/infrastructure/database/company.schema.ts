@@ -1,7 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { CompanyType } from '../company-type.enum';
-
 import { CompanySize } from '../company-size.enum';
 
 export type CompanyDocument = Company & Document;
@@ -11,20 +10,20 @@ export class Company {
   @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
 
-  @Prop({ required: true, unique: true})
+  @Prop({ required: true, unique: true })
   name: string;
 
   @Prop()
-  verified: boolean;;
+  verified: boolean;
 
   @Prop()
   logo: string;
 
   @Prop()
-  banner: string
+  description: string;
 
   @Prop()
-  description: string;;
+  followers: number;
 
   @Prop({
     type: String,
@@ -40,7 +39,6 @@ export class Company {
   })
   company_type: CompanyType;
 
-
   @Prop({ required: true })
   industry: string;
 
@@ -54,9 +52,8 @@ export class Company {
   website: string;
 
   @Prop()
-  address: string;;
+  address: string;
 
- 
   @Prop()
   location: string;
 

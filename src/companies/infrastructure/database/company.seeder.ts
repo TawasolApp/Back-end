@@ -29,7 +29,6 @@ export class CompanySeeder {
         name: faker.company.name(),
         verified: faker.datatype.boolean(),
         logo: faker.image.url(),
-        banner: faker.image.url(),
         description: faker.lorem.sentence(),
         followers: 0,
         company_size: faker.helpers.arrayElement([

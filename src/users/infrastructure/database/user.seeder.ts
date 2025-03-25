@@ -12,31 +12,27 @@ export class UserSeeder {
   async seedUsers(count: number): Promise<void> {
     const users: Partial<UserDocument>[] = [];
 
-    const plainPassword = 'TestPassword123';
-    const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
+   
+   
+    const plainPassword = 'TestPassword123';  // Set the password for testing
+    const hashedPassword = await bcrypt.hash(plainPassword, 10);  // Hashing the fixed password
+    console.log('Hashed password:', hashedPassword);
     for (let i = 0; i < count; i++) {
       users.push({
         first_name: faker.person.firstName(),
         last_name: faker.person.lastName(),
         email: faker.internet.email().toLowerCase(),
-        password: hashedPassword,
+        password: hashedPassword,  
         role: faker.helpers.arrayElement(['customer', 'employer', 'admin']),
-        isVerified: true,
       });
     }
 
-    const inserted = await this.userModel.insertMany(users);
-    console.log(`✅ ${inserted.length} users seeded successfully.`);
-
-    // Log each user's _id and email for verification
-    inserted.forEach((user) => {
-      console.log(`🆔 User ID: ${user._id} | 📧 Email: ${user.email}`);
-    });
+    await this.userModel.insertMany(users);
+    console.log(`${count} users seeded successfully with a fixed password!`);
   }
 
   async clearUsers(): Promise<void> {
     await this.userModel.deleteMany({});
-    console.log('🗑️ Users collection cleared.');
+    console.log('Users collection cleared.');
   }
 }

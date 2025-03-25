@@ -4,7 +4,7 @@ import { Document, Types } from 'mongoose';
 export type CompanyConnectionDocument = CompanyConnection & Document;
 
 @Schema({
-  timestamps: false,
+  timestamps: { createdAt: 'created_at', updatedAt: false },
   versionKey: false,
 })
 export class CompanyConnection {
@@ -16,12 +16,6 @@ export class CompanyConnection {
 
   @Prop({ type: Types.ObjectId, ref: 'Company', required: true })
   company_id: Types.ObjectId;
-
-  @Prop({
-    type: String,
-    default: () => new Date().toISOString(),
-  })
-  created_at: string;
 }
 
 export const CompanyConnectionSchema =

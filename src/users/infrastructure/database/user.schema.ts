@@ -8,8 +8,7 @@ export type UserDocument = User & Document;
   versionKey: false,
 })
 export class User {
-
-  
+  @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
 
   @Prop({ required: true })
@@ -26,9 +25,6 @@ export class User {
 
   @Prop({ enum: ['customer', 'employer', 'admin'], default: 'customer' })
   role: string;
-
-  @Prop({ default: false })
-  isVerified: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

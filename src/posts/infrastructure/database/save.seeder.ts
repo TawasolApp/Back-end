@@ -21,10 +21,7 @@ export class SaveSeeder {
   ) {}
 
   async seedSaves(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
+    const users = await this.userModel.find().select('_id').lean();
     const posts = await this.postModel.find().select('_id').lean();
 
     if (users.length === 0 || posts.length === 0) {
