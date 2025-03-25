@@ -1,11 +1,10 @@
 import { IsEmail, IsNotEmpty, MinLength } from 'class-validator';
 
-export class UpdateEmailDto {
+export class UpdateEmailRequestDto {
   @IsEmail()
-  @IsNotEmpty()
   newEmail: string;
 
   @IsNotEmpty()
   @MinLength(6)
-  password: string;  // 🔹 Require current password for verification
+  password: string;
 }
