@@ -1,7 +1,6 @@
 import { Expose, Transform } from 'class-transformer';
 import {
-  IsDate,
-  IsISO8601,
+  IsMongoId,
   IsOptional,
   IsString,
   IsUrl,
@@ -9,7 +8,7 @@ import {
 
 export class GetUserDto {
   @Expose({ name: '_id' })
-  @IsString()
+  @IsMongoId()
   userId: string;
 
   @Expose({ name: 'name' })

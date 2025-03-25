@@ -176,13 +176,27 @@ export class ConnectionsService {
       if (!connectionId1 && !connectionId2) {
         throw new NotFoundException('Connection not found.');
       } else if (connectionId1) {
-        deletedConnection = await this.userConnectionModel.findByIdAndDelete(
+        const connection = await this.userConnectionModel.findById(
           new Types.ObjectId(connectionId1),
         );
+        if (connection?.status === ConnectionStatus.Connected) {
+          deletedConnection = await this.userConnectionModel.findByIdAndDelete(
+            new Types.ObjectId(connectionId1),
+          );
+        } else {
+          throw new BadRequestException('Cannot remove a non-connection.');
+        }
       } else if (connectionId2) {
-        deletedConnection = await this.userConnectionModel.findByIdAndDelete(
+        const connection = await this.userConnectionModel.findById(
           new Types.ObjectId(connectionId2),
         );
+        if (connection?.status === ConnectionStatus.Connected) {
+          deletedConnection = await this.userConnectionModel.findByIdAndDelete(
+            new Types.ObjectId(connectionId2),
+          );
+        } else {
+          throw new BadRequestException('Cannot remove a non-connection.');
+        }
       }
       await this.profileModel.findByIdAndUpdate(
         deletedConnection?.sending_party,
@@ -212,12 +226,9 @@ export class ConnectionsService {
       if (sendingParty === receivingParty) {
         throw new BadRequestException('Cannot follow yourself.');
       }
-      const record1 = await this.getConnectionId(sendingParty, receivingParty);
-      const record2 = await this.getConnectionId(receivingParty, sendingParty);
-      if (record1 || record2) {
-        throw new ConflictException(
-          'Connection instance already estbalished between users.',
-        );
+      const record = await this.getConnectionId(sendingParty, receivingParty);
+      if (record) {
+        throw new ConflictException('Follow instance already exists.');
       }
       const newConnection = new this.userConnectionModel({
         _id: new Types.ObjectId(),
@@ -242,24 +253,24 @@ export class ConnectionsService {
       if (!exisitngUser) {
         throw new NotFoundException('User not found.');
       }
-      const connectionId1 = await this.getConnectionId(
+      const connectionId = await this.getConnectionId(
         sendingParty,
         receivingParty,
-      );
-      const connectionId2 = await this.getConnectionId(
-        receivingParty,
-        sendingParty,
       );
       let deletedConnection;
-      if (!connectionId1 && !connectionId2) {
-        throw new NotFoundException('Connection not found.');
-      } else if (connectionId1) {
+      if (!connectionId) {
+        throw new NotFoundException('Follow not found.');
+      }
+      const connection = await this.userConnectionModel.findById(
+        new Types.ObjectId(connectionId),
+      );
+      if (connection?.status === ConnectionStatus.Following) {
         deletedConnection = await this.userConnectionModel.findByIdAndDelete(
-          new Types.ObjectId(connectionId1),
+          new Types.ObjectId(connectionId),
         );
-      } else if (connectionId2) {
-        deletedConnection = await this.userConnectionModel.findByIdAndDelete(
-          new Types.ObjectId(connectionId2),
+      } else {
+        throw new BadRequestException(
+          'Cannot unfollow a user who is not followed.',
         );
       }
     } catch (error) {
