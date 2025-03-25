@@ -6,6 +6,7 @@ import { Model, Types } from 'mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
+import { SkillDto } from './dto/skill.dto';
 
 const mockProfile = {
   _id: new Types.ObjectId(),

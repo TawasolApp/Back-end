@@ -109,10 +109,11 @@ export class ProfilesService {
       throw new BadRequestException(`Skill '${skill.skillName}' already exists`);
     }
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      {_id: new Types.ObjectId(_id)},
+      { _id: new Types.ObjectId(_id)},
       { $addToSet: { skills: { skill_name: skill.skillName, endorsements: [] } } },
       { new: true, runValidators: true },
     );
+    console.log("addSkill service updated Profile : " + updatedProfile);
     if (!updatedProfile) {
       throw new NotFoundException('updated Profile not found');
     }
