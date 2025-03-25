@@ -221,106 +221,102 @@ describe('ProfilesService', () => {
   });
 
   describe('deleteHeadline', () => {
-    it('should call deletefield on the service', async () => {
+    it('should call deleteProfileField with "headline"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          headline: 'xx', 
+          headline: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
 
-      await service.deleteProfileField(mockProfile._id, 'headline');
+      await service.deleteHeadline(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'headline');
     });
   });
 
   describe('deleteBio', () => {
-    it('should call deleteProfileField on the service', async () => {
+    it('should call deleteProfileField with "bio"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          bio: '', 
+          bio: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
-  
-      await service.deleteProfileField(mockProfile._id, 'bio');
+      await service.deleteBio(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'bio');
     });
   });
   
-  describe('deleteLocation', () => {
-    it('should call deleteProfileField on the service', async () => {
+    describe('deleteLocation', () => {
+    it('should call deleteProfileField with "location"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          location: '', 
+          location: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
-  
-      await service.deleteProfileField(mockProfile._id, 'location');
+      await service.deleteLocation(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'location');
     });
   });
   
-  describe('deleteIndustry', () => {
-    it('should call deleteProfileField on the service', async () => {
+   describe('deleteIndustry', () => {
+    it('should call deleteProfileField with "industry"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          industry: '', 
+          industry: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
-  
-      await service.deleteProfileField(mockProfile._id, 'industry');
+      await service.deleteIndustry(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'industry');
     });
   });
   
-  describe('deleteProfilePicture', () => {
-    it('should call deleteProfileField on the service', async () => {
+    describe('deleteProfilePicture', () => {
+    it('should call deleteProfileField with "profile_picture"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          profilePicture: '', 
+          profilePicture: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
-  
-      await service.deleteProfileField(mockProfile._id, 'profilePicture');
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'profilePicture');
+      await service.deleteProfilePicture(mockProfile._id);
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'profile_picture');
     });
   });
   
-  describe('deleteCoverPhoto', () => {
-    it('should call deleteProfileField on the service', async () => {
+    describe('deleteCoverPhoto', () => {
+    it('should call deleteProfileField with "cover_photo"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          coverPhoto: '', 
+          coverPhoto: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
   
-      await service.deleteProfileField(mockProfile._id, 'coverPhoto');
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'coverPhoto');
+      await service.deleteCoverPhoto(mockProfile._id);
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'cover_photo');
     });
   });
   
-  describe('deleteResume', () => {
-    it('should call deleteProfileField on the service', async () => {
+    describe('deleteResume', () => {
+    it('should call deleteProfileField with "resume"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
         .mockResolvedValue({ 
           ...mockProfile, 
-          resume: '', 
+          resume: undefined, 
           skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
         });
   
-      await service.deleteProfileField(mockProfile._id, 'resume');
+      await service.deleteResume(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'resume');
     });
   });
