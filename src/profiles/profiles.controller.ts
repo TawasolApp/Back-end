@@ -7,6 +7,7 @@ import {
   Patch,
   Post,
   Put,
+  Req,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -18,11 +19,11 @@ import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { Skill } from './infrastructure/database/profile.schema';
 import { SkillDto } from './dto/skill.dto';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('profile')
 export class ProfilesController {
-  private _id: Types.ObjectId = new Types.ObjectId('67e1b2a91b7666535f42424e');
+  private _id: Types.ObjectId = new Types.ObjectId('67e215fc3f9cdc8e6040a90a');
 
   constructor(private profilesService: ProfilesService) {}
 
@@ -62,8 +63,9 @@ export class ProfilesController {
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
   @UseGuards(JwtAuthGuard)
-  deleteProfilePicture() {
-    return this.profilesService.deleteProfilePicture(this._id);
+  deleteProfilePicture(@Req() req) {
+    console.log("deleteProfilePicture controller: " + req.user.sub);
+    return this.profilesService.deleteProfilePicture(req.user.sub);
   }
 
   @Delete('cover-photo')

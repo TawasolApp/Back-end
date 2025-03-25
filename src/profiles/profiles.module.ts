@@ -10,8 +10,8 @@ import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module'; 
 import { JwtModule } from '@nestjs/jwt';
-
-import { ConnectionsModule } from 'src/connections/connections.module';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ConnectionsModule } from '../connections/connections.module';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { ConnectionsModule } from 'src/connections/connections.module';
     UsersModule, 
     ConnectionsModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET || 'default_secret',
+      secret: process.env.JWT_SECRET ,
       signOptions: { expiresIn: '1h' },
     }),
   ],

@@ -47,7 +47,9 @@ export class ProfilesService {
   }
 
   async deleteProfileField(_id: Types.ObjectId, field: string) {
-    const profile = await this.profileModel.findById(_id).exec();
+    console.log("deleteProfile service: " + _id);
+    const profile = await this.profileModel.findById(new Types.ObjectId(_id)).exec();
+    console.log("deleteProfile service profile: " + profile);
     if (!profile) {
       throw new NotFoundException(`Profile not found`);
     }
