@@ -4,11 +4,18 @@ import { Model } from 'mongoose';
 import { Company, CompanyDocument } from './company.schema';
 import { faker } from '@faker-js/faker';
 import { CompanyType } from '../company-type.enum';
+import { CompanySize } from '../company-size.enum';
+import {
+  CompanyConnection,
+  CompanyConnectionDocument,
+} from './company-connection.schema';
 
 @Injectable()
 export class CompanySeeder {
   constructor(
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(CompanyConnection.name)
+    private companyConnectionModel: Model<CompanyConnectionDocument>,
   ) {}
 
   async seedCompanies(count: number): Promise<void> {
@@ -24,7 +31,12 @@ export class CompanySeeder {
         logo: faker.image.url(),
         description: faker.lorem.sentence(),
         followers: 0,
-        employees: faker.number.int({ min: 1, max: 10000 }),
+        company_size: faker.helpers.arrayElement([
+          CompanySize.Mini,
+          CompanySize.Small,
+          CompanySize.Medium,
+          CompanySize.Large,
+        ]),
         company_type: faker.helpers.arrayElement([
           CompanyType.Public,
           CompanyType.SelfEmployed,
@@ -52,5 +64,17 @@ export class CompanySeeder {
   async clearCompanies(): Promise<void> {
     await this.companyModel.deleteMany({});
     console.log('Companies collection cleared.');
+  }
+
+  async updateFollowerCounts(): Promise<void> {
+    const companies = await this.companyModel.find().exec();
+    for (const company of companies) {
+      const followerCount = await this.companyConnectionModel
+        .countDocuments({ company_id: company._id })
+        .exec();
+      company.followers = followerCount;
+      await company.save();
+    }
+    console.log('Company follower counts updated.');
   }
 }
