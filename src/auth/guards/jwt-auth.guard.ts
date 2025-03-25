@@ -18,10 +18,12 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Invalid or missing token');
     }
 
-    const token = authHeader.split(' ')[1]; // Extract token after "Bearer"
+    const token = authHeader.split(' ')[1];
+
     try {
       const decoded = this.jwtService.verify(token);
-      request.user = decoded; // Decode and verify token
+      request.user = decoded; 
+      console.log('🔐 Decoded User ID:', decoded.sub);
       return true;
     } catch (error) {
       throw new UnauthorizedException('Token verification failed');

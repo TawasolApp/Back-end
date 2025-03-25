@@ -1,55 +1,56 @@
 import {
   Injectable,
-  BadRequestException,
   ConflictException,
+  BadRequestException,
   NotFoundException,
+  UnauthorizedException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from './infrastructure/database/user.schema';
 import { UpdateEmailRequestDto } from './dtos/update-email-request.dto';
 import { UpdatePasswordDto } from './dtos/update-password.dto';
 import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { JwtService } from '@nestjs/jwt';
-import { MailerService } from '../common/services/mailer.service';
+import { MailerService } from '../common/services/mailer.service'; 
+
 @Injectable()
 export class UsersService {
   constructor(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private readonly jwtService: JwtService, // ✅ Add this
+    private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
 
   async requestEmailUpdate(userId: string, dto: UpdateEmailRequestDto) {
-    const { newEmail, password } = dto;
-    const user = await this.userModel.findById(userId);
-    if (!user) throw new NotFoundException('User not found');
+    try {
+      const { newEmail, password } = dto;
+      const user = await this.userModel.findById(userId);
+      if (!user) throw new NotFoundException('User not found');
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) throw new BadRequestException('Incorrect password');
+      if (!(await bcrypt.compare(password, user.password))) {
+        throw new BadRequestException('Incorrect password');
+      }
 
-    const emailTaken = await this.userModel.findOne({ email: newEmail });
-    if (emailTaken) throw new ConflictException('Email already exists');
+      if (await this.userModel.findOne({ email: newEmail })) {
+        throw new ConflictException('Email already exists');
+      }
 
-    const token = this.jwtService.sign(
-      { userId, newEmail },
-      { expiresIn: '1h' },
-    );
-    console.log('JWT_SECRET used update:', process.env.JWT_SECRET);
+      const token = this.jwtService.sign({ userId, newEmail }, { expiresIn: '1h' });
+      await this.mailerService.sendEmailChangeConfirmation(newEmail, token);
 
-    await this.mailerService.sendEmailChangeConfirmation(newEmail, token);
-
-    return { message: 'Please check your new email to confirm the change.' };
+      return { message: 'Please check your new email to confirm the change.' };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to process email update request');
+    }
   }
 
   async confirmEmailChange(token: string) {
     try {
       const { userId, newEmail } = this.jwtService.verify(token);
-      console.log('JWT_SECRET used confirm:', process.env.JWT_SECRET);
-
       const user = await this.userModel.findById(userId);
-
       if (!user) throw new NotFoundException('User not found');
 
       user.email = newEmail;
@@ -62,45 +63,33 @@ export class UsersService {
   }
 
   async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
-    console.log('🔹 Password Update Request for User ID:', userId);
+    try {
+      const { currentPassword, newPassword } = updatePasswordDto;
+      const user = await this.userModel.findById(new Types.ObjectId(userId));
+      if (!user) throw new NotFoundException('User not found');
 
-    const { currentPassword, newPassword } = updatePasswordDto;
-    const user = await this.userModel.findById(new Types.ObjectId(userId));
+      if (!(await bcrypt.compare(currentPassword, user.password))) {
+        throw new BadRequestException('Incorrect current password');
+      }
 
-    if (!user) {
-      console.log('❌ User not found for ID:', userId);
-      throw new NotFoundException('User not found');
+      if (await bcrypt.compare(newPassword, user.password)) {
+        throw new BadRequestException('New password must be different from the current password');
+      }
+
+      user.password = await bcrypt.hash(newPassword, 10);
+      await user.save();
+
+      return { message: 'Password updated successfully' };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to update password');
     }
-
-    console.log('✅ User Found:', user.email);
-
-    const isPasswordValid = await bcrypt.compare(
-      currentPassword,
-      user.password,
-    );
-    if (!isPasswordValid) {
-      console.log('❌ Incorrect current password');
-      throw new BadRequestException('Incorrect current password');
-    }
-
-    // 🔹 Check if the new password is the same as the current password
-    const isSamePassword = await bcrypt.compare(newPassword, user.password);
-    if (isSamePassword) {
-      console.log('❌ New password cannot be the same as the current password');
-      throw new BadRequestException(
-        'New password must be different from the current password',
-      );
-    }
-
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedNewPassword;
-    await user.save();
-
-    console.log('✅ Password updated successfully');
-    return { message: 'Password updated successfully' };
   }
 
   async findByEmail(email: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ email });
+    try {
+      return await this.userModel.findOne({ email });
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch user by email');
+    }
   }
 }

@@ -4,6 +4,7 @@ import {
   BadRequestException,
   NotFoundException,
   UnauthorizedException,
+  InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -19,6 +20,7 @@ import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
 import { OAuth2Client } from 'google-auth-library';
 const googleClient = new OAuth2Client();
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -28,122 +30,108 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { first_name, last_name, email, password, captchaToken } =
-      registerDto;
+    try {
+      const { firstName, lastName, email, password, captchaToken } =
+        registerDto;
 
-    const isCaptchaValid = await this.verifyCaptcha(captchaToken);
-    if (!isCaptchaValid) {
-      throw new BadRequestException('Invalid CAPTCHA');
+      const isCaptchaValid = await this.verifyCaptcha(captchaToken);
+      if (!isCaptchaValid) throw new BadRequestException('Invalid CAPTCHA');
+
+      const existingUser = await this.userModel.findOne({ email });
+      if (existingUser) throw new ConflictException('Email is already in use');
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      const user = new this.userModel({
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        password: hashedPassword,
+        isVerified: false,
+      });
+
+      await user.save();
+
+      const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
+      await this.mailerService.sendVerificationEmail(email, token);
+
+      return {
+        message:
+          'Registration successful. Please check your email to verify your account.',
+      };
+    } catch (err) {
+      throw new InternalServerErrorException(
+        err.message || 'Something went wrong',
+      );
     }
+  }
 
-    const existingUser = await this.userModel.findOne({ email });
-    if (existingUser) {
-      throw new ConflictException('Email is already in use');
+  async checkEmailAvailability(email: string) {
+    try {
+      const existingUser = await this.userModel.findOne({ email });
+      if (existingUser) throw new ConflictException('Email is already in use');
+
+      return { message: 'Email is available' };
+    } catch (err) {
+      throw new InternalServerErrorException(
+        'Server error while checking email',
+      );
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = new this.userModel({
-      first_name,
-      last_name,
-      email,
-      password: hashedPassword,
-      isVerified: false,
-    });
-    // 👇 ADD THIS
-    console.log(
-      '🧪 Is user instance of model:',
-      user instanceof this.userModel,
-    );
-    console.log('🆔 Pre-save _id value:', user._id);
-    await user.save();
-
-    const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
-    console.log('📧 Email User:', process.env.EMAIL_USER);
-    console.log('🔐 Email Pass:', process.env.EMAIL_PASS);
-
-    await this.mailerService.sendVerificationEmail(email, token);
-
-    return {
-      message:
-        'Registration successful. Please check your email to verify your account.',
-    };
   }
 
   async login(email: string, password: string) {
     const user = await this.userModel.findOne({ email });
-    if (!user) {
-      throw new NotFoundException('User not found');
-    }
+    if (!user) throw new NotFoundException('User not found');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
+    if (!isPasswordValid)
       throw new UnauthorizedException('Invalid credentials');
-    }
 
-    if (!user.isVerified) {
-      throw new BadRequestException('Email not verified');
-    }
+    if (!user.isVerified) throw new BadRequestException('Email not verified');
 
-    const payload = { sub: user._id };
+    const payload = { sub: user._id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
-    return {
-      token: accessToken,
-      refreshToken,
-    };
+
+    return { token: accessToken, refreshToken };
   }
 
   async googleLogin(idToken: string) {
-    const ticket = await googleClient.verifyIdToken({
-      idToken,
-      // audience: not provided for now
-    });
+    try {
+      const ticket = await googleClient.verifyIdToken({ idToken });
+      const payload = ticket.getPayload();
 
-    const payload = ticket.getPayload();
-    if (!payload || !payload.email) {
-      throw new BadRequestException('Invalid Google token');
+      if (!payload || !payload.email) {
+        throw new BadRequestException('Invalid Google token');
+      }
+
+      let user = await this.userModel.findOne({ email: payload.email });
+      if (!user) {
+        user = new this.userModel({
+          first_name: payload.given_name || '',
+          last_name: payload.family_name || '',
+          email: payload.email,
+          password: '',
+          isVerified: true,
+        });
+        await user.save();
+      }
+
+      const token = this.jwtService.sign({ sub: user._id });
+      return { access_token: token, message: 'Login successful' };
+    } catch (err) {
+      throw new InternalServerErrorException('Google login failed');
     }
-
-    const email = payload.email;
-    const firstName = payload.given_name;
-    const lastName = payload.family_name;
-
-    let user = await this.userModel.findOne({ email });
-
-    if (!user) {
-      user = new this.userModel({
-        first_name: firstName || '',
-        last_name: lastName || '',
-        email,
-        password: '',
-        isVerified: true,
-      });
-      await user.save();
-    }
-
-    const token = this.jwtService.sign({ sub: user._id });
-
-    return {
-      access_token: token,
-      message: 'Login successful',
-    };
   }
 
   private async verifyCaptcha(token: string): Promise<boolean> {
-    // Allow test token for local testing (Postman etc.)
     if (token === 'test-token') return true;
 
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     const response = await axios.post(
       `https://www.google.com/recaptcha/api/siteverify`,
       null,
-      {
-        params: {
-          secret: secretKey,
-          response: token,
-        },
-      },
+      { params: { secret: secretKey, response: token } },
     );
 
     return (
@@ -152,104 +140,81 @@ export class AuthService {
     );
   }
 
-  async verifyEmail(token: string): Promise<string> {
+  async verifyEmail(token: string): Promise<{ message: string }> {
     try {
       const decoded = this.jwtService.verify(token);
-      const email = decoded.email;
+      const user = await this.userModel.findOne({ email: decoded.email });
 
-      const user = await this.userModel.findOne({ email });
-
-      if (!user) {
+      if (!user)
         throw new BadRequestException('Invalid token or user does not exist');
-      }
-
-      if (user.isVerified) {
-        return 'Email is already verified.';
-      }
+      if (user.isVerified) return { message: 'Email is already verified.' };
 
       user.isVerified = true;
       await user.save();
-
-      return 'Email verified successfully.';
-    } catch (error) {
+      return { message: 'Email verified successfully.' };
+    } catch (err) {
       throw new BadRequestException('Invalid or expired token');
     }
   }
 
-  async resendConfirmationEmail(email: string): Promise<string> {
+  async resendConfirmationEmail(email: string): Promise<{ message: string }> {
     const user = await this.userModel.findOne({ email });
-
-    if (!user) {
-      throw new NotFoundException('Email not found');
-    }
-
-    if (user.isVerified) {
-      return 'Email is already verified';
-    }
+    if (!user) throw new NotFoundException('Email not found');
+    if (user.isVerified) return { message: 'Email is already verified' };
 
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
     await this.mailerService.sendVerificationEmail(email, token);
 
-    return 'Confirmation email resent';
+    return { message: 'Confirmation email resent' };
   }
 
   async refreshToken(refreshToken: string) {
     try {
-      const decoded = this.jwtService.verify(refreshToken); // throws if invalid
+      const decoded = this.jwtService.verify(refreshToken);
       const payload = { sub: decoded.sub };
 
       const newAccessToken = this.jwtService.sign(payload, {
         expiresIn: '15m',
       });
-
-      return {
-        token: newAccessToken,
-        refreshToken, // reuse or regenerate if you want
-      };
-    } catch (error) {
+      return { token: newAccessToken, refreshToken };
+    } catch {
       throw new BadRequestException('Invalid or expired token');
     }
   }
 
   async forgotPassword(email: string) {
     const user = await this.userModel.findOne({ email });
-
-    if (!user) {
-      throw new NotFoundException('Email not found');
+    if (user?.isVerified) {
+      const token = this.jwtService.sign(
+        { sub: user._id },
+        { expiresIn: '15m' },
+      );
+      await this.mailerService.sendPasswordResetEmail(user.email, token);
     }
 
-    if (!user.isVerified) {
-      throw new BadRequestException('Email not verified');
-    }
-
-    const token = this.jwtService.sign({ sub: user._id }, { expiresIn: '15m' });
-
-    await this.mailerService.sendPasswordResetEmail(user.email, token);
-
-    return { message: 'Password reset email sent' };
+    return {
+      message:
+        'If an account with that email exists, a password reset link has been sent.',
+    };
   }
 
   async resetPassword(token: string, newPassword: string) {
     try {
       const { sub: userId } = await this.jwtService.verify(token);
-
       const user = await this.userModel.findById(userId);
       if (!user) throw new NotFoundException('User not found');
 
       const isSame = await bcrypt.compare(newPassword, user.password);
-      if (isSame) {
+      if (isSame)
         throw new BadRequestException(
-          'New password cannot be the same as the old password',
+          'New password must be different from the old password',
         );
-      }
 
-      const hashedPassword = await bcrypt.hash(newPassword, 10);
-      user.password = hashedPassword;
-
+      user.password = await bcrypt.hash(newPassword, 10);
       await user.save();
 
       return { message: 'Password reset successfully' };
-    } catch (error) {
+    } catch (err) {
       throw new BadRequestException('Invalid or expired token');
     }
   }
