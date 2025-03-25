@@ -26,6 +26,9 @@ export class Company {
   @Prop()
   description: string;;
 
+  @Prop()
+  followers: number
+  
   @Prop({
     type: String,
     enum: Object.values(CompanySize),
@@ -39,7 +42,6 @@ export class Company {
     required: true,
   })
   company_type: CompanyType;
-
 
   @Prop({ required: true })
   industry: string;
@@ -56,7 +58,6 @@ export class Company {
   @Prop()
   address: string;;
 
- 
   @Prop()
   location: string;
 
