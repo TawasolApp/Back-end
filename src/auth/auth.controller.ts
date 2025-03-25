@@ -25,10 +25,7 @@ export class AuthController {
     return this.authService.login(loginDto.email, loginDto.password);
   }
 
-  @Post('social-login/google')
-  async googleLogin(@Body('idToken') idToken: string) {
-    return this.authService.googleLogin(idToken);
-  }
+
 
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {

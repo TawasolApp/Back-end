@@ -60,6 +60,12 @@ export class AuthService {
           'Registration successful. Please check your email to verify your account.',
       };
     } catch (err) {
+      if (
+        err instanceof ConflictException ||
+        err instanceof BadRequestException
+      ) {
+        throw err; // Rethrow specific exceptions
+      }
       throw new InternalServerErrorException(
         err.message || 'Something went wrong',
       );
@@ -73,6 +79,9 @@ export class AuthService {
 
       return { message: 'Email is available' };
     } catch (err) {
+      if (err instanceof ConflictException) {
+        throw err; // Rethrow specific exceptions
+      }
       throw new InternalServerErrorException(
         'Server error while checking email',
       );
@@ -94,34 +103,6 @@ export class AuthService {
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
     return { token: accessToken, refreshToken };
-  }
-
-  async googleLogin(idToken: string) {
-    try {
-      const ticket = await googleClient.verifyIdToken({ idToken });
-      const payload = ticket.getPayload();
-
-      if (!payload || !payload.email) {
-        throw new BadRequestException('Invalid Google token');
-      }
-
-      let user = await this.userModel.findOne({ email: payload.email });
-      if (!user) {
-        user = new this.userModel({
-          first_name: payload.given_name || '',
-          last_name: payload.family_name || '',
-          email: payload.email,
-          password: '',
-          isVerified: true,
-        });
-        await user.save();
-      }
-
-      const token = this.jwtService.sign({ sub: user._id });
-      return { access_token: token, message: 'Login successful' };
-    } catch (err) {
-      throw new InternalServerErrorException('Google login failed');
-    }
   }
 
   private async verifyCaptcha(token: string): Promise<boolean> {
@@ -205,16 +186,23 @@ export class AuthService {
       if (!user) throw new NotFoundException('User not found');
 
       const isSame = await bcrypt.compare(newPassword, user.password);
-      if (isSame)
+      if (isSame) {
         throw new BadRequestException(
           'New password must be different from the old password',
         );
+      }
 
       user.password = await bcrypt.hash(newPassword, 10);
       await user.save();
 
       return { message: 'Password reset successfully' };
     } catch (err) {
+      if (
+        err instanceof BadRequestException ||
+        err instanceof NotFoundException
+      ) {
+        throw err; // Rethrow specific exceptions
+      }
       throw new BadRequestException('Invalid or expired token');
     }
   }
