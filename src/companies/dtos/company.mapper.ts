@@ -9,6 +9,7 @@ export function toCreateCompanySchema(
   return {
     name: createCompanyDto.name,
     logo: createCompanyDto.logo,
+    banner: createCompanyDto.banner,
     description: createCompanyDto.description,
     company_size: createCompanyDto.companySize,
     company_type: createCompanyDto.companyType,
@@ -30,6 +31,7 @@ export function toUpdateCompanySchema(
     name: updateCompanyDto.name,
     verified: updateCompanyDto.isVerified,
     logo: updateCompanyDto.logo,
+    banner: updateCompanyDto.banner,
     description: updateCompanyDto.description,
     company_size: updateCompanyDto.companySize,
     company_type: updateCompanyDto.companyType,
@@ -51,6 +53,7 @@ export function toGetCompanyDto(company: Partial<Company>): GetCompanyDto {
   if (company.name) dto.name = company.name;
   if (company.verified !== undefined) dto.isVerified = company.verified;
   if (company.logo) dto.logo = company.logo;
+  if (company.banner) dto.banner = company.banner;
   if (company.description) dto.description = company.description;
   if (company.followers != undefined) dto.followers = company.followers;
   if (company.company_size) dto.companySize = company.company_size;

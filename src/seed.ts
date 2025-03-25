@@ -34,7 +34,7 @@ async function bootstrap() {
   await companySeeder.clearCompanies();
   await companySeeder.seedCompanies(15);
   await companyConnectionSeeder.clearCompanyConnections();
-  await companyConnectionSeeder.seedCompanyConnections(5);
+  await companyConnectionSeeder.seedCompanyConnections(10);
   
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();

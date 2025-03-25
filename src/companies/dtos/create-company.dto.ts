@@ -22,6 +22,10 @@ export class CreateCompanyDto {
   @IsOptional()
   readonly logo?: string;
 
+  @IsUrl()
+  @IsOptional()
+  readonly banner?: string;
+
   @IsString()
   @IsOptional()
   readonly description?: string;

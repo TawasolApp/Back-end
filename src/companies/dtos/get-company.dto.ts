@@ -34,6 +34,10 @@ export class GetCompanyDto {
   @IsOptional()
   logo?: string;
 
+  @IsUrl()
+  @IsOptional()
+  banner?: string;
+
   @IsString()
   @IsOptional()
   description?: string;
