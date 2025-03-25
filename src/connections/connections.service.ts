@@ -17,8 +17,6 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/profile.schema';
 import { ConnectionStatus } from './infrastructure/connection-status.enum';
-import { plainToInstance } from 'class-transformer';
-import { GetUserDto } from './dtos/get-user.dto';
 import { toGetUserDto } from './dtos/user.mapper';
 
 @Injectable()

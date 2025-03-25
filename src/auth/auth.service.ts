@@ -10,7 +10,10 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
-import { User, UserDocument } from '../users/infrastructure/database/user.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/user.schema';
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
@@ -25,7 +28,8 @@ export class AuthService {
   ) {}
 
   async register(registerDto: RegisterDto) {
-    const { first_name, last_name, email, password, captchaToken } = registerDto;
+    const { first_name, last_name, email, password, captchaToken } =
+      registerDto;
 
     const isCaptchaValid = await this.verifyCaptcha(captchaToken);
     if (!isCaptchaValid) {
@@ -47,8 +51,11 @@ export class AuthService {
       isVerified: false,
     });
     // 👇 ADD THIS
-  console.log('🧪 Is user instance of model:', user instanceof this.userModel);
-  console.log('🆔 Pre-save _id value:', user._id);
+    console.log(
+      '🧪 Is user instance of model:',
+      user instanceof this.userModel,
+    );
+    console.log('🆔 Pre-save _id value:', user._id);
     await user.save();
 
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
@@ -58,11 +65,10 @@ export class AuthService {
     await this.mailerService.sendVerificationEmail(email, token);
 
     return {
-      message: 'Registration successful. Please check your email to verify your account.',
+      message:
+        'Registration successful. Please check your email to verify your account.',
     };
   }
-
-  
 
   async login(email: string, password: string) {
     const user = await this.userModel.findOne({ email });
@@ -86,9 +92,7 @@ export class AuthService {
       token: accessToken,
       refreshToken,
     };
-    
   }
-
 
   async googleLogin(idToken: string) {
     const ticket = await googleClient.verifyIdToken({
@@ -107,13 +111,12 @@ export class AuthService {
 
     let user = await this.userModel.findOne({ email });
 
-   
     if (!user) {
       user = new this.userModel({
         first_name: firstName || '',
         last_name: lastName || '',
         email,
-        password: '', 
+        password: '',
         isVerified: true,
       });
       await user.save();
@@ -126,7 +129,6 @@ export class AuthService {
       message: 'Login successful',
     };
   }
-
 
   private async verifyCaptcha(token: string): Promise<boolean> {
     // Allow test token for local testing (Postman etc.)
@@ -141,30 +143,33 @@ export class AuthService {
           secret: secretKey,
           response: token,
         },
-      }
+      },
     );
 
-    return response.data.success && (!response.data.score || response.data.score > 0.5);
+    return (
+      response.data.success &&
+      (!response.data.score || response.data.score > 0.5)
+    );
   }
 
   async verifyEmail(token: string): Promise<string> {
     try {
       const decoded = this.jwtService.verify(token);
       const email = decoded.email;
-  
+
       const user = await this.userModel.findOne({ email });
-  
+
       if (!user) {
         throw new BadRequestException('Invalid token or user does not exist');
       }
-  
+
       if (user.isVerified) {
         return 'Email is already verified.';
       }
-  
+
       user.isVerified = true;
       await user.save();
-  
+
       return 'Email verified successfully.';
     } catch (error) {
       throw new BadRequestException('Invalid or expired token');
@@ -173,18 +178,18 @@ export class AuthService {
 
   async resendConfirmationEmail(email: string): Promise<string> {
     const user = await this.userModel.findOne({ email });
-  
+
     if (!user) {
       throw new NotFoundException('Email not found');
     }
-  
+
     if (user.isVerified) {
       return 'Email is already verified';
     }
-  
+
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
     await this.mailerService.sendVerificationEmail(email, token);
-  
+
     return 'Confirmation email resent';
   }
 
@@ -192,9 +197,11 @@ export class AuthService {
     try {
       const decoded = this.jwtService.verify(refreshToken); // throws if invalid
       const payload = { sub: decoded.sub };
-  
-      const newAccessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
-  
+
+      const newAccessToken = this.jwtService.sign(payload, {
+        expiresIn: '15m',
+      });
+
       return {
         token: newAccessToken,
         refreshToken, // reuse or regenerate if you want
@@ -203,51 +210,47 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired token');
     }
   }
-  
+
   async forgotPassword(email: string) {
     const user = await this.userModel.findOne({ email });
-  
+
     if (!user) {
       throw new NotFoundException('Email not found');
     }
-  
+
     if (!user.isVerified) {
       throw new BadRequestException('Email not verified');
     }
-  
+
     const token = this.jwtService.sign({ sub: user._id }, { expiresIn: '15m' });
-  
+
     await this.mailerService.sendPasswordResetEmail(user.email, token);
-  
+
     return { message: 'Password reset email sent' };
   }
-  
 
   async resetPassword(token: string, newPassword: string) {
     try {
       const { sub: userId } = await this.jwtService.verify(token);
-  
+
       const user = await this.userModel.findById(userId);
       if (!user) throw new NotFoundException('User not found');
-  
+
       const isSame = await bcrypt.compare(newPassword, user.password);
       if (isSame) {
-        throw new BadRequestException('New password cannot be the same as the old password');
+        throw new BadRequestException(
+          'New password cannot be the same as the old password',
+        );
       }
-  
+
       const hashedPassword = await bcrypt.hash(newPassword, 10);
       user.password = hashedPassword;
-  
+
       await user.save();
-  
+
       return { message: 'Password reset successfully' };
     } catch (error) {
       throw new BadRequestException('Invalid or expired token');
     }
   }
-
-
-  
-  
-  
 }

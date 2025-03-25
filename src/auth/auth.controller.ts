@@ -28,16 +28,15 @@ export class AuthController {
 
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
-  const message = await this.authService.verifyEmail(token);
-  return { message };
-
+    const message = await this.authService.verifyEmail(token);
+    return { message };
   }
 
   @Post('resend-confirmation')
   async resendConfirmation(@Body() { email }: ResendConfirmationDto) {
-  const message = await this.authService.resendConfirmationEmail(email);
-  return { message };
-}
+    const message = await this.authService.resendConfirmationEmail(email);
+    return { message };
+  }
 
   @Post('refresh-token')
   async refresh(@Body('refreshToken') refreshToken: string) {
@@ -51,8 +50,6 @@ export class AuthController {
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-  return this.authService.resetPassword(dto.token, dto.newPassword);
-}
-
-
+    return this.authService.resetPassword(dto.token, dto.newPassword);
+  }
 }

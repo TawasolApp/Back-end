@@ -40,16 +40,14 @@ export class MailerService {
 
   async sendPasswordResetEmail(to: string, token: string) {
     const resetUrl = `http://localhost:3000/auth/reset-password?token=${token}`;
-  
+
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
       to,
       subject: 'Reset Your Password',
       html: `<p>Click <a href="${resetUrl}">here</a> to reset your password. This link will expire in 15 minutes.</p>`,
     });
-  
+
     console.log(`📨 Password reset email sent to ${to}`);
   }
-  
-  
 }

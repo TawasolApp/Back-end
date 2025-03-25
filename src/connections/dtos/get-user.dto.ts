@@ -1,12 +1,18 @@
 import { Expose, Transform } from 'class-transformer';
-import { IsDate, IsISO8601, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsDate,
+  IsISO8601,
+  IsOptional,
+  IsString,
+  IsUrl,
+} from 'class-validator';
 
 export class GetUserDto {
-  @Expose({name: '_id'})
+  @Expose({ name: '_id' })
   @IsString()
   userId: string;
 
-  @Expose({name: 'name'})
+  @Expose({ name: 'name' })
   @IsString()
   username: string;
 

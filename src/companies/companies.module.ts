@@ -20,7 +20,7 @@ import { UsersModule } from '../users/users.module';
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
     ]),
     AuthModule,
-    UsersModule
+    UsersModule,
   ],
   exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder],
   providers: [CompanySeeder, CompanyConnectionSeeder],
