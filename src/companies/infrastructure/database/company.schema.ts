@@ -20,6 +20,9 @@ export class Company {
   logo: string;
 
   @Prop()
+  banner: string
+
+  @Prop()
   description: string;
 
   @Prop()
