@@ -83,7 +83,7 @@ describe('ProfilesService', () => {
     it('should create a profile', async () => {
       const dto: CreateProfileDto = { name: 'John Doe' };
       jest.spyOn(profileModel, 'create').mockResolvedValue(mockProfile as any);
-      const result = await service.createProfile(dto);
+      const result = await service.createProfile(new Types.ObjectId,dto);
       expect(result).toEqual(toGetProfileDto(mockProfile));
     });
   });

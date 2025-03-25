@@ -14,14 +14,22 @@ export class ProfilesService {
     @InjectModel(Profile.name) private profileModel: Model<Profile>,
   ) {}
 
-  async createProfile(createProfileDto: CreateProfileDto) {
+  async createProfile(_id:Types.ObjectId,createProfileDto: CreateProfileDto) {
     console.log("createProfile service: " + createProfileDto.name);
-    
-    const profileData = toCreateProfileSchema(createProfileDto);
-    const createdProfile = await this.profileModel.create(profileData);
-    await createdProfile.save();
-    return toGetProfileDto(createdProfile);
+  
+    const profileData = toCreateProfileSchema(_id,createProfileDto);
+    try {
+      const createdProfile = await this.profileModel.create(profileData);
+      await createdProfile.save();
+      return toGetProfileDto(createdProfile);
+    } catch (error) {
+      if (error.code === 11000) { // MongoDB duplicate key error
+        throw new ConflictException('Profile already exists');
+      }
+      throw new BadRequestException('Failed to create profile');
+    }
   }
+  
   
   async getProfile(_id: Types.ObjectId) {
     console.log("getProfile service id : " + _id);

@@ -11,10 +11,11 @@ import { UpdateProfileDto } from './update-profile.dto';
 /**
  * Maps CreateProfileDto to the Profile schema.
  */
-export function toCreateProfileSchema(
+export function toCreateProfileSchema(id: Types.ObjectId,
   createProfileDto: Partial<CreateProfileDto>,
 ){
   return {
+    _id:id,
     name: createProfileDto.name,
     profile_picture: createProfileDto.profilePicture,
     cover_photo: createProfileDto.coverPhoto,

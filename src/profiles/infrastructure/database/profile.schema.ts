@@ -125,7 +125,7 @@ export class PlanStatistics {
 
 @Schema({ timestamps: false, versionKey: false })
 export class Profile {
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true , default: () => new Types.ObjectId()})
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   _id: Types.ObjectId;
   
   @Prop({ required: true })

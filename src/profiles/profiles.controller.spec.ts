@@ -49,8 +49,9 @@ describe('ProfilesController', () => {
   describe('createProfile', () => {
     it('should call createProfile on the service', async () => {
       const dto: CreateProfileDto = { name: 'Test Name', skills: [{ skillName: 'NestJS' }] };
-      await controller.createProfile(dto);
-      expect(service.createProfile).toHaveBeenCalledWith(dto);
+      const userId = new Types.ObjectId();
+      await controller.createProfile({ user: { sub: userId } }, dto);
+      expect(service.createProfile).toHaveBeenCalledWith(userId, dto);
     });
   });
 

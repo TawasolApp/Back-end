@@ -28,14 +28,14 @@ export class ProfilesController {
 
   @Post()
   @UsePipes(new ValidationPipe())
-  createProfile(@Body() createProfileDto:CreateProfileDto) {
+  createProfile(@Req() req,@Body() createProfileDto:CreateProfileDto) {
     console.log("createProfile controller: " + createProfileDto.name);
     if (createProfileDto.skills && createProfileDto.skills.length > 0) {
       console.log("createProfile controller: " + createProfileDto.skills[0].skillName);
     } else {
       console.log("createProfile controller: No skills provided");
     }
-    return this.profilesService.createProfile(createProfileDto);
+    return this.profilesService.createProfile(req.user.sub,createProfileDto);
   }
 
   @Get(':id')  
