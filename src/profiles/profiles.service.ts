@@ -15,8 +15,10 @@ export class ProfilesService {
   ) {}
 
   async createProfile(createProfileDto: CreateProfileDto) {
+    console.log("createProfile service: " + createProfileDto.name);
+    
     const profileData = toCreateProfileSchema(createProfileDto);
-    const createdProfile = new this.profileModel(profileData);
+    const createdProfile = await this.profileModel.create(profileData);
     await createdProfile.save();
     return toGetProfileDto(createdProfile);
   }

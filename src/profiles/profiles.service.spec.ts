@@ -2,11 +2,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/profile.schema';
-import { Model, Types } from 'mongoose';
+import { model, Model, Types } from 'mongoose';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
 import { SkillDto } from './dto/skill.dto';
+import { CreateProfileDto } from './dto/create-profile.dto';
+import { toGetProfileDto } from './dto/profile.mapper';
+import { create } from 'domain';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -16,7 +20,32 @@ const mockProfile = {
   location: 'Cairo, Egypt',
   industry: 'Technology',
   skills: [{ skill_name: 'JavaScript', endorsements: [] }],
+  profile_picture: '',
+  cover_photo: '',
+  resume: '',
+  visibility: 'public',
+  connection_count: 0,
+  education: [],
+  certification: [],
+  work_experience: [],
+  plan_details: 
+    {
+      plan_type: 'premium',
+      start_date: new Date(),
+      expiry_date: new Date(),
+      auto_renewal: false,
+    },
+  
+  plan_statistics: 
+    {
+      statistic_type: 'Connections',
+      value: 0,
+      message_count: 0,
+      application_count: 0,
+    },
+ 
   save: jest.fn(),
+  
 };
 
 describe('ProfilesService', () => {
@@ -35,7 +64,7 @@ describe('ProfilesService', () => {
           useValue: {
             findById: jest.fn(),
             findOneAndUpdate: jest.fn(),
-            
+            create: jest.fn(),
             save: jest.fn(),
           },
         },
@@ -49,7 +78,15 @@ describe('ProfilesService', () => {
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
-
+  
+  describe('createProfile', () => {
+    it('should create a profile', async () => {
+      const dto: CreateProfileDto = { name: 'John Doe' };
+      jest.spyOn(profileModel, 'create').mockResolvedValue(mockProfile as any);
+      const result = await service.createProfile(dto);
+      expect(result).toEqual(toGetProfileDto(mockProfile));
+    });
+  });
   describe('getProfile', () => {
     it('should return a profile if found', async () => {
       jest.spyOn(profileModel, 'findById').mockReturnValue({
@@ -69,6 +106,30 @@ describe('ProfilesService', () => {
       await expect(service.getProfile(new Types.ObjectId())).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  describe('updateProfile', () => {
+    it('should update a profile', async () => {
+      const dto: UpdateProfileDto = {
+        headline: 'Updated Headline',
+        name: ''
+      };
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockProfile),
+      } as any);
+
+      const result = await service.updateProfile(dto, mockProfile._id);
+      expect(result).toEqual(toGetProfileDto(mockProfile));
+    });
+
+    it('should throw NotFoundException if profile not found', async () => {
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+      await expect(service.updateProfile({
+        name: ''
+      }, new Types.ObjectId())).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -96,6 +157,7 @@ describe('ProfilesService', () => {
         service.deleteProfileField(new Types.ObjectId(), 'headline'),
       ).rejects.toThrow(NotFoundException);
     });
+    
 
     it('should throw BadRequestException if field is already unset', async () => {
       jest.spyOn(profileModel, 'findById').mockReturnValue({
@@ -157,4 +219,110 @@ describe('ProfilesService', () => {
       );
     });
   });
+
+  describe('deleteHeadline', () => {
+    it('should call deletefield on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          headline: 'xx', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+
+      await service.deleteProfileField(mockProfile._id, 'headline');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'headline');
+    });
+  });
+
+  describe('deleteBio', () => {
+    it('should call deleteProfileField on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          bio: '', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+  
+      await service.deleteProfileField(mockProfile._id, 'bio');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'bio');
+    });
+  });
+  
+  describe('deleteLocation', () => {
+    it('should call deleteProfileField on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          location: '', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+  
+      await service.deleteProfileField(mockProfile._id, 'location');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'location');
+    });
+  });
+  
+  describe('deleteIndustry', () => {
+    it('should call deleteProfileField on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          industry: '', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+  
+      await service.deleteProfileField(mockProfile._id, 'industry');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'industry');
+    });
+  });
+  
+  describe('deleteProfilePicture', () => {
+    it('should call deleteProfileField on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          profilePicture: '', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+  
+      await service.deleteProfileField(mockProfile._id, 'profilePicture');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'profilePicture');
+    });
+  });
+  
+  describe('deleteCoverPhoto', () => {
+    it('should call deleteProfileField on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          coverPhoto: '', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+  
+      await service.deleteProfileField(mockProfile._id, 'coverPhoto');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'coverPhoto');
+    });
+  });
+  
+  describe('deleteResume', () => {
+    it('should call deleteProfileField on the service', async () => {
+      const deleteProfileFieldSpy = jest
+        .spyOn(service, 'deleteProfileField')
+        .mockResolvedValue({ 
+          ...mockProfile, 
+          resume: '', 
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+        });
+  
+      await service.deleteProfileField(mockProfile._id, 'resume');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'resume');
+    });
+  });
+  
 });

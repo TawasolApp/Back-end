@@ -29,6 +29,7 @@ export class ProfilesController {
   @Post()
   @UsePipes(new ValidationPipe())
   createProfile(@Body() createProfileDto:CreateProfileDto) {
+    console.log("createProfile controller: " + createProfileDto.name);
     if (createProfileDto.skills && createProfileDto.skills.length > 0) {
       console.log("createProfile controller: " + createProfileDto.skills[0].skillName);
     } else {
