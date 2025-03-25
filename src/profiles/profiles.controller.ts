@@ -18,10 +18,11 @@ import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { Skill } from './infrastructure/database/profile.schema';
 import { SkillDto } from './dto/skill.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 
 @Controller('profile')
 export class ProfilesController {
-  private _id: Types.ObjectId = new Types.ObjectId('67e1f89cdbb929b029dc28af');
+  private _id: Types.ObjectId = new Types.ObjectId('67e1b2a91b7666535f42424e');
 
   constructor(private profilesService: ProfilesService) {}
 
@@ -60,12 +61,14 @@ export class ProfilesController {
 
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
+  @UseGuards(JwtAuthGuard)
   deleteProfilePicture() {
     return this.profilesService.deleteProfilePicture(this._id);
   }
 
   @Delete('cover-photo')
   @UsePipes(new ValidationPipe())
+  @UseGuards(JwtAuthGuard)
   deleteCoverPhoto() {
     return this.profilesService.deleteCoverPhoto(this._id);
   }

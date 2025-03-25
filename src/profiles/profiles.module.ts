@@ -9,12 +9,20 @@ import { AuthModule } from '../auth/auth.module';
 import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module'; 
+import { JwtModule } from '@nestjs/jwt';
+
+import { ConnectionsModule } from 'src/connections/connections.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Profile.name, schema: ProfileSchema }]),
     AuthModule,
     UsersModule, 
+    ConnectionsModule,
+    JwtModule.register({
+      secret: process.env.JWT_SECRET || 'default_secret',
+      signOptions: { expiresIn: '1h' },
+    }),
   ],
   providers: [ProfileSeeder, ProfilesService],
   exports: [ProfileSeeder],
