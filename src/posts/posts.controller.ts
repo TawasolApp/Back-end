@@ -109,6 +109,7 @@ export class PostsController {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = req.user['sub'];
+    console.log(userId);
     try {
       return await this.postsService.getReactions(postId, page, limit, userId);
     } catch (error) {

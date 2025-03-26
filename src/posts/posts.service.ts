@@ -225,9 +225,9 @@ export class PostsService {
     try {
       //console.log(searchedUserId);
       const posts = await this.postModel
-        .find({ author_id: searchedUserId })
+        .find({ author_id: new Types.ObjectId(searchedUserId) })
         .exec();
-      if (!posts || posts.length == 0) {
+      if (!posts || posts.length === 0) {
         throw new NotFoundException('No posts found');
       }
       //console.log(posts);
@@ -358,6 +358,17 @@ export class PostsService {
     userId: string,
     updateReactionsDto: UpdateReactionsDto,
   ): Promise<Post | Comment> {
+    // Log the incoming userId
+    console.log(`Incoming userId: ${userId}`);
+
+    // Validate userId format
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    const objectIdUserId = new Types.ObjectId(userId); // Ensure consistent ObjectId conversion
+    console.log(`Converted userId to ObjectId: ${objectIdUserId}`);
+
     let count = 0;
 
     for (const reaction in updateReactionsDto.reactions) {
@@ -420,15 +431,18 @@ export class PostsService {
         const existingReaction = await this.reactModel
           .findOne({
             post_id: objectIdPostId, // Use converted ObjectId
-            user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            user_id: objectIdUserId, // Use the consistently converted ObjectId
             user_type: reactorType,
           })
           .exec();
+        console.log(`Existing reaction user_id: ${existingReaction?.user_id}`);
+        console.log(`Expected user_id: ${objectIdUserId}`);
         if (!existingReaction) {
+          console.log('adding reaction with user id ', userId);
           const newReaction = new this.reactModel({
             _id: new Types.ObjectId(),
             post_id: objectIdPostId, // Use converted ObjectId
-            user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            user_id: objectIdUserId, // Use the consistently converted ObjectId
             user_type: reactorType,
             react_type: reactionType,
             post_type: updateReactionsDto.postType,
@@ -465,7 +479,7 @@ export class PostsService {
         const existingReaction = await this.reactModel
           .findOne({
             post_id: objectIdPostId, // Use converted ObjectId
-            user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
+            user_id: objectIdUserId, // Use the consistently converted ObjectId
             user_type: reactorType,
             react_type: reactionType,
           })
@@ -512,7 +526,8 @@ export class PostsService {
       if (!reactions || reactions.length === 0) {
         throw new NotFoundException('Reactions not found');
       }
-      //console.log(reactions);
+
+      console.log(reactions);
       return Promise.all(
         reactions.map((reaction) => this.mapToReactionDto(reaction)),
       );
@@ -643,11 +658,7 @@ export class PostsService {
         }),
       );
     } catch (error) {
-      console.error(
-        `Error fetching saved posts for user with id ${userId}:`,
-        error,
-      );
-      throw new InternalServerErrorException('Failed to fetch saved posts');
+      throw error;
     }
   }
 
