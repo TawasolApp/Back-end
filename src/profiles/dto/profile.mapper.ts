@@ -15,7 +15,7 @@ export function toCreateProfileSchema(id: Types.ObjectId,
   createProfileDto: Partial<CreateProfileDto>,
 ){
   return {
-    _id:id,
+    _id:new Types.ObjectId(id),
     name: createProfileDto.name,
     profile_picture: createProfileDto.profilePicture,
     cover_photo: createProfileDto.coverPhoto,

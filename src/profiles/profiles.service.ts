@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/profile.schema';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import { pick } from 'lodash';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -31,9 +31,9 @@ export class ProfilesService {
   }
   
   
-  async getProfile(_id: Types.ObjectId) {
-    console.log("getProfile service id : " + _id);
-    const profile = await this.profileModel.findById( new Types.ObjectId(_id)).exec();
+  async getProfile(id: Types.ObjectId) {
+    console.log("getProfile service id : " + id);
+    const profile = await this.profileModel.findById( id).exec();
     console.log("getProfile service: " + profile);
     if (!profile) {
       throw new NotFoundException('Profile not found');
@@ -42,6 +42,8 @@ export class ProfilesService {
   }
 
   async updateProfile(updateProfileDto: UpdateProfileDto, _id: Types.ObjectId) {
+    console.log("updateProfile service id: " + _id);
+    console.log("updateProfile service name: " + updateProfileDto.headline);
     const updateData = toUpdateProfileSchema(updateProfileDto);
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
@@ -50,6 +52,7 @@ export class ProfilesService {
         { new: true, runValidators: true },
       )
       .exec();
+    console.log("updateProfile service updated profile: " + updatedProfile);
 
     if (!updatedProfile) {
       throw new NotFoundException(`Profile not found`);
@@ -58,28 +61,35 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
-  async deleteProfileField(_id: Types.ObjectId, field: string) {
-    
-    console.log("deleteProfile service: " + _id);
-    const profile = await this.profileModel.findById(new Types.ObjectId(_id)).exec();
+  async deleteProfileField(id: Types.ObjectId, field: string) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+  
+    console.log("deleteProfile service: " + id);
+    const profile = await this.profileModel.findById(new Types.ObjectId(id)).exec();
     console.log("deleteProfile service profile: " + profile);
     if (!profile) {
       throw new NotFoundException(`Profile not found`);
     }
+  
     if (!profile[field]) {
       throw new BadRequestException(`${field} is already unset or does not exist`);
     }
+  
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
-        { _id: new Types.ObjectId(_id) },
+        { _id: new Types.ObjectId(id) },
         { $unset: { [field]: '' } },
         { new: true, runValidators: true },
       )
       .exec();
-      console.log("deleteProfile service profile: " + updatedProfile);
+  
+    console.log("deleteProfile service updated profile: " + updatedProfile);
     if (!updatedProfile) {
-      throw new NotFoundException(`updated Profile not found`);
+      throw new NotFoundException(`Updated Profile not found`);
     }
+  
     return toGetProfileDto(updatedProfile);
   }
 
@@ -109,8 +119,8 @@ export class ProfilesService {
   }
   
 
-  async addSkill(skill: SkillDto, _id: Types.ObjectId) {
-    const profile = await this.profileModel.findById( new Types.ObjectId(_id));
+  async addSkill(skill: SkillDto, id: Types.ObjectId) {
+    const profile = await this.profileModel.findById( new Types.ObjectId(id));
     console.log("addSkill service: " + profile);
     if (!profile) {
       throw new NotFoundException('Profile not found');
@@ -119,7 +129,7 @@ export class ProfilesService {
       throw new BadRequestException(`Skill '${skill.skillName}' already exists`);
     }
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      { _id: new Types.ObjectId(_id)},
+      { _id: new Types.ObjectId(id)},
       { $addToSet: { skills: { skill_name: skill.skillName, endorsements: [] } } },
       { new: true, runValidators: true },
     );
@@ -130,9 +140,9 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
-  async deleteSkill(skillName: string, _id: Types.ObjectId) {
+  async deleteSkill(skillName: string, id: Types.ObjectId) {
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      { _id: new Types.ObjectId(_id), 'skills.skill_name': skillName },
+      { _id: new Types.ObjectId(id), 'skills.skill_name': skillName },
       { $pull: { skills: { skill_name: skillName } } },
       { new: true }
     );
