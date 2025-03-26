@@ -113,7 +113,7 @@ export class CompaniesController {
     @Req() request: Request,
     @Query('name') name?: string,
     @Query('industry') industry?: string,
-  ): Promise<GetCompanyDto[]> {
+  ) {
     try {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -147,7 +147,7 @@ export class CompaniesController {
   async getCompanyDetails(
     @Param('companyId') companyId: string,
     @Req() request: Request,
-  ): Promise<GetCompanyDto> {
+  ) {
     try {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -215,7 +215,10 @@ export class CompaniesController {
 
   @Post('/:companyId/follow')
   @HttpCode(HttpStatus.CREATED)
-  async followCompany(@Param('companyId') companyId: string, @Req() request: Request) {
+  async followCompany(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
     try {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -235,7 +238,10 @@ export class CompaniesController {
 
   @Delete('/:companyId/unfollow')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async unfollowCompany(@Param('companyId') companyId: string, @Req() request: Request) {
+  async unfollowCompany(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
     try {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -255,7 +261,10 @@ export class CompaniesController {
 
   @Get('/suggested/:companyId')
   @HttpCode(HttpStatus.OK)
-  async getSuggestedCompanies(@Param('companyId') companyId: string, @Req() request: Request) {
+  async getSuggestedCompanies(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
     try {
       if (!request.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -274,28 +283,28 @@ export class CompaniesController {
     }
   }
 
-  @Get('/:companyId/common')
-  @HttpCode(HttpStatus.OK)
-  async getCommonFollowers(@Param('companyId') companyId: string, @Req() request: Request) {
-    try {
-      if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
-      }
-      if (!Types.ObjectId.isValid(companyId)) {
-        throw new BadRequestException('Invalid company ID format.');
-      }
-      const userId = request.user['sub'];
-      return await this.companiesService.getCommonFollowers(
-        userId,
-        companyId,
-      );
-    } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
-      throw new InternalServerErrorException(
-        'Failed to retrieve list of common followers.',
-      );
-    }
-  }
+  // @Get('/:companyId/common')
+  // @HttpCode(HttpStatus.OK)
+  // async getCommonFollowers(
+  //   @Param('companyId') companyId: string,
+  //   @Req() request: Request,
+  // ) {
+  //   try {
+  //     if (!request.user) {
+  //       throw new UnauthorizedException('User not authenticated');
+  //     }
+  //     if (!Types.ObjectId.isValid(companyId)) {
+  //       throw new BadRequestException('Invalid company ID format.');
+  //     }
+  //     const userId = request.user['sub'];
+  //     return await this.companiesService.getCommonFollowers(userId, companyId);
+  //   } catch (error) {
+  //     if (error instanceof HttpException) {
+  //       throw error;
+  //     }
+  //     throw new InternalServerErrorException(
+  //       'Failed to retrieve list of common followers.',
+  //     );
+  //   }
+  // }
 }

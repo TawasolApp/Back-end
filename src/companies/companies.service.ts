@@ -82,7 +82,7 @@ export class CompaniesService {
   async updateCompany(
     companyId: string,
     updateCompanyDto: Partial<UpdateCompanyDto>,
-  ): Promise<GetCompanyDto> {
+  ) {
     try {
       const updateData = toUpdateCompanySchema(updateCompanyDto);
       const existingCompany = await this.companyModel
@@ -111,31 +111,33 @@ export class CompaniesService {
         { $set: updateData },
         { new: true },
       );
-      if (!updatedCompany) {
-        throw new InternalServerErrorException(
-          'Failed to update company details.',
-        );
-      }
-      return toGetCompanyDto(updatedCompany);
+      return toGetCompanyDto(updatedCompany!);
     } catch (error) {
       throw error;
     }
   }
 
   async deleteCompany(companyId: string) {
-    await this.companyModel
-      .findByIdAndDelete(new Types.ObjectId(companyId))
-      .lean();
-    await this.companyConnectionModel.deleteMany({
-      company_id: new Types.ObjectId(companyId),
-    });
-    return;
+    try {
+      const existingCompany = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!existingCompany) {
+        throw new NotFoundException('Company not found.');
+      }
+      await this.companyModel
+        .findByIdAndDelete(new Types.ObjectId(companyId))
+        .lean();
+      await this.companyConnectionModel.deleteMany({
+        company_id: new Types.ObjectId(companyId),
+      });
+      return;
+    } catch (error) {
+      throw error;
+    }
   }
 
-  async getCompanyDetails(
-    companyId: string,
-    userId: string,
-  ): Promise<GetCompanyDto> {
+  async getCompanyDetails(companyId: string, userId: string) {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -154,11 +156,8 @@ export class CompaniesService {
       throw error;
     }
   }
-  async filterCompanies(
-    userId: string,
-    name?: string,
-    industry?: string,
-  ): Promise<GetCompanyDto[]> {
+
+  async filterCompanies(userId: string, name?: string, industry?: string) {
     const filter: any = {};
     if (name) {
       filter.name = { $regex: name, $options: 'i' };
@@ -191,7 +190,7 @@ export class CompaniesService {
     });
   }
 
-  async getCompanyFollowers(companyId: string): Promise<GetFollowerDto[]> {
+  async getCompanyFollowers(companyId: string) {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -247,14 +246,20 @@ export class CompaniesService {
 
   async followCompany(userId: string, companyId: string) {
     try {
-      const exisitingFollow = await this.companyConnectionModel.findOne({
-        user_id: new Types.ObjectId(userId),
-        company_id: new Types.ObjectId(companyId),
-      });
-      if (exisitingFollow) {
-        throw new ConflictException(
-          'User already follows this company.',
-        );
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const existingFollow = await this.companyConnectionModel
+        .findOne({
+          user_id: new Types.ObjectId(userId),
+          company_id: new Types.ObjectId(companyId),
+        })
+        .lean();
+      if (existingFollow) {
+        throw new ConflictException('User already follows this company.');
       }
       const newFollow = new this.companyConnectionModel({
         _id: new Types.ObjectId(),
@@ -317,47 +322,47 @@ export class CompaniesService {
     }
   }
 
-  async getCommonFollowers(userId: string, companyId: string) {
-    try {
-      const company = await this.companyModel
-        .findById(new Types.ObjectId(companyId))
-        .lean();
-      if (!company) {
-        throw new NotFoundException('Company not found');
-      }
-      const connections = await this.userConnectionModel
-        .find({
-          $or: [
-            { sending_party: new Types.ObjectId(userId) },
-            { receiving_party: new Types.ObjectId(userId) },
-          ],
-          status: ConnectionStatus.Connected,
-        })
-        .select('sending_party receiving_party')
-        .lean();
-      const connectionIds = connections.map((connection) =>
-        connection.sending_party.equals(new Types.ObjectId(userId))
-          ? connection.receiving_party
-          : connection.sending_party,
-      );
-      const followers = await this.companyConnectionModel
-        .find({
-          user_id: { $in: connectionIds },
-          company_id: companyId,
-        })
-        .select('user_id')
-        .lean();
+  // async getCommonFollowers(userId: string, companyId: string) {
+  //   try {
+  //     const company = await this.companyModel
+  //       .findById(new Types.ObjectId(companyId))
+  //       .lean();
+  //     if (!company) {
+  //       throw new NotFoundException('Company not found');
+  //     }
+  //     const connections = await this.userConnectionModel
+  //       .find({
+  //         $or: [
+  //           { sending_party: new Types.ObjectId(userId) },
+  //           { receiving_party: new Types.ObjectId(userId) },
+  //         ],
+  //         status: ConnectionStatus.Connected,
+  //       })
+  //       .select('sending_party receiving_party')
+  //       .lean();
+  //     const connectionIds = connections.map((connection) =>
+  //       connection.sending_party.equals(new Types.ObjectId(userId))
+  //         ? connection.receiving_party
+  //         : connection.sending_party,
+  //     );
+  //     const followers = await this.companyConnectionModel
+  //       .find({
+  //         user_id: { $in: connectionIds },
+  //         company_id: companyId,
+  //       })
+  //       .select('user_id')
+  //       .lean();
 
-      const followerIds = followers.map((follower) => follower.user_id);
+  //     const followerIds = followers.map((follower) => follower.user_id);
 
-      const profiles = await this.profileModel
-        .find({ _id: { $in: followerIds } })
-        .select('_id name profile_picture headline')
-        .lean();
+  //     const profiles = await this.profileModel
+  //       .find({ _id: { $in: followerIds } })
+  //       .select('_id name profile_picture headline')
+  //       .lean();
 
-      return profiles.map(toGetFollowerDto);
-    } catch (error) {
-      throw error;
-    }
-  }
+  //     return profiles.map(toGetFollowerDto);
+  //   } catch (error) {
+  //     throw error;
+  //   }
+  // }
 }
