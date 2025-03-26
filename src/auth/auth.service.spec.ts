@@ -196,6 +196,46 @@ describe('AuthService', () => {
         BadRequestException,
       );
     });
+
+    it('should throw BadRequestException if user is not found', async () => {
+      jest
+        .spyOn(jwtService, 'verify')
+        .mockReturnValue({ email: 'test@example.com' });
+      jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
+
+      await expect(service.verifyEmail('valid-token')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+
+    it('should return a message if email is already verified', async () => {
+      jest
+        .spyOn(jwtService, 'verify')
+        .mockReturnValue({ email: 'test@example.com' });
+      jest.spyOn(userModel, 'findOne').mockResolvedValue({
+        email: 'test@example.com',
+        isVerified: true,
+      });
+
+      const result = await service.verifyEmail('valid-token');
+      expect(result.message).toBe('Email is already verified.');
+    });
+
+    it('should verify email for valid input', async () => {
+      const mockUser = {
+        email: 'test@example.com',
+        isVerified: false,
+        save: jest.fn(),
+      };
+      jest
+        .spyOn(jwtService, 'verify')
+        .mockReturnValue({ email: 'test@example.com' });
+      jest.spyOn(userModel, 'findOne').mockResolvedValue(mockUser);
+
+      const result = await service.verifyEmail('valid-token');
+      expect(result.message).toBe('Email verified successfully.');
+      expect(mockUser.save).toHaveBeenCalled();
+    });
   });
 
   describe('forgotPassword', () => {
@@ -250,6 +290,51 @@ describe('AuthService', () => {
 
       const result = await service.resetPassword('valid-token', 'new-password');
 
+      expect(result.message).toBe('Password reset successfully');
+    });
+
+    it('should throw BadRequestException for invalid token', async () => {
+      jest.spyOn(jwtService, 'verify').mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+
+      await expect(
+        service.resetPassword('invalid-token', 'new-password'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if user is not found', async () => {
+      jest.spyOn(jwtService, 'verify').mockReturnValue({ sub: 'userId' });
+      jest.spyOn(userModel, 'findById').mockResolvedValue(null);
+
+      await expect(
+        service.resetPassword('valid-token', 'new-password'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if new password matches the old password', async () => {
+      jest.spyOn(jwtService, 'verify').mockReturnValue({ sub: 'userId' });
+      jest.spyOn(userModel, 'findById').mockResolvedValue({
+        password: await bcrypt.hash('same-password', 10),
+        save: jest.fn(),
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
+
+      await expect(
+        service.resetPassword('valid-token', 'same-password'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should reset the password for valid input', async () => {
+      jest.spyOn(jwtService, 'verify').mockReturnValue({ sub: 'userId' });
+      jest.spyOn(userModel, 'findById').mockResolvedValue({
+        password: await bcrypt.hash('old-password', 10),
+        save: jest.fn(),
+      });
+      jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
+      jest.spyOn(bcrypt, 'hash').mockResolvedValue('new-hashed-password');
+
+      const result = await service.resetPassword('valid-token', 'new-password');
       expect(result.message).toBe('Password reset successfully');
     });
   });
