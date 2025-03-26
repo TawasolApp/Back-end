@@ -6,6 +6,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
+import { BadRequestException, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
 
 describe('ProfilesController', () => {
   let controller: ProfilesController;
@@ -47,123 +48,106 @@ describe('ProfilesController', () => {
   });
 
   describe('createProfile', () => {
-    it('should call createProfile on the service', async () => {
-      const dto: CreateProfileDto = {
-        name: 'Test Name',
-        skills: [{ skillName: 'NestJS' }],
-      };
+    it('should create a profile successfully', async () => {
+      const dto: CreateProfileDto = { name: 'Test Name', skills: [{ skillName: 'NestJS' }] };
       const userId = new Types.ObjectId();
       await controller.createProfile({ user: { sub: userId } }, dto);
       expect(service.createProfile).toHaveBeenCalledWith(userId, dto);
     });
+
+    it('should throw UnauthorizedException when user is not authenticated', async () => {
+      await expect(controller.createProfile({}, {} as CreateProfileDto)).rejects.toThrow(UnauthorizedException);
+    });
   });
 
   describe('getProfile', () => {
-    it('should call getProfile on the service with a valid ObjectId', async () => {
+    it('should get profile successfully with valid ObjectId', async () => {
       const id = new Types.ObjectId().toHexString();
       await controller.getProfile(id);
       expect(service.getProfile).toHaveBeenCalled();
     });
 
-    it('should return an error if the ObjectId is invalid', async () => {
-      const response = await controller.getProfile('invalid-id');
-      expect(response).toEqual({ error: 'Invalid profile ID' });
+    it('should throw BadRequestException for invalid ObjectId', async () => {
+      await expect(controller.getProfile('invalid-id')).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('updateProfile', () => {
-    it('should call updateProfile on the service', async () => {
-      const dto: UpdateProfileDto = {
-        headline: 'Updated Headline',
-        name: 'Updated Name',
-      };
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+    it('should update a profile successfully', async () => {
+      const dto: UpdateProfileDto = { headline: 'Updated Headline', name: 'Updated Name' };
+      const testUserId = new Types.ObjectId();
       const req = { user: { sub: testUserId } };
       await controller.updateProfile(req, dto);
       expect(service.updateProfile).toHaveBeenCalledWith(dto, testUserId);
     });
-  });
 
-  describe('deleteProfilePicture', () => {
-    it('should call deleteProfilePicture on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-
-      await controller.deleteProfilePicture(req);
-
-      expect(service.deleteProfilePicture).toHaveBeenCalledWith(testUserId);
+    it('should throw UnauthorizedException when user is not authenticated', async () => {
+      await expect(controller.updateProfile({}, {} as UpdateProfileDto)).rejects.toThrow(UnauthorizedException);
     });
   });
 
-  describe('deleteCoverPhoto', () => {
-    it('should call deleteCoverPhoto on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-      await controller.deleteCoverPhoto(req);
-      expect(service.deleteCoverPhoto).toHaveBeenCalledWith(testUserId);
-    });
-  });
+  const deleteFunctions = [
+    { name: 'deleteProfilePicture', method: 'deleteProfilePicture' },
+    { name: 'deleteCoverPhoto', method: 'deleteCoverPhoto' },
+    { name: 'deleteResume', method: 'deleteResume' },
+    { name: 'deleteHeadline', method: 'deleteHeadline' },
+    { name: 'deleteBio', method: 'deleteBio' },
+    { name: 'deleteLocation', method: 'deleteLocation' },
+    { name: 'deleteIndustry', method: 'deleteIndustry' },
+  ];
 
-  describe('deleteResume', () => {
-    it('should call deleteResume on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-      await controller.deleteResume(req);
-      expect(service.deleteResume).toHaveBeenCalledWith(testUserId);
+  deleteFunctions.forEach(({ name, method }) => {
+    describe(name, () => {
+      it(`should call ${method} on the service`, async () => {
+        const testUserId = new Types.ObjectId();
+        const req = { user: { sub: testUserId } };
+        await controller[method](req);
+        expect(service[method]).toHaveBeenCalledWith(testUserId);
+      });
+
+      it(`should throw UnauthorizedException for ${method} if user is not authenticated`, async () => {
+        const req = {}; // Instead of { user: null }
+        await expect(controller[method](req)).rejects.toThrow(UnauthorizedException);
+      });
+      
     });
   });
 
   describe('addSkill', () => {
-    it('should call addSkill on the service', async () => {
+    it('should add skill successfully', async () => {
       const skillDto: SkillDto = { skillName: 'NestJS' };
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const testUserId = new Types.ObjectId();
       const req = { user: { sub: testUserId } };
       await controller.addSkill(req, skillDto);
       expect(service.addSkill).toHaveBeenCalledWith(skillDto, testUserId);
     });
+
+    it('should throw UnauthorizedException when user is not authenticated', async () => {
+      await expect(controller.addSkill({}, {} as SkillDto)).rejects.toThrow(UnauthorizedException);
+    });
   });
 
   describe('deleteSkill', () => {
-    it('should call deleteSkill on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+    it('should delete skill successfully', async () => {
+      const testUserId = new Types.ObjectId();
       const req = { user: { sub: testUserId } };
       await controller.deleteSkill(req, 'NestJS');
       expect(service.deleteSkill).toHaveBeenCalledWith('NestJS', testUserId);
     });
-  });
-  describe('deleteHeadline', () => {
-    it('should call deleteHeadline on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-      await controller.deleteHeadline(req);
-      expect(service.deleteHeadline).toHaveBeenCalledWith(testUserId);
+
+    it('should throw UnauthorizedException when user is not authenticated', async () => {
+      await expect(controller.deleteSkill({}, 'NestJS')).rejects.toThrow(UnauthorizedException);
     });
   });
 
-  describe('deleteBio', () => {
-    it('should call deleteBio on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-      await controller.deleteBio(req);
-      expect(service.deleteBio).toHaveBeenCalledWith(testUserId);
-    });
-  });
-
-  describe('deleteLocation', () => {
-    it('should call deleteLocation on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-      await controller.deleteLocation(req);
-      expect(service.deleteLocation).toHaveBeenCalledWith(testUserId);
-    });
-  });
-
-  describe('deleteIndustry', () => {
-    it('should call deleteIndustry on the service', async () => {
-      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
-      const req = { user: { sub: testUserId } };
-      await controller.deleteIndustry(req);
-      expect(service.deleteIndustry).toHaveBeenCalledWith(testUserId);
+  describe('Error Handling', () => {
+    it('should throw InternalServerErrorException on service failure', async () => {
+      (service.createProfile as jest.Mock).mockImplementation(() => {
+        throw new Error('Unexpected error');
+      });
+      const userId = new Types.ObjectId();
+      const dto: CreateProfileDto = { name: 'Test Name', skills: [{ skillName: 'NestJS' }] };
+      await expect(controller.createProfile({ user: { sub: userId } }, dto)).rejects.toThrow(InternalServerErrorException);
     });
   });
 });

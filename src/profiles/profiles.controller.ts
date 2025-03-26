@@ -1,12 +1,16 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
   Get,
+  HttpException,
+  InternalServerErrorException,
   Param,
   Patch,
   Post,
   Req,
+  UnauthorizedException,
   UseGuards,
   UsePipes,
   ValidationPipe,
@@ -21,88 +25,178 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
+  
+
   constructor(private profilesService: ProfilesService) {}
+
+  private handleException(error: any, defaultMessage: string) {
+    if (error instanceof HttpException) {
+      throw error;
+    }
+    throw new InternalServerErrorException(defaultMessage);
+  }
 
   @Post()
   @UsePipes(new ValidationPipe())
-  createProfile(@Req() req, @Body() createProfileDto: CreateProfileDto) {
-    console.log('createProfile controller: ' + createProfileDto.name);
-
-    return this.profilesService.createProfile(req.user.sub, createProfileDto);
+  async createProfile(@Req() req, @Body() createProfileDto: CreateProfileDto) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.createProfile(req.user.sub, createProfileDto);
+    } catch (error) {
+      this.handleException(error, 'Failed to create profile.');
+    }
   }
 
   @Get(':id')
   @UsePipes(new ValidationPipe())
-  getProfile(@Param('id') id: string) {
-    // console.log("getProfile controller username  " )
-    let getId: Types.ObjectId;
+  async getProfile(@Param('id') id: string) {
     try {
-      getId = new Types.ObjectId(id);
+      if (!Types.ObjectId.isValid(id)) {
+        throw new BadRequestException('Invalid profile ID format');
+      }
+      return await this.profilesService.getProfile(new Types.ObjectId(id));
     } catch (error) {
-      throw new Error('Invalid profile ID'); // Throw an exception for the error case
+      this.handleException(error, 'Failed to retrieve profile.');
     }
-    return this.profilesService.getProfile(getId);
   }
 
   @Patch()
   @UsePipes(new ValidationPipe())
-  updateProfile(@Req() req, @Body() updateProfileDto: UpdateProfileDto) {
-    return this.profilesService.updateProfile(updateProfileDto, req.user.sub);
+  async updateProfile(@Req() req, @Body() updateProfileDto: UpdateProfileDto) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.updateProfile(updateProfileDto, req.user.sub);
+    } catch (error) {
+      this.handleException(error, 'Failed to update profile.');
+    }
   }
+
+  
 
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
-  deleteProfilePicture(@Req() req) {
-    console.log('deleteProfilePicture controller: ' + req.user.sub);
-    return this.profilesService.deleteProfilePicture(req.user.sub);
+  
+  async deleteProfilePicture(@Req() req) {
+   
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      console.log("deleteProfilePicture controller: " + req.user.sub);
+      return await this.profilesService.deleteProfilePicture(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete profile-picture.`);
+    }
   }
 
+  
   @Delete('cover-photo')
   @UsePipes(new ValidationPipe())
-  deleteCoverPhoto(@Req() req) {
-    return this.profilesService.deleteCoverPhoto(req.user.sub);
+  
+  async deleteCoverPhoto(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteCoverPhoto(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete cover-photo.`);
+    }
   }
 
   @Delete('resume')
   @UsePipes(new ValidationPipe())
-  deleteResume(@Req() req) {
-    return this.profilesService.deleteResume(req.user.sub);
+  async deleteResume(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteResume(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete resume.`);
+    }
   }
 
   @Delete('headline')
   @UsePipes(new ValidationPipe())
-  deleteHeadline(@Req() req) {
-    return this.profilesService.deleteHeadline(req.user.sub);
+  async deleteHeadline(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteHeadline(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete headline.`);
+    }
   }
 
   @Delete('bio')
   @UsePipes(new ValidationPipe())
-  deleteBio(@Req() req) {
-    return this.profilesService.deleteBio(req.user.sub);
+  async deleteBio(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteBio(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete bio.`);
+    }
   }
 
   @Delete('location')
   @UsePipes(new ValidationPipe())
-  deleteLocation(@Req() req) {
-    return this.profilesService.deleteLocation(req.user.sub);
+  async deleteLocation(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteLocation(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete location.`);
+    }
   }
 
   @Delete('industry')
   @UsePipes(new ValidationPipe())
-  deleteIndustry(@Req() req) {
-    return this.profilesService.deleteIndustry(req.user.sub);
+  async deleteIndustry(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteIndustry(req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete industry.`);
+    }
   }
+
 
   @Patch('skills')
   @UsePipes(new ValidationPipe())
-  addSkill(@Req() req, @Body() skill: SkillDto) {
-    console.log('addSkill controller: ' + skill.skillName);
-    return this.profilesService.addSkill(skill, req.user.sub);
+  async addSkill(@Req() req, @Body() skill: SkillDto) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.addSkill(skill, req.user.sub);
+    } catch (error) {
+      this.handleException(error, 'Failed to add skill.');
+    }
   }
 
   @Delete('skills/:skill_name')
   @UsePipes(new ValidationPipe())
-  deleteSkill(@Req() req, @Param('skill_name') skillName: string) {
-    return this.profilesService.deleteSkill(skillName, req.user.sub);
+  async deleteSkill(@Req() req, @Param('skill_name') skillName: string) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteSkill(skillName, req.user.sub);
+    } catch (error) {
+      this.handleException(error, `Failed to delete skill: ${skillName}`);
+    }
   }
 }
