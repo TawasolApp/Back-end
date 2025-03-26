@@ -48,7 +48,10 @@ describe('ProfilesController', () => {
 
   describe('createProfile', () => {
     it('should call createProfile on the service', async () => {
-      const dto: CreateProfileDto = { name: 'Test Name', skills: [{ skillName: 'NestJS' }] };
+      const dto: CreateProfileDto = {
+        name: 'Test Name',
+        skills: [{ skillName: 'NestJS' }],
+      };
       const userId = new Types.ObjectId();
       await controller.createProfile({ user: { sub: userId } }, dto);
       expect(service.createProfile).toHaveBeenCalledWith(userId, dto);
@@ -70,7 +73,10 @@ describe('ProfilesController', () => {
 
   describe('updateProfile', () => {
     it('should call updateProfile on the service', async () => {
-      const dto: UpdateProfileDto = { headline: 'Updated Headline', name: 'Updated Name' };
+      const dto: UpdateProfileDto = {
+        headline: 'Updated Headline',
+        name: 'Updated Name',
+      };
       const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
       const req = { user: { sub: testUserId } };
       await controller.updateProfile(req, dto);
@@ -82,10 +88,11 @@ describe('ProfilesController', () => {
     it('should call deleteProfilePicture on the service', async () => {
       const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
       const req = { user: { sub: testUserId } };
-  
+
       await controller.deleteProfilePicture(req);
-  
-      expect(service.deleteProfilePicture).toHaveBeenCalledWith(testUserId); });
+
+      expect(service.deleteProfilePicture).toHaveBeenCalledWith(testUserId);
+    });
   });
 
   describe('deleteCoverPhoto', () => {
@@ -122,6 +129,41 @@ describe('ProfilesController', () => {
       const req = { user: { sub: testUserId } };
       await controller.deleteSkill(req, 'NestJS');
       expect(service.deleteSkill).toHaveBeenCalledWith('NestJS', testUserId);
+    });
+  });
+  describe('deleteHeadline', () => {
+    it('should call deleteHeadline on the service', async () => {
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteHeadline(req);
+      expect(service.deleteHeadline).toHaveBeenCalledWith(testUserId);
+    });
+  });
+
+  describe('deleteBio', () => {
+    it('should call deleteBio on the service', async () => {
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteBio(req);
+      expect(service.deleteBio).toHaveBeenCalledWith(testUserId);
+    });
+  });
+
+  describe('deleteLocation', () => {
+    it('should call deleteLocation on the service', async () => {
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteLocation(req);
+      expect(service.deleteLocation).toHaveBeenCalledWith(testUserId);
+    });
+  });
+
+  describe('deleteIndustry', () => {
+    it('should call deleteIndustry on the service', async () => {
+      const testUserId = new Types.ObjectId(); // Ensure valid ObjectId
+      const req = { user: { sub: testUserId } };
+      await controller.deleteIndustry(req);
+      expect(service.deleteIndustry).toHaveBeenCalledWith(testUserId);
     });
   });
 });
