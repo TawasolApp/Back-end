@@ -21,7 +21,6 @@ export class UsersController {
   @Patch('request-email-update')
   @UseGuards(JwtAuthGuard)
   async requestEmailUpdate(@Req() req, @Body() dto: UpdateEmailRequestDto) {
-  
     return this.usersService.requestEmailUpdate(req.user.sub, dto);
   }
 
