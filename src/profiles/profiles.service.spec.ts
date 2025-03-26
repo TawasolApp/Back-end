@@ -233,7 +233,7 @@ describe('ProfilesService', () => {
 
       await expect(
         service.addSkill({ skillName: 'JavaScript' }, mockProfile._id),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(ConflictException);
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId

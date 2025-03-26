@@ -26,7 +26,7 @@ export class ProfilesService {
       return toGetProfileDto(createdProfile);
     } catch (error) {
       if (error.code === 11000) { // MongoDB duplicate key error
-        throw new ConflictException('Profile already exists');
+        throw new ConflictException('Profile for this user already exists');
       }
       throw new BadRequestException('Failed to create profile');
     }
@@ -137,7 +137,7 @@ export class ProfilesService {
       throw new NotFoundException('Profile not found');
     }
     if ((profile.skills ?? []).some(s => s.skill_name.toLowerCase() === skill.skillName.toLowerCase())) {
-      throw new BadRequestException(`Skill '${skill.skillName}' already exists`);
+      throw new ConflictException(`Skill '${skill.skillName}' already exists`);
     }
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id)},
