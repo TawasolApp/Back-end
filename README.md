@@ -39,7 +39,7 @@ MONGO_URI=mongodb+srv://noorahmedalhadidi:mongodbatlaspassword@tawasolcluster.5i
 JWT_SECRET=4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4
 EMAIL_USER=noreply.tawasolapp@gmail.com
 EMAIL_PASS=gknjkmsddprpcanb
-RECAPTCHA_SECRET_KEY= 6LdMDv0qAAAAAH2f77XnX3AN3RO01m26yTNTUUWR
+RECAPTCHA_SECRET_KEY=6LdMDv0qAAAAAH2f77XnX3AN3RO01m26yTNTUUWR
 ```
 
 ### 4. Run the application:
