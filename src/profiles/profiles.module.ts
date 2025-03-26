@@ -10,7 +10,6 @@ import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConnectionsModule } from '../connections/connections.module';
 
 @Module({

@@ -2,15 +2,7 @@ import { IsNotEmpty, IsString, IsOptional, IsArray, ValidateNested, IsEnum, IsBo
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { SkillDto } from './skill.dto';
-import { Skill } from '../infrastructure/database/profile.schema';
-import { Types } from 'mongoose';
 
-// class Skill {
-//   @ApiProperty({ description: 'Name of the skill', example: 'JavaScript' })
-//   @IsNotEmpty()
-//   @IsString()
-//   skillName: string;
-// }
 
 class Education {
   @ApiProperty({ description: 'Name of the educational institution', example: 'Harvard University' })
@@ -237,19 +229,5 @@ export class CreateProfileDto {
   @IsEnum(['public', 'private', 'connections_only'])
   visibility?: string;
 
-  // @ApiPropertyOptional({ description: 'Connection count', example: 50 })
-  // @IsOptional()
-  // connectionCount?: number;
 
-  // @ApiPropertyOptional({ description: 'Plan details', type: PlanDetails })
-  // @IsOptional()
-  // @ValidateNested()
-  // @Type(() => PlanDetails)
-  // planDetails?: PlanDetails;
-
-  // @ApiProperty({ description: 'Plan statistics', type: PlanStatistics })
-  
-  // @ValidateNested()
-  // @Type(() => PlanStatistics)
-  // planStatistics: PlanStatistics;
 }
