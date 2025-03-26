@@ -3,7 +3,7 @@ import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/profile.schema';
 import { model, Model, Types } from 'mongoose';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
 import { SkillDto } from './dto/skill.dto';
@@ -86,6 +86,21 @@ describe('ProfilesService', () => {
       const result = await service.createProfile(new Types.ObjectId,dto);
       expect(result).toEqual(toGetProfileDto(mockProfile));
     });
+    it('should throw ConflictException if profile already exists (duplicate key error)', async () => {
+      const dto: CreateProfileDto = { name: 'John Doe' };
+      
+      // Mock the `create` method to throw a duplicate key error (MongoDB error code 11000)
+      jest.spyOn(profileModel, 'create').mockRejectedValue({ code: 11000 });
+    
+      await expect(service.createProfile(new Types.ObjectId(), dto)).rejects.toThrow(ConflictException);
+    });
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+      const dto: CreateProfileDto = { name: 'John Doe' };
+      await expect(service.createProfile(invalidId as any, dto)).rejects.toThrow(
+        BadRequestException
+      );
+    });
   });
   describe('getProfile', () => {
     it('should return a profile if found', async () => {
@@ -105,6 +120,14 @@ describe('ProfilesService', () => {
 
       await expect(service.getProfile(new Types.ObjectId())).rejects.toThrow(
         NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+    
+      await expect(service.getProfile(invalidId as any)).rejects.toThrow(
+        BadRequestException,
       );
     });
   });
@@ -130,6 +153,13 @@ describe('ProfilesService', () => {
       await expect(service.updateProfile({
         name: ''
       }, new Types.ObjectId())).rejects.toThrow(NotFoundException);
+    });
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+    
+      await expect(service.updateProfile({name:'' }, invalidId as any)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 
@@ -169,6 +199,13 @@ describe('ProfilesService', () => {
         service.deleteProfileField(mockProfile._id, 'headline'),
       ).rejects.toThrow(BadRequestException);
     });
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+    
+      await expect(service.deleteProfileField(invalidId as any, 'headline')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 
   describe('addSkill', () => {
@@ -198,6 +235,13 @@ describe('ProfilesService', () => {
         service.addSkill({ skillName: 'JavaScript' }, mockProfile._id),
       ).rejects.toThrow(BadRequestException);
     });
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+    
+      await expect(service.addSkill({ skillName: 'JavaScript' },invalidId as any)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 
   describe('deleteSkill', () => {
@@ -216,6 +260,13 @@ describe('ProfilesService', () => {
 
       await expect(service.deleteSkill('Python', mockProfile._id)).rejects.toThrow(
         NotFoundException,
+      );
+    });
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+    
+      await expect(service.deleteSkill('Python',invalidId as any)).rejects.toThrow(
+        BadRequestException,
       );
     });
   });

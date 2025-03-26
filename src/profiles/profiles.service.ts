@@ -14,10 +14,13 @@ export class ProfilesService {
     @InjectModel(Profile.name) private profileModel: Model<Profile>,
   ) {}
 
-  async createProfile(_id:Types.ObjectId,createProfileDto: CreateProfileDto) {
+  async createProfile(id:Types.ObjectId,createProfileDto: CreateProfileDto) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
     console.log("createProfile service: " + createProfileDto.name);
   
-    const profileData = toCreateProfileSchema(_id,createProfileDto);
+    const profileData = toCreateProfileSchema(id,createProfileDto);
     try {
       const createdProfile = await this.profileModel.create(profileData);
       await createdProfile.save();
@@ -32,6 +35,9 @@ export class ProfilesService {
   
   
   async getProfile(id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
     console.log("getProfile service id : " + id);
     const profile = await this.profileModel.findById( id).exec();
     console.log("getProfile service: " + profile);
@@ -41,13 +47,16 @@ export class ProfilesService {
     return toGetProfileDto(profile);
   }
 
-  async updateProfile(updateProfileDto: UpdateProfileDto, _id: Types.ObjectId) {
-    console.log("updateProfile service id: " + _id);
+  async updateProfile(updateProfileDto: UpdateProfileDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    console.log("updateProfile service id: " + id);
     console.log("updateProfile service name: " + updateProfileDto.headline);
     const updateData = toUpdateProfileSchema(updateProfileDto);
     const updatedProfile = await this.profileModel
       .findOneAndUpdate(
-        { _id: new Types.ObjectId(_id) },
+        { _id: new Types.ObjectId(id) },
         { $set: updateData },
         { new: true, runValidators: true },
       )
@@ -120,6 +129,9 @@ export class ProfilesService {
   
 
   async addSkill(skill: SkillDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
     const profile = await this.profileModel.findById( new Types.ObjectId(id));
     console.log("addSkill service: " + profile);
     if (!profile) {
@@ -141,6 +153,9 @@ export class ProfilesService {
   }
 
   async deleteSkill(skillName: string, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id), 'skills.skill_name': skillName },
       { $pull: { skills: { skill_name: skillName } } },
