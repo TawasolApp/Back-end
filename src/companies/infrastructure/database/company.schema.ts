@@ -20,6 +20,9 @@ export class Company {
   logo: string;
 
   @Prop()
+  banner: string;
+
+  @Prop()
   description: string;
 
   @Prop()
@@ -38,6 +41,7 @@ export class Company {
     required: true,
   })
   company_type: CompanyType;
+
 
   @Prop({ required: true })
   industry: string;
