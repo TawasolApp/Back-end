@@ -100,6 +100,7 @@ export const mockReaction = {
   user_id: '60d0fe4f5311236168a109ca',
   react_type: 'Like',
   user_type: 'User',
+  post_type: 'Post',
 };
 
 export const mockSave = {

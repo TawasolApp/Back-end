@@ -8,7 +8,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import { Post, PostDocument } from './infrastructure/database/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { GetPostDto } from './dto/get-post.dto';
@@ -21,7 +21,7 @@ import {
   CompanyDocument,
 } from '../companies/infrastructure/database/company.schema';
 import { React, ReactDocument } from './infrastructure/database/react.schema';
-import { Reactions, UpdateReactionsDto } from './dto/update-reactions.dto';
+import { UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto';
 import { Save, SaveDocument } from './infrastructure/database/save.schema';
 import { EditPostDto } from './dto/edit-post.dto';
@@ -32,7 +32,6 @@ import {
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { EditCommentDto } from './dto/edit-comment.dto';
-import { th } from '@faker-js/faker/.';
 
 @Injectable()
 export class PostsService {
@@ -52,8 +51,14 @@ export class PostsService {
   ): Promise<Post> {
     try {
       // Validate post ID format
-      if (!Types.ObjectId.isValid(id)) {
+      // console.log('Is valid : ' + isValidObjectId(userId));
+      // console.log('Post ID : ' + id);
+      // console.log('User ID : ' + userId);
+      if (!isValidObjectId(id)) {
         throw new BadRequestException('Invalid post ID format');
+      }
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('Invalid user ID format');
       }
 
       const post = await this.findPostById(id);
@@ -81,8 +86,9 @@ export class PostsService {
         authorType = 'User';
       } else {
         const authorCompany = await this.companyModel
-          .find({ _id: new Types.ObjectId(userId) })
+          .findById({ _id: new Types.ObjectId(userId) })
           .exec();
+        console.log(authorCompany);
         if (authorCompany) {
           authorType = 'Company';
         } else {
@@ -186,7 +192,7 @@ export class PostsService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      if (error.name === 'NetworkError') {
+      if (error instanceof Error && error.name === 'NetworkError') {
         throw new InternalServerErrorException(
           'Network error occurred while fetching posts',
         );
@@ -243,9 +249,10 @@ export class PostsService {
     post: PostDocument,
     userId: string,
   ): Promise<GetPostDto> {
-    let authorProfile;
-    let authorProfilePicture;
-    let authorBio;
+    let authorProfile: ProfileDocument | CompanyDocument | null = null;
+    let authorProfilePicture: string | undefined;
+    let authorBio: string | undefined;
+
     if (post.author_type === 'User') {
       authorProfile = await this.profileModel
         .findById(new Types.ObjectId(post.author_id))
@@ -255,7 +262,7 @@ export class PostsService {
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.profile_picture;
-      authorBio = authorProfile.bio; // Set bio for User
+      authorBio = authorProfile.bio;
     } else if (post.author_type === 'Company') {
       authorProfile = await this.companyModel
         .findById(new Types.ObjectId(post.author_id))
@@ -265,36 +272,29 @@ export class PostsService {
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.logo;
-      authorBio = authorProfile.description; // Set description as bio for Company
+      authorBio = authorProfile.description;
     } else {
       throw new Error('Invalid author type');
     }
 
-    let userReactionType:
-      | 'Like'
-      | 'Love'
-      | 'Funny'
-      | 'Celebrate'
-      | 'Insightful'
-      | 'Support'
-      | null = null;
-    if (userId) {
-      const userReaction = await this.reactModel
-        .findOne({
-          post_id: post._id, // Ensure the correct field is used
-          user_id: new Types.ObjectId(userId), // Ensure userId is converted to ObjectId
-        })
-        .exec();
-      userReactionType = userReaction
-        ? (userReaction.react_type as
-            | 'Like'
-            | 'Love'
-            | 'Funny'
-            | 'Celebrate'
-            | 'Insightful'
-            | 'Support')
-        : null;
-    }
+    const userReaction = userId
+      ? await this.reactModel
+          .findOne({
+            post_id: post._id,
+            user_id: new Types.ObjectId(userId),
+          })
+          .exec()
+      : null;
+
+    const userReactionType = userReaction
+      ? (userReaction.react_type as
+          | 'Like'
+          | 'Love'
+          | 'Funny'
+          | 'Celebrate'
+          | 'Insightful'
+          | 'Support')
+      : null;
 
     const isSaved = await this.saveModel.exists({
       post_id: post._id,
@@ -304,20 +304,20 @@ export class PostsService {
     return {
       id: post.id.toString(),
       authorId: post.author_id.toString(),
-      authorName: authorProfile.name, // Fetch authorName from profile
-      authorPicture: authorProfilePicture, // Fetch authorPicture from profile
-      authorBio: authorBio, // Fetch authorBio from profile
+      authorName: authorProfile.name,
+      authorPicture: authorProfilePicture,
+      authorBio: authorBio,
       content: post.text,
       media: post.media,
-      reactCounts: post.react_count, // Use the new reactCounts structure
+      reactCounts: post.react_count,
       comments: post.comment_count,
       shares: post.share_count,
       taggedUsers: post.tags.map((tag) => tag.toString()),
       visibility: post.visibility as 'Public' | 'Connections' | 'Private',
-      authorType: post.author_type as 'User' | 'Company',
-      reactType: userReactionType, // Add logic to determine if the post is liked
+      authorType: post.author_type,
+      reactType: userReactionType,
       timestamp: post.posted_at,
-      isSaved: !!isSaved || false, // Add isSaved property, return false if not saved
+      isSaved: !!isSaved,
     };
   }
 
@@ -368,8 +368,8 @@ export class PostsService {
     if (count > 1) {
       throw new BadRequestException('Only one reaction is allowed');
     }
-    let post;
-    let comment;
+    let post: PostDocument | null = null;
+    let comment: CommentDocument | null = null;
     const objectIdPostId = new Types.ObjectId(postId); // Convert postId to ObjectId
     //console.log(`Converted postId to ObjectId: ${objectIdPostId}`);
     if (updateReactionsDto.postType === 'Post') {
@@ -399,23 +399,12 @@ export class PostsService {
 
     const reactions = updateReactionsDto.reactions;
     for (const [reactionType, value] of Object.entries(reactions)) {
-      let reactorType: 'User' | 'Company';
       const reactorProfile = await this.profileModel
-        .findById(new Types.ObjectId(userId))
+        .findById(objectIdUserId)
         .exec();
-      if (reactorProfile) {
-        reactorType = 'User';
-      } else {
-        const reactorCompany = await this.companyModel
-          .findById(new Types.ObjectId(userId))
-          .exec();
-        if (reactorCompany) {
-          reactorType = 'Company';
-        } else {
-          throw new NotFoundException('Reactor not found');
-        }
-      }
-      if (value === true) {
+      const reactorType = reactorProfile ? 'User' : 'Company';
+
+      if (value) {
         const existingReaction = await this.reactModel
           .findOne({
             post_id: objectIdPostId, // Use converted ObjectId
@@ -442,15 +431,12 @@ export class PostsService {
             post.react_count[reactionType] =
               (post.react_count[reactionType] || 0) + 1;
             await post.save();
-            newReaction.post_type = 'Post';
-            await newReaction.save();
           }
           if (comment) {
             comment.react_count++;
             await comment.save();
-            newReaction.post_type = 'Comment';
-            await newReaction.save();
           }
+          await newReaction.save();
         } else {
           // Update the existing reaction
           if (existingReaction.react_type !== reactionType) {
@@ -849,8 +835,8 @@ export class PostsService {
       }
       return post;
     } catch (error) {
-      // console.error(`Error finding post with id ${id}:`, error);
-      if (error.name === 'CastError') {
+      console.error(`Error finding post with id ${id}:`, error.name);
+      if (error.name === 'BSONError') {
         throw new NotFoundException('Invalid post id format');
       }
       throw new InternalServerErrorException('Failed to find post');

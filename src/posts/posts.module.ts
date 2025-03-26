@@ -21,12 +21,12 @@ import { CompaniesModule } from '../companies/companies.module';
 import {
   Company,
   CompanySchema,
-} from '../companies/infrastructure/database/company.schema'; // Correct import path
+} from '../companies/infrastructure/database/company.schema';
 import {
   Profile,
   ProfileSchema,
 } from '../profiles/infrastructure/database/profile.schema';
-import { ProfilesModule } from '../profiles/profiles.module'; // Import ProfilesModule
+import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PostsService } from './posts.service';
@@ -44,7 +44,7 @@ import { PostsService } from './posts.service';
     ]),
     AuthModule,
     CompaniesModule,
-    ProfilesModule, // Add ProfilesModule to imports
+    ProfilesModule,
     UsersModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,

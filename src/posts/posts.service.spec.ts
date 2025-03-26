@@ -4,7 +4,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Post } from './infrastructure/database/post.schema';
 import { Profile } from '../profiles/infrastructure/database/profile.schema';
 import { Company } from '../companies/infrastructure/database/company.schema';
-import { React } from './infrastructure/database/react.schema';
+import { React, ReactDocument } from './infrastructure/database/react.schema';
 import { Save } from './infrastructure/database/save.schema';
 import { Comment } from './infrastructure/database/comment.schema';
 import { Types } from 'mongoose';
@@ -2016,12 +2016,156 @@ describe('PostsService', () => {
     ).rejects.toThrow('Comment not found');
   });
 
-  it('should throw an error if user is unauthorized to delete a comment', async () => {
+  it('should throw an error if user is unauthorized to delete a comment ', async () => {
     const commentInstance = { ...mockComment, author_id: new Types.ObjectId() };
     commentModelMock.findById.mockReturnValue(commentInstance);
 
     await expect(
       service.deleteComment(mockComment._id.toString(), mockUserId),
     ).rejects.toThrow('User not authorized to edit this comment');
+  });
+
+  // Invalid user ID format in editPost
+  it('should throw error for invalid user ID format in editPost', async () => {
+    await expect(
+      service.editPost(mockPost.id.toString(), mockEditPostDto, '123'),
+    ).rejects.toThrow('Invalid user ID format');
+  });
+
+  // Company exists but not found by find (author not found)
+  it('should throw error when author not found in editPost', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockPost),
+    });
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockReturnValue(null),
+    });
+
+    await expect(
+      service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
+    ).rejects.toThrow('Author not found');
+  });
+
+  // updateReactions with multiple reactions
+  it('should throw error if multiple reactions are set to true', async () => {
+    await expect(
+      service.updateReactions(mockPost.id.toString(), mockUserId, {
+        postType: 'Post',
+        reactions: {
+          Like: true,
+          Love: true,
+          Funny: false,
+          Celebrate: false,
+          Insightful: false,
+          Support: false,
+        },
+      }),
+    ).rejects.toThrow('Only one reaction is allowed');
+  });
+
+  // updateReactions with invalid reactor (no profile or company found)
+  it('should throw error if reactor not found in updateReactions', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockPost),
+    });
+
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(
+      service.updateReactions(mockPost.id.toString(), mockUserId, {
+        postType: 'Post',
+        reactions: {
+          Like: true,
+          Love: false,
+          Funny: false,
+          Celebrate: false,
+          Insightful: false,
+          Support: false,
+        },
+      }),
+    ).rejects.toThrow('Reactor not found');
+  });
+
+  // getReactions returns empty array
+  it('should throw error if no reactions found', async () => {
+    reactModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([]),
+    });
+
+    await expect(
+      service.getReactions(mockPost.id.toString(), 1, 10, mockUserId),
+    ).rejects.toThrow('Reactions not found');
+  });
+
+  // mapToReactionDto - user profile not found
+  it('should throw error if user profile is not found in mapToReactionDto', async () => {
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(
+      service.mapToReactionDto({
+        _id: new Types.ObjectId(mockReaction._id),
+        post_id: new Types.ObjectId(mockReaction.post_id),
+        user_id: new Types.ObjectId(mockReaction.user_id),
+        user_type: 'User',
+        post_type: 'Post',
+        react_type: 'Like',
+      } as ReactDocument), // Cast to ReactDocument
+    ).rejects.toThrow('Author profile not found');
+  });
+
+  // mapToReactionDto - company profile not found
+  it('should throw error if company profile is not found in mapToReactionDto', async () => {
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(
+      service.mapToReactionDto({
+        ...mockReaction,
+        _id: new Types.ObjectId(mockReaction._id),
+        post_id: new Types.ObjectId(mockReaction.post_id),
+        user_id: new Types.ObjectId(mockReaction.user_id),
+        user_type: 'Company',
+        post_type: 'Post',
+      } as ReactDocument), // Cast to ReactDocument
+    ).rejects.toThrow('Author profile not found');
+  });
+
+  // deletePost: deletedCount = 0
+  it('should throw error if deletedCount is 0 in deletePost', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockPost),
+    });
+    postModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ deletedCount: 0 }),
+    });
+
+    await expect(
+      service.deletePost(mockPost.id.toString(), mockUserId),
+    ).rejects.toThrow('Post not found');
+  });
+
+  // findPostById: invalid ObjectId throws CastError
+  it('should throw error for invalid post id in findPostById', async () => {
+    postModelMock.findById.mockImplementation(() => {
+      throw { name: 'CastError' };
+    });
+
+    await expect(service['findPostById']('bad-id')).rejects.toThrow(
+      'Invalid post id format',
+    );
   });
 });

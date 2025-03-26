@@ -14,7 +14,7 @@ import { UpdateEmailRequestDto } from './dtos/update-email-request.dto';
 import { UpdatePasswordDto } from './dtos/update-password.dto';
 import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { MailerService } from '../common/services/mailer.service'; 
+import { MailerService } from '../common/services/mailer.service';
 
 @Injectable()
 export class UsersService {
@@ -38,12 +38,17 @@ export class UsersService {
         throw new ConflictException('Email already exists');
       }
 
-      const token = this.jwtService.sign({ userId, newEmail }, { expiresIn: '1h' });
+      const token = this.jwtService.sign(
+        { userId, newEmail },
+        { expiresIn: '1h' },
+      );
       await this.mailerService.sendEmailChangeConfirmation(newEmail, token);
 
       return { message: 'Please check your new email to confirm the change.' };
     } catch (error) {
-      throw new InternalServerErrorException('Failed to process email update request');
+      throw new InternalServerErrorException(
+        'Failed to process email update request',
+      );
     }
   }
 
@@ -73,7 +78,9 @@ export class UsersService {
       }
 
       if (await bcrypt.compare(newPassword, user.password)) {
-        throw new BadRequestException('New password must be different from the current password');
+        throw new BadRequestException(
+          'New password must be different from the current password',
+        );
       }
 
       user.password = await bcrypt.hash(newPassword, 10);

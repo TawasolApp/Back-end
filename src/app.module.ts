@@ -23,7 +23,7 @@ import { UsersModule } from './users/users.module';
     ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGO_URI || ''),
     JwtModule.register({
-      secret: process.env.JWT_SECRET , 
+      secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
     }),
     PassportModule.register({ defaultStrategy: 'jwt' }),
