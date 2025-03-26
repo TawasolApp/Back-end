@@ -25,15 +25,18 @@ async function bootstrap() {
   const shareSeeder = app.get(ShareSeeder);
 
   await userSeeder.clearUsers();
-  await userSeeder.seedUsers(10);
+  await userSeeder.seedUsers(20);
   await profileSeeder.clearProfiles();
-  await profileSeeder.seedProfiles(10);
+  await profileSeeder.seedProfiles();
   await userConnectionSeeder.clearUserConnections();
   await userConnectionSeeder.seedUserConnections(5);
+  await profileSeeder.updateConnectionCounts();
   await companySeeder.clearCompanies();
   await companySeeder.seedCompanies(10);
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(5);
+
+  await postSeeder.clearPosts();
   await postSeeder.clearPosts();
   await postSeeder.seedPosts(10);
   await commentSeeder.clearComments();
