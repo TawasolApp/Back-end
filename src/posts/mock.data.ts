@@ -112,6 +112,11 @@ export const mockEditPostDto = {
   content: 'This is an edited post',
 };
 
+export const mockEditCommentDto = {
+  content: 'Updated mock comment content',
+  tagged: ['507f1f77bcf86cd799439011'], // Example tagged user IDs
+};
+
 // Mock arrays
 export const mockProfiles = [
   mockProfile,
@@ -172,3 +177,7 @@ export const mockCommentWithReacts = {
   ...mockComment,
   react_count: 5,
 };
+
+export const mockInvalidPostId = 'invalidPostId';
+export const mockInvalidUserId = 'invalidUserId';
+export const mockInvalidCommentId = 'invalidCommentId';

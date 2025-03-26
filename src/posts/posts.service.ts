@@ -245,6 +245,7 @@ export class PostsService {
   ): Promise<GetPostDto> {
     let authorProfile;
     let authorProfilePicture;
+    let authorBio;
     if (post.author_type === 'User') {
       authorProfile = await this.profileModel
         .findById(new Types.ObjectId(post.author_id))
@@ -254,6 +255,7 @@ export class PostsService {
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.profile_picture;
+      authorBio = authorProfile.bio; // Set bio for User
     } else if (post.author_type === 'Company') {
       authorProfile = await this.companyModel
         .findById(new Types.ObjectId(post.author_id))
@@ -263,6 +265,7 @@ export class PostsService {
         throw new NotFoundException('Author profile not found');
       }
       authorProfilePicture = authorProfile.logo;
+      authorBio = authorProfile.description; // Set description as bio for Company
     } else {
       throw new Error('Invalid author type');
     }
@@ -303,7 +306,7 @@ export class PostsService {
       authorId: post.author_id.toString(),
       authorName: authorProfile.name, // Fetch authorName from profile
       authorPicture: authorProfilePicture, // Fetch authorPicture from profile
-      authorBio: authorProfile.bio, // Fetch authorBio from profile
+      authorBio: authorBio, // Fetch authorBio from profile
       content: post.text,
       media: post.media,
       reactCounts: post.react_count, // Use the new reactCounts structure
@@ -318,39 +321,24 @@ export class PostsService {
     };
   }
 
-  async deletePost(id: string, userId: string): Promise<void> {
-    try {
-      const post = await this.findPostById(id);
-      if (post.author_id.toString() !== userId) {
-        throw new UnauthorizedException(
-          'User not authorized to delete this post',
-        );
-      }
-      const result = await this.postModel.deleteOne({ _id: id }).exec();
-      if (result.deletedCount === 0) {
-        throw new NotFoundException('Post not found');
-      }
-
-      // Delete related data
-      await this.reactModel.deleteMany({ post_id: id }).exec();
-      await this.commentModel.deleteMany({ post_id: id }).exec();
-      await this.saveModel.deleteMany({ post_id: id }).exec();
-      // await this.shareModel.deleteMany({ post_id: id }).exec();
-    } catch (error) {
-      // console.error(`Error deleting post with id ${id}:`, error);
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      if (error.name === 'CastError') {
-        throw new NotFoundException('Invalid post id');
-      }
-      if (error.name === 'NetworkError') {
-        throw new InternalServerErrorException(
-          'Network error occurred while deleting post',
-        );
-      }
-      throw new InternalServerErrorException('Failed to delete post');
+  async deletePost(postId: string, userId: string): Promise<void> {
+    const post = await this.postModel.findById(postId).exec();
+    if (!post) {
+      throw new NotFoundException('Post not found');
     }
+    if (post.author_id.toString() !== userId) {
+      throw new ForbiddenException('User not authorized to delete this post');
+    }
+    const result = await this.postModel.deleteOne({ _id: postId }).exec();
+    if (result.deletedCount === 0) {
+      throw new NotFoundException('Post not found');
+    }
+
+    // Delete related data
+    await this.reactModel.deleteMany({ post_id: postId }).exec();
+    await this.commentModel.deleteMany({ post_id: postId }).exec();
+    await this.saveModel.deleteMany({ post_id: postId }).exec();
+    // await this.shareModel.deleteMany({ post_id: id }).exec();
   }
 
   async updateReactions(
@@ -438,7 +426,9 @@ export class PostsService {
         console.log(`Existing reaction user_id: ${existingReaction?.user_id}`);
         console.log(`Expected user_id: ${objectIdUserId}`);
         if (!existingReaction) {
-          console.log('adding reaction with user id ', userId);
+          console.log(
+            'No existing reaction found for user, creating a new one.',
+          );
           const newReaction = new this.reactModel({
             _id: new Types.ObjectId(),
             post_id: objectIdPostId, // Use converted ObjectId
@@ -617,19 +607,13 @@ export class PostsService {
     postId: string,
     userId: string,
   ): Promise<{ message: string }> {
-    const post = await this.postModel
-      .findById(new Types.ObjectId(postId))
+    const savedPost = await this.saveModel
+      .findOneAndDelete({
+        post_id: postId,
+        user_id: userId,
+      })
       .exec();
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-
-    const save = await this.saveModel.findOneAndDelete({
-      post_id: new Types.ObjectId(postId),
-      user_id: new Types.ObjectId(userId),
-    });
-
-    if (!save) {
+    if (!savedPost) {
       throw new NotFoundException('Saved post not found');
     }
 
