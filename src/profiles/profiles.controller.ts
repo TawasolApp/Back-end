@@ -25,17 +25,24 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
-  
-
   constructor(private profilesService: ProfilesService) {}
 
+  /**
+   * Handles exceptions and throws an InternalServerErrorException if not already an HTTP exception.
+   * @param error - The error object
+   * @param defaultMessage - The default error message
+   */
   private handleException(error: any, defaultMessage: string) {
     if (error instanceof HttpException) {
       throw error;
     }
     throw new InternalServerErrorException(defaultMessage);
   }
-
+  /**
+   * Creates a new user profile.
+   * @param req - The request object containing the authenticated user
+   * @param createProfileDto - The profile data transfer object
+   */
   @Post()
   @UsePipes(new ValidationPipe())
   async createProfile(@Req() req, @Body() createProfileDto: CreateProfileDto) {
@@ -43,12 +50,19 @@ export class ProfilesController {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      return await this.profilesService.createProfile(req.user.sub, createProfileDto);
+      return await this.profilesService.createProfile(
+        req.user.sub,
+        createProfileDto,
+      );
     } catch (error) {
       this.handleException(error, 'Failed to create profile.');
     }
   }
 
+  /**
+   * Retrieves a user profile by ID.
+   * @param id - The profile ID
+   */
   @Get(':id')
   @UsePipes(new ValidationPipe())
   async getProfile(@Param('id') id: string) {
@@ -61,6 +75,11 @@ export class ProfilesController {
       this.handleException(error, 'Failed to retrieve profile.');
     }
   }
+  /**
+   * Updates an existing user profile.
+   * @param req - The request object containing the authenticated user
+   * @param updateProfileDto - The profile update data transfer object
+   */
 
   @Patch()
   @UsePipes(new ValidationPipe())
@@ -69,34 +88,40 @@ export class ProfilesController {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      return await this.profilesService.updateProfile(updateProfileDto, req.user.sub);
+      return await this.profilesService.updateProfile(
+        updateProfileDto,
+        req.user.sub,
+      );
     } catch (error) {
       this.handleException(error, 'Failed to update profile.');
     }
   }
 
-  
+  /**
+   * Deletes the user's profile picture.
+   * @param req - The request object containing the authenticated user
+   */
 
   @Delete('profile-picture')
   @UsePipes(new ValidationPipe())
-  
   async deleteProfilePicture(@Req() req) {
-   
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      console.log("deleteProfilePicture controller: " + req.user.sub);
+      console.log('deleteProfilePicture controller: ' + req.user.sub);
       return await this.profilesService.deleteProfilePicture(req.user.sub);
     } catch (error) {
       this.handleException(error, `Failed to delete profile-picture.`);
     }
   }
 
-  
+  /**
+   * Deletes the user's cover photo.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('cover-photo')
   @UsePipes(new ValidationPipe())
-  
   async deleteCoverPhoto(@Req() req) {
     try {
       if (!req.user) {
@@ -107,6 +132,10 @@ export class ProfilesController {
       this.handleException(error, `Failed to delete cover-photo.`);
     }
   }
+  /**
+   * Deletes the user's resume.
+   * @param req - The request object containing the authenticated user
+   */
 
   @Delete('resume')
   @UsePipes(new ValidationPipe())
@@ -120,6 +149,10 @@ export class ProfilesController {
       this.handleException(error, `Failed to delete resume.`);
     }
   }
+  /**
+   * Deletes the user's headline.
+   * @param req - The request object containing the authenticated user
+   */
 
   @Delete('headline')
   @UsePipes(new ValidationPipe())
@@ -134,6 +167,10 @@ export class ProfilesController {
     }
   }
 
+  /**
+   * Deletes the user's bio.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('bio')
   @UsePipes(new ValidationPipe())
   async deleteBio(@Req() req) {
@@ -147,6 +184,10 @@ export class ProfilesController {
     }
   }
 
+  /**
+   * Deletes the user's location.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('location')
   @UsePipes(new ValidationPipe())
   async deleteLocation(@Req() req) {
@@ -160,6 +201,10 @@ export class ProfilesController {
     }
   }
 
+  /**
+   * Deletes the user's industry.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('industry')
   @UsePipes(new ValidationPipe())
   async deleteIndustry(@Req() req) {
@@ -173,7 +218,11 @@ export class ProfilesController {
     }
   }
 
-
+  /**
+   * Adds a skill to the user's profile.
+   * @param req - The request object containing the authenticated user
+   * @param skill - The skill data transfer object
+   */
   @Patch('skills')
   @UsePipes(new ValidationPipe())
   async addSkill(@Req() req, @Body() skill: SkillDto) {
@@ -186,7 +235,11 @@ export class ProfilesController {
       this.handleException(error, 'Failed to add skill.');
     }
   }
-
+  /**
+   * Deletes a specific skill from the user's profile.
+   * @param req - The request object containing the authenticated user
+   * @param skillName - The name of the skill to be deleted
+   */
   @Delete('skills/:skill_name')
   @UsePipes(new ValidationPipe())
   async deleteSkill(@Req() req, @Param('skill_name') skillName: string) {
