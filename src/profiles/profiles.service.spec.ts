@@ -11,6 +11,7 @@ import { CreateProfileDto } from './dto/create-profile.dto';
 import { toGetProfileDto } from './dto/profile.mapper';
 
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { SkillDto } from './dto/skill.dto';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -99,6 +100,17 @@ describe('ProfilesService', () => {
       const dto: CreateProfileDto = { name: 'John Doe' };
       await expect(service.createProfile(invalidId as any, dto)).rejects.toThrow(
         BadRequestException
+      );
+    });
+    it('should throw BadRequestException when profile creation fails', async () => {
+      // Mock `create` to throw a generic error (not a duplicate key error)
+      jest.spyOn(profileModel, 'create').mockRejectedValue(new Error('Database error'));
+  
+      const id = new Types.ObjectId();
+      const createProfileDto = { name: 'John Doe', bio: 'Software Engineer' };
+  
+      await expect(service.createProfile(id, createProfileDto)).rejects.toThrow(
+        new BadRequestException('Failed to create profile'),
       );
     });
   });
@@ -206,6 +218,27 @@ describe('ProfilesService', () => {
         BadRequestException,
       );
     });
+    it('should throw NotFoundException when updated profile is not found', async () => {
+      const id = new Types.ObjectId();
+      const field = 'bio';
+  
+      // Mock `findById().exec()` to return a profile (valid profile)
+      jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: id, [field]: 'Software Engineer' }),
+      } as any);
+  
+      // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);      
+      jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+  
+      await expect(service.deleteProfileField(id, field)).rejects.toThrow(
+        new NotFoundException('Updated Profile not found'),
+      );
+    });
   });
 
   describe('addSkill', () => {
@@ -242,6 +275,24 @@ describe('ProfilesService', () => {
         BadRequestException,
       );
     });
+
+    it('should throw NotFoundException when updated profile is not found after adding skill', async () => {
+      const id = new Types.ObjectId();
+      const skill: SkillDto = { skillName: 'JavaScript' };
+  
+      // Mock `findById().exec()` to return a profile (valid profile)
+      jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: id, skills: [] }),
+      } as any);
+  
+      // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.addSkill(skill, id)).rejects.toThrow(
+        new NotFoundException('updated Profile not found'),
+      );
+    });
+    
   });
 
   describe('deleteSkill', () => {
