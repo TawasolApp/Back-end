@@ -50,7 +50,7 @@ export class ReactSeeder {
         ? faker.helpers.arrayElement(users)
         : faker.helpers.arrayElement(companies);
 
-      let post = faker.helpers.arrayElement(posts);
+      const post = faker.helpers.arrayElement(posts);
 
       let existingReact = await this.reactModel.find({
         post_id: post._id,
@@ -105,7 +105,7 @@ export class ReactSeeder {
         ? faker.helpers.arrayElement(users)
         : faker.helpers.arrayElement(companies);
 
-      let comment = faker.helpers.arrayElement(comments);
+      const comment = faker.helpers.arrayElement(comments);
 
       let existingReact = await this.reactModel.find({
         post_id: comment._id,

@@ -128,13 +128,15 @@ export class ProfileSeeder {
   async updateConnectionCounts(): Promise<void> {
     const profiles = await this.profileModel.find().exec();
     for (const profile of profiles) {
-      const connectionCount = await this.userConnectionModel.countDocuments({
-        status: ConnectionStatus.Connected,
-        $or: [
-          { sending_party: profile._id },
-          { receiving_party: profile._id },
-        ],
-      }).exec();
+      const connectionCount = await this.userConnectionModel
+        .countDocuments({
+          status: ConnectionStatus.Connected,
+          $or: [
+            { sending_party: profile._id },
+            { receiving_party: profile._id },
+          ],
+        })
+        .exec();
 
       profile.connection_count = connectionCount;
       await profile.save();
