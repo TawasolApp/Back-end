@@ -30,7 +30,7 @@ import { User, UserSchema } from '../users/infrastructure/database/schemas/user.
     }),
   ],
   providers: [ProfileSeeder, ProfilesService],
-  exports: [MongooseModule, ProfileSeeder],
+  exports: [ProfileSeeder,MongooseModule],
   controllers: [ProfilesController],
 })
 export class ProfilesModule {}
