@@ -62,8 +62,8 @@ describe('ConnectionsService', () => {
   });
 
   it('should return the connection ID when a match is found (id3 → id4)', async () => {
-    const sendingParty = mockProfiles[2]._id.toString(); 
-    const receivingParty = mockProfiles[4]._id.toString(); 
+    const sendingParty = mockProfiles[2]._id.toString();
+    const receivingParty = mockProfiles[4]._id.toString();
 
     const expectedConnection = mockConnections.find(
       (conn) =>
@@ -84,8 +84,8 @@ describe('ConnectionsService', () => {
   });
 
   it('should return null when no connection is found (id2 → id5)', async () => {
-    const sendingParty = mockProfiles[1]._id.toString(); 
-    const receivingParty = mockProfiles[4]._id.toString(); 
+    const sendingParty = mockProfiles[1]._id.toString();
+    const receivingParty = mockProfiles[4]._id.toString();
 
     userConnectionModel.findOne.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(null),
@@ -297,6 +297,24 @@ describe('ConnectionsService', () => {
     expect(profileModel.findByIdAndUpdate).not.toHaveBeenCalled();
   });
 
+  it('should throw NotFoundException if sending party does not exist', async () => {
+    const sendingParty = new Types.ObjectId().toString();
+    const receivingParty = mockProfiles[1]._id.toString();
+    const updateRequestDto = { isAccept: true };
+
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(null),
+    });
+
+    await expect(
+      service.updateConnection(sendingParty, receivingParty, updateRequestDto),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(profileModel.findById).toHaveBeenCalledWith(
+      new Types.ObjectId(sendingParty),
+    );
+  });
+
   it('should throw NotFoundException if no connection request exists (id4 → id5)', async () => {
     const sendingParty = mockProfiles[3]._id.toString();
     const receivingParty = mockProfiles[4]._id.toString();
@@ -360,6 +378,46 @@ describe('ConnectionsService', () => {
     ).rejects.toThrow(BadRequestException);
   });
 
+  it('should throw BadRequestException if users are not connected (id4 → id3)', async () => {
+    const sendingParty = mockProfiles[3]._id.toString();
+    const receivingParty = mockProfiles[2]._id.toString();
+
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValue(mockProfiles[2]),
+    });
+
+    jest
+      .spyOn(service, 'getConnectionId')
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(mockConnections[4]._id);
+
+    userConnectionModel.findById = jest.fn().mockResolvedValue({
+      status: ConnectionStatus.Following,
+    });
+
+    await expect(
+      service.removeConnection(sendingParty, receivingParty),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  it('should throw NotFoundException if receving party does not exist', async () => {
+    const receivingParty = new Types.ObjectId().toString();
+    const sendingParty = mockProfiles[1]._id.toString();
+    const updateRequestDto = { isAccept: true };
+
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(null),
+    });
+
+    await expect(
+      service.removeConnection(sendingParty, receivingParty),
+    ).rejects.toThrow(NotFoundException);
+
+    expect(profileModel.findById).toHaveBeenCalledWith(
+      new Types.ObjectId(receivingParty),
+    );
+  });
+
   it('should remove connection if connected (id2 → id4)', async () => {
     const sendingParty = mockProfiles[1]._id.toString();
     const receivingParty = mockProfiles[3]._id.toString();
@@ -401,14 +459,14 @@ describe('ConnectionsService', () => {
   it('should remove a connection through connectionId2 path (id4 → id2)', async () => {
     const sendingParty = mockProfiles[3]._id.toString();
     const receivingParty = mockProfiles[1]._id.toString();
-  
+
     const connection = mockConnections.find(
       (conn) =>
         conn.sending_party.equals(receivingParty) &&
         conn.receiving_party.equals(sendingParty) &&
         conn.status === ConnectionStatus.Connected,
     );
-  
+
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
     });
@@ -416,22 +474,21 @@ describe('ConnectionsService', () => {
       .spyOn(service, 'getConnectionId')
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(connection?._id!);
-  
+
     userConnectionModel.findById.mockResolvedValueOnce(connection);
-  
+
     userConnectionModel.findByIdAndDelete.mockResolvedValueOnce(connection);
-  
+
     profileModel.findByIdAndUpdate.mockResolvedValueOnce({});
-  
+
     await expect(
       service.removeConnection(sendingParty, receivingParty),
     ).resolves.not.toThrow();
-  
+
     expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
       connection?._id,
     );
   });
-  
 
   it('should throw NotFoundException if no connection exists (id3 → id5)', async () => {
     const sendingParty = mockProfiles[2]._id.toString();
@@ -691,29 +748,29 @@ describe('ConnectionsService', () => {
   });
 
   it('should return an empty array if user id1 has no pending requests', async () => {
-    const userId = mockProfiles[0]._id.toString(); 
-  
+    const userId = mockProfiles[0]._id.toString();
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce([]), 
+          lean: jest.fn().mockResolvedValueOnce([]),
         }),
       }),
     });
-  
+
     const result = await service.getPendingRequests(userId);
     expect(result).toEqual([]);
   });
-  
+
   it('should return profile1 as sender if user id2 has one pending request', async () => {
-    const userId = mockProfiles[1]._id.toString(); 
-  
+    const userId = mockProfiles[1]._id.toString();
+
     const pendingConnection = {
-      sending_party: mockProfiles[0]._id, 
-      receiving_party: mockProfiles[1]._id, 
+      sending_party: mockProfiles[0]._id,
+      receiving_party: mockProfiles[1]._id,
       created_at: new Date().toISOString(),
     };
-  
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
@@ -721,42 +778,44 @@ describe('ConnectionsService', () => {
         }),
       }),
     });
-  
+
     profileModel.findById.mockReturnValueOnce({
       select: jest.fn().mockReturnValueOnce({
         lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
       }),
     });
-  
+
     const result = await service.getPendingRequests(userId);
     expect(result).toHaveLength(1);
-    expect(result[0].userId?.toString()).toEqual(mockProfiles[0]._id.toString());
+    expect(result[0].userId?.toString()).toEqual(
+      mockProfiles[0]._id.toString(),
+    );
   });
-  
+
   it('should return an empty array if user id2 has no sent requests', async () => {
-    const userId = mockProfiles[1]._id.toString(); 
-  
+    const userId = mockProfiles[1]._id.toString();
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce([]), 
+          lean: jest.fn().mockResolvedValueOnce([]),
         }),
       }),
     });
-  
+
     const result = await service.getSentRequests(userId);
     expect(result).toEqual([]);
   });
-  
+
   it('should return profile1 as receiver if user id3 has one sent request', async () => {
-    const userId = mockProfiles[2]._id.toString(); 
-  
+    const userId = mockProfiles[2]._id.toString();
+
     const pendingConnection = {
-      sending_party: mockProfiles[2]._id, 
-      receiving_party: mockProfiles[0]._id, 
+      sending_party: mockProfiles[2]._id,
+      receiving_party: mockProfiles[0]._id,
       created_at: new Date().toISOString(),
     };
-  
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
@@ -764,42 +823,44 @@ describe('ConnectionsService', () => {
         }),
       }),
     });
-  
+
     profileModel.findById.mockReturnValueOnce({
       select: jest.fn().mockReturnValueOnce({
         lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
       }),
     });
-  
+
     const result = await service.getSentRequests(userId);
     expect(result).toHaveLength(1);
-    expect(result[0].userId?.toString()).toEqual(mockProfiles[0]._id.toString());
+    expect(result[0].userId?.toString()).toEqual(
+      mockProfiles[0]._id.toString(),
+    );
   });
-  
+
   it('should return an empty array if user id3 has no followers', async () => {
-    const userId = mockProfiles[2]._id.toString(); 
-  
+    const userId = mockProfiles[2]._id.toString();
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce([]), 
+          lean: jest.fn().mockResolvedValueOnce([]),
         }),
       }),
     });
-  
+
     const result = await service.getFollowers(userId);
     expect(result).toEqual([]);
   });
-  
+
   it('should return profile3 as follower if user id4 has one follower', async () => {
-    const userId = mockProfiles[3]._id.toString(); 
-  
+    const userId = mockProfiles[3]._id.toString();
+
     const followConnection = {
-      sending_party: mockProfiles[2]._id, 
-      receiving_party: mockProfiles[3]._id, 
+      sending_party: mockProfiles[2]._id,
+      receiving_party: mockProfiles[3]._id,
       created_at: new Date().toISOString(),
     };
-  
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
@@ -807,42 +868,44 @@ describe('ConnectionsService', () => {
         }),
       }),
     });
-  
+
     profileModel.findById.mockReturnValueOnce({
       select: jest.fn().mockReturnValueOnce({
         lean: jest.fn().mockResolvedValueOnce(mockProfiles[2]),
       }),
     });
-  
+
     const result = await service.getFollowers(userId);
     expect(result).toHaveLength(1);
-    expect(result[0].userId?.toString()).toEqual(mockProfiles[2]._id.toString());
+    expect(result[0].userId?.toString()).toEqual(
+      mockProfiles[2]._id.toString(),
+    );
   });
 
   it('should return an empty array if user id1 does not follow any user', async () => {
-    const userId = mockProfiles[0]._id.toString(); 
-  
+    const userId = mockProfiles[0]._id.toString();
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce([]), 
+          lean: jest.fn().mockResolvedValueOnce([]),
         }),
       }),
     });
-  
+
     const result = await service.getFollowing(userId);
     expect(result).toEqual([]);
   });
-  
+
   it('should return profile1 as a followed user if user id4 follows one user', async () => {
-    const userId = mockProfiles[3]._id.toString(); 
-  
+    const userId = mockProfiles[3]._id.toString();
+
     const followConnection = {
-      sending_party: mockProfiles[3]._id, 
-      receiving_party: mockProfiles[0]._id, 
+      sending_party: mockProfiles[3]._id,
+      receiving_party: mockProfiles[0]._id,
       created_at: new Date().toISOString(),
     };
-  
+
     userConnectionModel.find.mockReturnValueOnce({
       sort: jest.fn().mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
@@ -850,16 +913,17 @@ describe('ConnectionsService', () => {
         }),
       }),
     });
-  
+
     profileModel.findById.mockReturnValueOnce({
       select: jest.fn().mockReturnValueOnce({
         lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
       }),
     });
-  
+
     const result = await service.getFollowing(userId);
     expect(result).toHaveLength(1);
-    expect(result[0].userId?.toString()).toEqual(mockProfiles[0]._id.toString());
+    expect(result[0].userId?.toString()).toEqual(
+      mockProfiles[0]._id.toString(),
+    );
   });
-
 });

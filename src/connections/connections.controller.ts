@@ -31,6 +31,11 @@ import { UpdateRequestDto } from './dtos/update-request.dto';
 export class ConnectionsController {
   constructor(private readonly connectionsService: ConnectionsService) {}
 
+  /*
+    searches for users:
+    - applies at least one filter to users
+    - filter is applied with partial matching and case insensitive
+  */
   @Get('/users')
   @HttpCode(HttpStatus.OK)
   async searchUsers(
@@ -62,6 +67,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    logged in user send a connection request to user with ID provided in DTO
+  */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async requestConnection(
@@ -85,6 +93,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    logged in user accepts/ignores a connection request sent by the user with ID provided as route parameter
+  */
   @Patch('/:userId')
   @HttpCode(HttpStatus.OK)
   async updateConnection(
@@ -116,6 +127,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    logged in user removes the connection between them and user with ID provided as route parameter
+  */
   @Delete('/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async removeConnection(
@@ -139,6 +153,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    retrieves list of users connected with the logged in user
+  */
   @Get('/list')
   async getConnections(@Req() request: Request) {
     try {
@@ -158,6 +175,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    retrieves list of users who sent a connection request to logged in user and logged in user has yet to respond
+  */
   @Get('/pending')
   async getPendingRequests(@Req() request: Request) {
     try {
@@ -178,6 +198,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    retrieves list of users that received a connection request from logged in user and are yet to respond
+  */
   @Get('/sent')
   async getSentRequests(@Req() request: Request) {
     try {
@@ -198,6 +221,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    logged in user follows user with ID provided in DTO
+  */
   @Post('/follow')
   @HttpCode(HttpStatus.CREATED)
   async follow(
@@ -221,6 +247,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    logged in user unfollows user with ID provided as route parameter
+  */
   @Delete('/unfollow/:userId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async unfollow(
@@ -247,6 +276,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    retrieves list of users who follow logged in user
+  */
   @Get('/followers')
   async getFollowers(@Req() request: Request) {
     try {
@@ -266,6 +298,9 @@ export class ConnectionsController {
     }
   }
 
+  /*
+    retrieves list of users followed by logged in user
+  */
   @Get('/following')
   async getFollowing(@Req() request: Request) {
     try {
