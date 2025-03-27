@@ -32,6 +32,9 @@ import { Request } from 'express';
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
 
+  /*
+    creates a new company with required fields: name, company size, company type, industry
+  */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createCompany(
@@ -53,6 +56,9 @@ export class CompaniesController {
     }
   }
 
+  /*
+    updates company with ID as route parameter with fields presented in DTO 
+  */
   @Patch('/:companyId')
   @HttpCode(HttpStatus.OK)
   async updateCompany(
@@ -85,6 +91,9 @@ export class CompaniesController {
     }
   }
 
+  /*
+    deletes company with ID as route parameter
+  */
   @Delete('/:companyId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCompany(
@@ -107,6 +116,12 @@ export class CompaniesController {
     }
   }
 
+  /*
+    searches for companies:
+    - applies at least one filter to companies
+    - filter is applied with partial matching and case insensitive
+    - returns only essential fields: id, name, logo, industry, follow
+  */
   @Get()
   @HttpCode(HttpStatus.OK)
   async filterCompanies(
@@ -142,6 +157,9 @@ export class CompaniesController {
     }
   }
 
+  /*
+    gets all company details present in the record associated with ID in route parameter
+  */
   @Get('/:companyId')
   @HttpCode(HttpStatus.OK)
   async getCompanyDetails(
@@ -169,6 +187,10 @@ export class CompaniesController {
     }
   }
 
+  /*
+    - retrieves all users following the company with ID as route parameter
+    - returns only essential fields: id, name, profile picture, headline
+  */
   @Get('/:companyId/followers')
   @HttpCode(HttpStatus.OK)
   async getCompanyFollowers(
@@ -213,6 +235,9 @@ export class CompaniesController {
   //   }
   // }
 
+  /*
+    allows logged in user to follow company with ID as route parameter
+  */
   @Post('/:companyId/follow')
   @HttpCode(HttpStatus.CREATED)
   async followCompany(
@@ -236,6 +261,9 @@ export class CompaniesController {
     }
   }
 
+  /*
+    allows logged in user to unfollow company with ID as route parameter
+  */
   @Delete('/:companyId/unfollow')
   @HttpCode(HttpStatus.NO_CONTENT)
   async unfollowCompany(
@@ -259,6 +287,9 @@ export class CompaniesController {
     }
   }
 
+  /*
+    - retrieves companies with the same industry and size as company with ID as route parameter
+  */
   @Get('/suggested/:companyId')
   @HttpCode(HttpStatus.OK)
   async getSuggestedCompanies(
