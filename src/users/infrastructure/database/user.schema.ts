@@ -8,8 +8,6 @@ export type UserDocument = User & Document;
   versionKey: false,
 })
 export class User {
-
-  
   _id: Types.ObjectId;
 
   @Prop({ required: true })

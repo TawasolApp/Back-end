@@ -48,6 +48,7 @@ export class ProfileSeeder {
       ],
       education: [
         {
+          _id: new this.profileModel()._id, // Generate a unique ObjectId
           school: faker.company.name(),
           degree: faker.person.jobTitle(),
           field: faker.commerce.department(),
@@ -61,6 +62,7 @@ export class ProfileSeeder {
       ],
       certification: [
         {
+          _id: new this.profileModel()._id, // Generate a unique ObjectId
           name: faker.person.jobTitle(),
           company: faker.company.name(),
           issue_date: faker.date.past({ years: 3 }),
@@ -68,6 +70,7 @@ export class ProfileSeeder {
       ],
       work_experience: [
         {
+          _id: new this.profileModel()._id, // Generate a unique ObjectId
           title: faker.person.jobTitle(),
           employment_type: faker.helpers.arrayElement([
             'full_time',
@@ -125,13 +128,15 @@ export class ProfileSeeder {
   async updateConnectionCounts(): Promise<void> {
     const profiles = await this.profileModel.find().exec();
     for (const profile of profiles) {
-      const connectionCount = await this.userConnectionModel.countDocuments({
-        status: ConnectionStatus.Connected,
-        $or: [
-          { sending_party: profile._id },
-          { receiving_party: profile._id },
-        ],
-      }).exec();
+      const connectionCount = await this.userConnectionModel
+        .countDocuments({
+          status: ConnectionStatus.Connected,
+          $or: [
+            { sending_party: profile._id },
+            { receiving_party: profile._id },
+          ],
+        })
+        .exec();
 
       profile.connection_count = connectionCount;
       await profile.save();

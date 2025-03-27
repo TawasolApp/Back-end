@@ -5,7 +5,7 @@ import { UsersController } from './users.controller';
 import { User, UserSchema } from './infrastructure/database/user.schema';
 import { UserSeeder } from './infrastructure/database/user.seeder';
 import { JwtModule } from '@nestjs/jwt';
-import { MailerModule } from '../common/services/mailer.module'; 
+import { MailerModule } from '../common/services/mailer.module';
 
 @Module({
   imports: [
@@ -14,7 +14,7 @@ import { MailerModule } from '../common/services/mailer.module';
       secret: process.env.JWT_SECRET || 'default_secret',
       signOptions: { expiresIn: '1h' },
     }),
-    MailerModule, 
+    MailerModule,
   ],
   providers: [UsersService, UserSeeder],
   controllers: [UsersController],
