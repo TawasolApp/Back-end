@@ -4,8 +4,8 @@ import {
   InternalServerErrorException,
   BadRequestException,
   UnauthorizedException,
-  ConflictException,
   ForbiddenException,
+  HttpException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
@@ -32,6 +32,13 @@ import {
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { EditCommentDto } from './dto/edit-comment.dto';
+import { mapPostToDto } from './mappers/post.map';
+import {
+  findPostById,
+  getCommentInfo,
+  getPostInfo,
+  getReactionInfo,
+} from './helpers/posts.helpers';
 
 @Injectable()
 export class PostsService {
@@ -66,7 +73,7 @@ export class PostsService {
         throw new BadRequestException('Invalid user ID format');
       }
 
-      const post = await this.findPostById(id);
+      const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
@@ -103,15 +110,8 @@ export class PostsService {
       Object.assign(post, editPostDto);
       await post.save();
       return post;
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException ||
-        error instanceof ConflictException ||
-        error instanceof UnauthorizedException
-      ) {
-        throw error;
-      }
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to edit post');
     }
   }
@@ -134,13 +134,14 @@ export class PostsService {
       }
 
       let authorType: 'User' | 'Company';
+      let authorCompany;
       const authorProfile = await this.profileModel
         .findById(new Types.ObjectId(author_id))
         .exec();
       if (authorProfile) {
         authorType = 'User';
       } else {
-        const authorCompany = await this.companyModel
+        authorCompany = await this.companyModel
           .findById(new Types.ObjectId(author_id))
           .exec();
         if (authorCompany) {
@@ -160,16 +161,12 @@ export class PostsService {
         author_type: authorType,
       });
 
-      const savedPost = await createdPost.save();
-      return this.mapToGetPostDto(savedPost, author_id);
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException ||
-        error instanceof ForbiddenException
-      ) {
-        throw error;
-      }
+      await createdPost.save();
+      const author = authorType === 'User' ? authorProfile : authorCompany;
+      return mapPostToDto(createdPost, author, null, false);
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      // console.log(error);
       throw new InternalServerErrorException('Failed to add post');
     }
   }
@@ -193,17 +190,19 @@ export class PostsService {
         throw new NotFoundException('No posts found for the requested page');
       }
       return Promise.all(
-        posts.map((post) => this.mapToGetPostDto(post, userId)),
+        posts.map((post) =>
+          getPostInfo(
+            post,
+            userId,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+          ),
+        ),
       );
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      if (error instanceof Error && error.name === 'NetworkError') {
-        throw new InternalServerErrorException(
-          'Network error occurred while fetching posts',
-        );
-      }
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch posts');
     }
   }
@@ -215,23 +214,25 @@ export class PostsService {
   // 3. Map the post to GetPostDto and return.
   async getPost(id: string, userId: string): Promise<GetPostDto> {
     try {
+      if (!isValidObjectId(id)) {
+        throw new BadRequestException('Invalid post ID format');
+      }
       const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
-      return this.mapToGetPostDto(post, userId); // Use mapToGetPostDto method
-    } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      if (
-        error.message ===
-        'input must be a 24 character hex string, 12 byte Uint8Array, or an integer'
-      ) {
-        throw new NotFoundException('Invalid post id format');
-      }
-      throw new InternalServerErrorException('Failed to fetch post');
+      return getPostInfo(
+        post,
+        userId,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+        this.saveModel,
+      ); // Use mapToGetPostDto method
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
     }
+    throw new InternalServerErrorException('Failed to fetch post');
   }
 
   // Retrieve all posts created by a specific user.
@@ -248,96 +249,27 @@ export class PostsService {
       const posts = await this.postModel
         .find({ author_id: new Types.ObjectId(searchedUserId) })
         .exec();
+
       if (!posts || posts.length === 0) {
         throw new NotFoundException('No posts found');
       }
+
       return Promise.all(
-        posts.map((post) => this.mapToGetPostDto(post, userId)),
+        posts.map((post) =>
+          getPostInfo(
+            post,
+            userId,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+          ),
+        ),
       );
     } catch (error) {
-      throw error;
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Failed to fetch user posts');
     }
-  }
-
-  // Convert a post document to a formatted DTO object for client use.
-  // Description:
-  // 1. Find the author's profile or company info.
-  // 2. Find user reaction if exists.
-  // 3. Check if the post is saved.
-  // 4. Return all post details as GetPostDto.
-
-  async mapToGetPostDto(
-    post: PostDocument,
-    userId: string,
-  ): Promise<GetPostDto> {
-    let authorProfile: ProfileDocument | CompanyDocument | null = null;
-    let authorProfilePicture: string | undefined;
-    let authorBio: string | undefined;
-
-    if (post.author_type === 'User') {
-      authorProfile = await this.profileModel
-        .findById(new Types.ObjectId(post.author_id))
-        .exec();
-      if (!authorProfile) {
-        throw new NotFoundException('Author profile not found');
-      }
-      authorProfilePicture = authorProfile.profile_picture;
-      authorBio = authorProfile.bio;
-    } else if (post.author_type === 'Company') {
-      authorProfile = await this.companyModel
-        .findById(new Types.ObjectId(post.author_id))
-        .exec();
-      if (!authorProfile) {
-        throw new NotFoundException('Author profile not found');
-      }
-      authorProfilePicture = authorProfile.logo;
-      authorBio = authorProfile.description;
-    } else {
-      throw new Error('Invalid author type');
-    }
-
-    const userReaction = userId
-      ? await this.reactModel
-          .findOne({
-            post_id: post._id,
-            user_id: new Types.ObjectId(userId),
-          })
-          .exec()
-      : null;
-
-    const userReactionType = userReaction
-      ? (userReaction.react_type as
-          | 'Like'
-          | 'Love'
-          | 'Funny'
-          | 'Celebrate'
-          | 'Insightful'
-          | 'Support')
-      : null;
-
-    const isSaved = await this.saveModel.exists({
-      post_id: post._id,
-      user_id: new Types.ObjectId(userId),
-    });
-
-    return {
-      id: post.id.toString(),
-      authorId: post.author_id.toString(),
-      authorName: authorProfile.name,
-      authorPicture: authorProfilePicture,
-      authorBio: authorBio,
-      content: post.text,
-      media: post.media,
-      reactCounts: post.react_count,
-      comments: post.comment_count,
-      shares: post.share_count,
-      taggedUsers: [],
-      visibility: post.visibility as 'Public' | 'Connections' | 'Private',
-      authorType: post.author_type,
-      reactType: userReactionType,
-      timestamp: post.posted_at,
-      isSaved: !!isSaved,
-    };
   }
 
   // Delete a post and all associated reactions, comments, and saves.
@@ -346,21 +278,27 @@ export class PostsService {
   // 2. Verify that the requesting user is the author.
   // 3. Delete the post, related reactions, comments, and saves.
   async deletePost(postId: string, userId: string): Promise<void> {
-    const post = await this.postModel.findById(postId).exec();
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
-    if (post.author_id.toString() !== userId) {
-      throw new ForbiddenException('User not authorized to delete this post');
-    }
-    const result = await this.postModel.deleteOne({ _id: postId }).exec();
-    if (result.deletedCount === 0) {
-      throw new NotFoundException('Post not found');
-    }
+    try {
+      const post = await this.postModel.findById(postId).exec();
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+      if (post.author_id.toString() !== userId) {
+        throw new ForbiddenException('User not authorized to delete this post');
+      }
 
-    await this.reactModel.deleteMany({ post_id: postId }).exec();
-    await this.commentModel.deleteMany({ post_id: postId }).exec();
-    await this.saveModel.deleteMany({ post_id: postId }).exec();
+      const result = await this.postModel.deleteOne({ _id: postId }).exec();
+      if (result.deletedCount === 0) {
+        throw new NotFoundException('Post not found');
+      }
+
+      await this.reactModel.deleteMany({ post_id: postId }).exec();
+      await this.commentModel.deleteMany({ post_id: postId }).exec();
+      await this.saveModel.deleteMany({ post_id: postId }).exec();
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to delete post');
+    }
   }
 
   // Add, update, or remove a user reaction on a post or comment.
@@ -377,119 +315,133 @@ export class PostsService {
     userId: string,
     updateReactionsDto: UpdateReactionsDto,
   ): Promise<Post | Comment> {
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid user ID format');
-    }
-
-    const objectIdUserId = new Types.ObjectId(userId);
-
-    let count = 0;
-
-    for (const reaction in updateReactionsDto.reactions) {
-      if (updateReactionsDto.reactions[reaction] === true) {
-        count++;
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
       }
-    }
-
-    if (count > 1) {
-      throw new BadRequestException('Only one reaction is allowed');
-    }
-    let post: PostDocument | null = null;
-    let comment: CommentDocument | null = null;
-    const objectIdPostId = new Types.ObjectId(postId);
-    if (updateReactionsDto.postType === 'Post') {
-      post = await this.postModel.findById(objectIdPostId).exec();
-
-      if (!post) {
-        const postExists = await this.postModel.exists({ _id: objectIdPostId });
-        throw new NotFoundException(`Post with id ${postId} not found`);
+      if (!Types.ObjectId.isValid(postId)) {
+        throw new BadRequestException('Invalid post ID format');
       }
-    } else {
-      comment = await this.commentModel.findById(objectIdPostId).exec();
-      if (!comment) {
-        const commentExists = await this.commentModel.exists({
-          _id: objectIdPostId,
-        });
-        throw new NotFoundException(`Comment with id ${postId} not found`);
+
+      const objectIdUserId = new Types.ObjectId(userId);
+      let count = 0;
+
+      for (const reaction in updateReactionsDto.reactions) {
+        if (updateReactionsDto.reactions[reaction] === true) {
+          count++;
+        }
       }
-    }
 
-    const reactions = updateReactionsDto.reactions;
-    for (const [reactionType, value] of Object.entries(reactions)) {
-      const reactorProfile = await this.profileModel
-        .findById(objectIdUserId)
-        .exec();
-      const reactorType = reactorProfile ? 'User' : 'Company';
+      if (count > 1) {
+        throw new BadRequestException('Only one reaction is allowed');
+      }
 
-      if (value) {
-        const existingReaction = await this.reactModel
-          .findOne({
-            post_id: objectIdPostId,
-            user_id: objectIdUserId,
-            user_type: reactorType,
-          })
+      let post: PostDocument | null = null;
+      let comment: CommentDocument | null = null;
+      const objectIdPostId = new Types.ObjectId(postId);
+
+      if (updateReactionsDto.postType === 'Post') {
+        post = await this.postModel.findById(objectIdPostId).exec();
+        if (!post) {
+          throw new NotFoundException(`Post with id ${postId} not found`);
+        }
+      } else {
+        comment = await this.commentModel.findById(objectIdPostId).exec();
+        if (!comment) {
+          throw new NotFoundException(`Comment with id ${postId} not found`);
+        }
+      }
+
+      const reactions = updateReactionsDto.reactions;
+      for (const [reactionType, value] of Object.entries(reactions)) {
+        const reactorProfile = await this.profileModel
+          .findById(objectIdUserId)
           .exec();
-        if (!existingReaction) {
-          const newReaction = new this.reactModel({
-            _id: new Types.ObjectId(),
-            post_id: objectIdPostId,
-            user_id: objectIdUserId,
-            user_type: reactorType,
-            react_type: reactionType,
-            post_type: updateReactionsDto.postType,
-          });
-          if (post) {
-            post.react_count[reactionType] =
-              (post.react_count[reactionType] || 0) + 1;
-            await post.save();
-          }
-          if (comment) {
-            comment.react_count++;
-            await comment.save();
-          }
-          await newReaction.save();
-        } else {
-          if (existingReaction.react_type !== reactionType) {
+        const reactorType = reactorProfile ? 'User' : 'Company';
+
+        if (value) {
+          const existingReaction = await this.reactModel
+            .findOne({
+              post_id: objectIdPostId,
+              user_id: objectIdUserId,
+              user_type: reactorType,
+            })
+            .exec();
+
+          if (!existingReaction) {
+            const newReaction = new this.reactModel({
+              _id: new Types.ObjectId(),
+              post_id: objectIdPostId,
+              user_id: objectIdUserId,
+              user_type: reactorType,
+              react_type: reactionType,
+              post_type: updateReactionsDto.postType,
+            });
+
             if (post) {
-              post.react_count[existingReaction.react_type]--;
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               await post.save();
             }
-            existingReaction.react_type = reactionType;
-            await existingReaction.save();
+
+            if (comment) {
+              comment.react_count++;
+              await comment.save();
+            }
+
+            await newReaction.save();
+          } else {
+            if (existingReaction.react_type !== reactionType) {
+              if (post) {
+                post.react_count[existingReaction.react_type]--;
+                post.react_count[reactionType] =
+                  (post.react_count[reactionType] || 0) + 1;
+                await post.save();
+              }
+              existingReaction.react_type = reactionType;
+              await existingReaction.save();
+            }
           }
-        }
-      } else {
-        const existingReaction = await this.reactModel
-          .findOne({
-            post_id: objectIdPostId,
-            user_id: objectIdUserId,
-            user_type: reactorType,
-            react_type: reactionType,
-          })
-          .exec();
-        if (existingReaction) {
-          await this.reactModel.deleteOne({ _id: existingReaction._id }).exec();
-          if (post) {
-            post.react_count[reactionType]--;
-            await post.save();
-          }
-          if (comment) {
-            comment.react_count--;
-            await comment.save();
+        } else {
+          const existingReaction = await this.reactModel
+            .findOne({
+              post_id: objectIdPostId,
+              user_id: objectIdUserId,
+              user_type: reactorType,
+              react_type: reactionType,
+            })
+            .exec();
+
+          if (existingReaction) {
+            await this.reactModel
+              .deleteOne({ _id: existingReaction._id })
+              .exec();
+
+            if (post) {
+              post.react_count[reactionType]--;
+              await post.save();
+            }
+
+            if (comment) {
+              comment.react_count--;
+              await comment.save();
+            }
           }
         }
       }
+
+      let returned;
+      if (post) {
+        returned = post;
+      }
+      if (comment) {
+        returned = comment;
+      }
+      return returned;
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Failed to update reaction');
     }
-    let returned;
-    if (post) {
-      returned = post;
-    }
-    if (comment) {
-      returned = comment;
-    }
-    return returned;
   }
 
   // Retrieve paginated list of all reactions for a specific post.
@@ -502,10 +454,14 @@ export class PostsService {
     postId: string,
     page: number,
     limit: number,
-    userId: string,
+    userId: string, // For user-specific reactions later.
   ): Promise<ReactionDto[]> {
     try {
       const skip = (page - 1) * limit;
+      console.log(isValidObjectId(postId));
+      if (!isValidObjectId(postId)) {
+        throw new BadRequestException('Invalid post ID format');
+      }
       const objectIdPostId = new Types.ObjectId(postId);
       const reactions = await this.reactModel
         .find({ post_id: objectIdPostId })
@@ -517,58 +473,14 @@ export class PostsService {
       }
 
       return Promise.all(
-        reactions.map((reaction) => this.mapToReactionDto(reaction)),
+        reactions.map((reaction) =>
+          getReactionInfo(reaction, this.profileModel, this.companyModel),
+        ),
       );
     } catch (err) {
-      if (err instanceof NotFoundException) {
-        throw err;
-      }
-      if (
-        err.message ===
-        'input must be a 24 character hex string, 12 byte Uint8Array, or an integer'
-      ) {
-        throw new NotFoundException('Invalid post id format');
-      }
+      if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch reactions');
     }
-  }
-
-  // Convert a reaction document to a formatted DTO object.
-  // Steps:
-  // 1. Find the author's profile or company info.
-  // 2. Return all reaction details as ReactionDto.
-  async mapToReactionDto(reaction: ReactDocument): Promise<ReactionDto> {
-    let authorProfile;
-    let authorProfilePicture;
-    if (reaction.user_type === 'User') {
-      authorProfile = await this.profileModel.findById(reaction.user_id).exec();
-      if (!authorProfile) {
-        throw new NotFoundException('Author profile not found');
-      }
-      authorProfilePicture = authorProfile.profile_picture;
-    } else if (reaction.user_type === 'Company') {
-      authorProfile = await this.companyModel.findById(reaction.user_id).exec();
-      if (!authorProfile) {
-        throw new NotFoundException('Author profile not found');
-      }
-      authorProfilePicture = authorProfile.logo;
-    }
-    return {
-      likeId: reaction._id.toString(),
-      postId: reaction.post_id.toString(),
-      authorId: reaction.user_id.toString(),
-      authorType: reaction.user_type as 'User' | 'Company',
-      type: reaction.react_type as
-        | 'Like'
-        | 'Love'
-        | 'Funny'
-        | 'Celebrate'
-        | 'Insightful'
-        | 'Support',
-      authorName: authorProfile.name,
-      authorPicture: authorProfilePicture,
-      authorBio: authorProfile.bio,
-    };
   }
 
   // Save a post for later reference by a specific user.
@@ -578,30 +490,35 @@ export class PostsService {
   // 3. Create a new Save document.
   // 4. Save and return success message.
   async savePost(postId: string, userId: string): Promise<{ message: string }> {
-    const post = await this.postModel
-      .findById(new Types.ObjectId(postId))
-      .exec();
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
+    try {
+      const post = await this.postModel
+        .findById(new Types.ObjectId(postId))
+        .exec();
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
 
-    if (
-      await this.saveModel.exists({
+      const existing = await this.saveModel.exists({
         post_id: new Types.ObjectId(post._id),
         user_id: new Types.ObjectId(userId),
-      })
-    ) {
-      throw new BadRequestException('Post already saved');
+      });
+
+      if (existing) {
+        throw new BadRequestException('Post already saved');
+      }
+
+      const save = new this.saveModel({
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(userId),
+        post_id: new Types.ObjectId(postId),
+      });
+
+      await save.save();
+      return { message: 'Post saved successfully' };
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to save post');
     }
-
-    const save = new this.saveModel({
-      _id: new Types.ObjectId(),
-      user_id: new Types.ObjectId(userId),
-      post_id: new Types.ObjectId(postId),
-    });
-
-    await save.save();
-    return { message: 'Post saved successfully' };
   }
 
   // Remove a saved post from the user's saved list.
@@ -614,17 +531,23 @@ export class PostsService {
     postId: string,
     userId: string,
   ): Promise<{ message: string }> {
-    const savedPost = await this.saveModel
-      .findOneAndDelete({
-        post_id: postId,
-        user_id: userId,
-      })
-      .exec();
-    if (!savedPost) {
-      throw new NotFoundException('Saved post not found');
-    }
+    try {
+      const savedPost = await this.saveModel
+        .findOneAndDelete({
+          post_id: postId,
+          user_id: userId,
+        })
+        .exec();
 
-    return { message: 'Post unsaved successfully' };
+      if (!savedPost) {
+        throw new NotFoundException('Saved post not found');
+      }
+
+      return { message: 'Post unsaved successfully' };
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to unsave post');
+    }
   }
 
   // Retrieve all posts saved by a specific user.
@@ -637,6 +560,7 @@ export class PostsService {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
         .exec();
+
       if (!savedPosts || savedPosts.length === 0) {
         throw new NotFoundException('No saved posts found');
       }
@@ -649,11 +573,19 @@ export class PostsService {
           if (!post) {
             throw new NotFoundException('Post not found');
           }
-          return this.mapToGetPostDto(post, userId);
+          return getPostInfo(
+            post,
+            userId,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+          );
         }),
       );
     } catch (error) {
-      throw error;
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Failed to fetch saved posts');
     }
   }
 
@@ -669,46 +601,51 @@ export class PostsService {
     createCommentDto: CreateCommentDto,
     userId: string,
   ): Promise<Comment> {
-    const post = await this.postModel
-      .findById(new Types.ObjectId(postId))
-      .exec();
-    if (!post) {
-      throw new NotFoundException('Post not found');
-    }
+    try {
+      const post = await this.postModel
+        .findById(new Types.ObjectId(postId))
+        .exec();
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
 
-    let authorType: 'User' | 'Company';
-    const authorProfile = await this.profileModel
-      .findById(new Types.ObjectId(userId))
-      .exec();
-    if (authorProfile) {
-      authorType = 'User';
-    } else {
-      const authorCompany = await this.companyModel
+      let authorType: 'User' | 'Company';
+      const authorProfile = await this.profileModel
         .findById(new Types.ObjectId(userId))
         .exec();
-      if (authorCompany) {
-        authorType = 'Company';
+      if (authorProfile) {
+        authorType = 'User';
       } else {
-        throw new NotFoundException('Author not found');
+        const authorCompany = await this.companyModel
+          .findById(new Types.ObjectId(userId))
+          .exec();
+        if (authorCompany) {
+          authorType = 'Company';
+        } else {
+          throw new NotFoundException('Author not found');
+        }
       }
+
+      const newComment = new this.commentModel({
+        _id: new Types.ObjectId(),
+        post_id: new Types.ObjectId(postId),
+        author_type: authorType,
+        author_id: new Types.ObjectId(userId),
+        content: createCommentDto.content,
+        tags: [],
+        react_count: 0,
+        replies: [],
+      });
+
+      await newComment.save();
+      post.comment_count++;
+      await post.save();
+
+      return newComment;
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to add comment');
     }
-
-    const newComment = new this.commentModel({
-      _id: new Types.ObjectId(),
-      post_id: new Types.ObjectId(postId),
-      author_type: authorType,
-      author_id: new Types.ObjectId(userId),
-      content: createCommentDto.content,
-      tags: [],
-      react_count: 0,
-      replies: [],
-    });
-
-    await newComment.save();
-    post.comment_count++;
-    await post.save();
-
-    return newComment;
   }
 
   // Retrieve paginated comments for a given post.
@@ -723,118 +660,32 @@ export class PostsService {
     limit: number,
     userId: string,
   ): Promise<GetCommentDto[]> {
-    const skip = (page - 1) * limit;
-    const comments = await this.commentModel
-      .find({ post_id: new Types.ObjectId(postId) })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-    if (!comments || comments.length === 0) {
-      throw new NotFoundException('No comments found for the requested page');
-    }
-
-    return Promise.all(
-      comments.map((comment) => this.mapToGetCommentDto(comment, userId)),
-    );
-  }
-
-  // Convert a comment document to a formatted DTO object.
-  // Description:
-  // 1. Fetch comment's author details.
-  // 2. Find user's reaction to comment if exists.
-  // 3. Return all comment details as GetCommentDto.
-
-  async mapToGetCommentDto(
-    comment: CommentDocument,
-    userId: string,
-  ): Promise<GetCommentDto> {
-    let authorProfile;
-    let authorProfilePicture;
-    let authorName = 'Unknown';
-    let authorBio = '';
-
-    if (comment.author_type === 'User') {
-      authorProfile = await this.profileModel
-        .findById(comment.author_id)
-        .exec();
-      if (authorProfile) {
-        authorProfilePicture = authorProfile.profile_picture;
-        authorName = authorProfile.name;
-        authorBio = authorProfile.bio;
-      } else {
-      }
-    } else if (comment.author_type === 'Company') {
-      authorProfile = await this.companyModel
-        .findById(comment.author_id)
-        .exec();
-      if (authorProfile) {
-        authorProfilePicture = authorProfile.logo;
-        authorName = authorProfile.name;
-        authorBio = authorProfile.bio;
-      } else {
-      }
-    }
-
-    let userReactionType:
-      | 'Like'
-      | 'Love'
-      | 'Funny'
-      | 'Celebrate'
-      | 'Insightful'
-      | 'Support'
-      | null = null;
-    if (userId) {
-      const userReaction = await this.reactModel
-        .findOne({
-          post_id: comment._id,
-          user_id: new Types.ObjectId(userId),
-        })
-        .exec();
-      userReactionType = userReaction
-        ? (userReaction.react_type as
-            | 'Like'
-            | 'Love'
-            | 'Funny'
-            | 'Celebrate'
-            | 'Insightful'
-            | 'Support')
-        : null;
-    }
-
-    return {
-      id: comment._id.toString(),
-      postId: comment.post_id.toString(),
-      authorId: comment.author_id.toString(),
-      authorName: authorName,
-      authorPicture: authorProfilePicture,
-      authorBio: authorBio,
-      authorType: comment.author_type as 'User' | 'Company',
-      content: comment.content,
-      replies: [],
-      reactCount: comment.react_count,
-      timestamp: comment.commented_at.toISOString(),
-      taggedUsers: [],
-      reactType: userReactionType,
-    };
-  }
-
-  // Helper function to find a post by ID and handle errors.
-  // Steps:
-  // 1. Find the post by its ID.
-  // 2. Throw appropriate error if not found.
-  // 3. Return the post document.
-  async findPostById(id: string): Promise<PostDocument> {
     try {
-      const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
-      if (!post) {
-        throw new NotFoundException('Post not found with ');
+      const skip = (page - 1) * limit;
+      const comments = await this.commentModel
+        .find({ post_id: new Types.ObjectId(postId) })
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      if (!comments || comments.length === 0) {
+        throw new NotFoundException('No comments found for the requested page');
       }
-      return post;
+
+      return Promise.all(
+        comments.map((comment) =>
+          getCommentInfo(
+            comment,
+            userId,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+          ),
+        ),
+      );
     } catch (error) {
-      if (error.name === 'BSONError') {
-        throw new NotFoundException('Invalid post id format');
-      }
-      throw new InternalServerErrorException('Failed to find post');
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Failed to fetch comments');
     }
   }
 
@@ -849,20 +700,26 @@ export class PostsService {
     editCommentDto: EditCommentDto,
     userId: string,
   ): Promise<Comment> {
-    const comment = await this.commentModel
-      .findById(new Types.ObjectId(commentId))
-      .exec();
-    if (!comment) {
-      throw new NotFoundException('Comment not found');
+    try {
+      const comment = await this.commentModel
+        .findById(new Types.ObjectId(commentId))
+        .exec();
+      if (!comment) {
+        throw new NotFoundException('Comment not found');
+      }
+      const authorId = comment.author_id.toString();
+      if (authorId !== userId) {
+        throw new UnauthorizedException(
+          'User not authorized to edit this comment',
+        );
+      }
+
+      Object.assign(comment, editCommentDto);
+      return await comment.save();
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to edit comment');
     }
-    const authorId = comment.author_id.toString();
-    if (authorId !== userId) {
-      throw new UnauthorizedException(
-        'User not authorized to edit this comment',
-      );
-    }
-    Object.assign(comment, editCommentDto);
-    return await comment.save();
   }
 
   // Delete a comment if the requesting user is the author.
@@ -871,18 +728,23 @@ export class PostsService {
   // 2. Verify user authorization.
   // 3. Delete the comment and related reactions.
   async deleteComment(commentId: string, userId: string): Promise<void> {
-    const comment = await this.commentModel.findById(commentId);
-    if (!comment) {
-      throw new NotFoundException('Comment not found');
-    }
-    const authorId = comment.author_id.toString();
-    if (authorId !== userId) {
-      throw new UnauthorizedException(
-        'User not authorized to edit this comment',
-      );
-    }
+    try {
+      const comment = await this.commentModel.findById(commentId);
+      if (!comment) {
+        throw new NotFoundException('Comment not found');
+      }
+      const authorId = comment.author_id.toString();
+      if (authorId !== userId) {
+        throw new UnauthorizedException(
+          'User not authorized to edit this comment',
+        );
+      }
 
-    await this.reactModel.deleteMany({ post_id: commentId }).exec();
-    const result = await this.commentModel.deleteOne({ _id: commentId }).exec();
+      await this.reactModel.deleteMany({ post_id: commentId }).exec();
+      await this.commentModel.deleteOne({ _id: commentId }).exec();
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to delete comment');
+    }
   }
 }

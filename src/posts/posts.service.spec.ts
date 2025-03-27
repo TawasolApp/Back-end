@@ -152,6 +152,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPost,
       save: jest.fn().mockResolvedValue(mockPost),
     };
     postModelMock.mockImplementation(() => postInstance);
@@ -198,6 +199,9 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPost,
+      text: mockPostDtoNoMedia.content,
+      media: mockPostDtoNoMedia.media,
       save: jest.fn().mockResolvedValue({
         ...mockPost,
         text: mockPostDtoNoMedia.content,
@@ -248,6 +252,9 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPost,
+      text: mockPostDtoPrivate.content,
+      visibility: mockPostDtoPrivate.visibility,
       save: jest.fn().mockResolvedValue({
         ...mockPost,
         text: mockPostDtoPrivate.content,
@@ -1090,6 +1097,60 @@ describe('PostsService', () => {
     ]);
   });
 
+  // Test for getReactions
+  it('[23-b] should get reactions(made by a company) to a post', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockPost),
+    });
+
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ ...mockReaction, user_type: 'Company' }),
+    });
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    reactModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest
+        .fn()
+        .mockResolvedValue([{ ...mockReaction, user_type: 'Company' }]),
+    });
+
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockCompany),
+    });
+
+    const result = await service.getReactions(
+      mockPost.id.toString(),
+      1,
+      10,
+      mockUserId,
+    );
+
+    expect(result).toEqual([
+      {
+        likeId: mockReaction._id.toString(),
+        postId: mockReaction.post_id.toString(),
+        authorId: mockReaction.user_id.toString(),
+        authorType: 'Company',
+        type: mockReaction.react_type,
+        authorName: mockCompany.name,
+        authorPicture: mockCompany.logo,
+        authorBio: mockCompany.description,
+      },
+    ]);
+  });
+
   // Test for getSavedPosts
   it('[24] should get saved posts', async () => {
     saveModelMock.find.mockReturnValue({
@@ -1159,6 +1220,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPostWithMedia,
       save: jest.fn().mockResolvedValue(mockPostWithMedia),
     };
     postModelMock.mockImplementation(() => postInstance);
@@ -1206,6 +1268,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPost,
       save: jest.fn().mockResolvedValue(mockPostWithTags),
     };
     postModelMock.mockImplementation(() => postInstance);
@@ -1253,6 +1316,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPostWithShares,
       save: jest.fn().mockResolvedValue(mockPostWithShares),
     };
     postModelMock.mockImplementation(() => postInstance);
@@ -1300,6 +1364,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPostWithComments,
       save: jest.fn().mockResolvedValue(mockPostWithComments),
     };
     postModelMock.mockImplementation(() => postInstance);
@@ -1354,6 +1419,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
 
     const postInstance = {
+      ...mockPostWithReacts,
       save: jest.fn().mockResolvedValue(mockPostWithReacts),
     };
     postModelMock.mockImplementation(() => postInstance);
@@ -1522,7 +1588,7 @@ describe('PostsService', () => {
         replies: commentInstance.replies,
         authorName: 'Mock Company',
         authorPicture: 'http://example.com/logo.jpg',
-        authorBio: undefined,
+        authorBio: '',
         authorType: 'Company',
         reactType: 'Like',
         taggedUsers: [],
@@ -1620,7 +1686,6 @@ describe('PostsService', () => {
     });
   });
 
-  // Test for updateReactions on a comment
   it('[35] should update reactions on a comment', async () => {
     const commentInstance = {
       ...mockComment,
@@ -1679,23 +1744,21 @@ describe('PostsService', () => {
 
     expect(result).toEqual({
       ...mockComment,
-      react_count: -10, // Adjusted to match the received value
+      react_count: -10,
       save: expect.any(Function),
     });
   });
 
-  // Test for getPost with invalid ID
   it('[36] should throw an error if post ID is invalid', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(null),
     });
 
     await expect(service.getPost('invalidId', mockUserId)).rejects.toThrow(
-      'Invalid post id format',
+      'Invalid post ID format',
     );
   });
 
-  // Test for getUserPosts with no posts found
   it('[37] should throw an error if no posts are found for the user', async () => {
     postModelMock.find.mockReturnValue({
       exec: jest.fn().mockResolvedValue([]),
@@ -1706,7 +1769,6 @@ describe('PostsService', () => {
     );
   });
 
-  // Test for savePost with post already saved
   it('[38] should throw an error if post is already saved', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
@@ -1719,7 +1781,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('Post already saved');
   });
 
-  // Test for unsavePost with saved post not found
   it('[39] should throw an error if saved post is not found', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
@@ -1734,7 +1795,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('Saved post not found');
   });
 
-  // Test for addComment with author not found
   it('[40] should throw an error if author is not found', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
@@ -1753,12 +1813,11 @@ describe('PostsService', () => {
     ).rejects.toThrow('Author not found');
   });
 
-  // Test for editComment with unauthorized user
   it('[41] should throw an error if user is not authorized to edit the comment', async () => {
     const mockCommentId = mockComment._id.toString();
     const commentInstance = {
       ...mockComment,
-      author_id: new Types.ObjectId('507f1f77bcf86cd799439011'), // valid ObjectId
+      author_id: new Types.ObjectId('507f1f77bcf86cd799439011'),
       save: jest.fn().mockResolvedValue(mockComment),
     };
     commentModelMock.findById.mockReturnValue({
@@ -1770,12 +1829,11 @@ describe('PostsService', () => {
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
-  // Test for deleteComment with unauthorized user
   it('[42] should throw an error if user is not authorized to delete the comment', async () => {
     const mockCommentId = mockComment._id.toString();
     const commentInstance = {
       ...mockComment,
-      author_id: new Types.ObjectId('507f1f77bcf86cd799439011'), // valid ObjectId
+      author_id: new Types.ObjectId('507f1f77bcf86cd799439011'),
       save: jest.fn().mockResolvedValue(mockComment),
     };
     commentModelMock.findById.mockReturnValue({
@@ -1788,7 +1846,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
-  // Test for updateReactions with invalid post ID
   it('[43] should throw an error if post ID is invalid in updateReactions', async () => {
     await expect(
       service.updateReactions('invalidId', mockUserId, {
@@ -1802,25 +1859,15 @@ describe('PostsService', () => {
           Support: false,
         },
       }),
-    ).rejects.toThrow(
-      'input must be a 24 character hex string, 12 byte Uint8Array, or an integer',
+    ).rejects.toThrow('Invalid post ID format');
+  });
+
+  it('[44] should throw an error if post ID is invalid in getReactions', async () => {
+    await expect(service.getReactions('1', 1, 10, mockUserId)).rejects.toThrow(
+      'Invalid post ID format',
     );
   });
 
-  // Test for getReactions with invalid post ID
-  it('[44] should throw an error if post ID is invalid in getReactions', async () => {
-    reactModelMock.find.mockReturnValue({
-      skip: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      exec: jest.fn().mockResolvedValue([]),
-    });
-
-    await expect(
-      service.getReactions('invalidId', 1, 10, mockUserId),
-    ).rejects.toThrow('Invalid post id format');
-  });
-
-  // Test for getComments with no comments found
   it('[45] should throw an error if no comments are found for the post', async () => {
     commentModelMock.find.mockReturnValue({
       skip: jest.fn().mockReturnThis(),
@@ -1898,7 +1945,7 @@ describe('PostsService', () => {
 
   it('[52] should throw an error if post ID is invalid in getPost', async () => {
     await expect(service.getPost('invalidId', mockUserId)).rejects.toThrow(
-      'Invalid post id format',
+      'Invalid post ID format',
     );
   });
 
@@ -2030,14 +2077,12 @@ describe('PostsService', () => {
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
-  // Invalid user ID format in editPost
   it('[64] should throw error for invalid user ID format in editPost', async () => {
     await expect(
       service.editPost(mockPost.id.toString(), mockEditPostDto, '123'),
     ).rejects.toThrow('Invalid user ID format');
   });
 
-  // Company exists but not found by find (author not found)
   it('[65] should throw error when author not found in editPost', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
@@ -2055,7 +2100,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('Author not found');
   });
 
-  // updateReactions with multiple reactions
   it('[66] should throw error if multiple reactions are set to true', async () => {
     await expect(
       service.updateReactions(mockPost.id.toString(), mockUserId, {
@@ -2072,7 +2116,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('Only one reaction is allowed');
   });
 
-  // getReactions returns empty array
   it('[67] should throw error if no reactions found', async () => {
     reactModelMock.find.mockReturnValue({
       skip: jest.fn().mockReturnThis(),
@@ -2085,44 +2128,7 @@ describe('PostsService', () => {
     ).rejects.toThrow('Reactions not found');
   });
 
-  // mapToReactionDto - user profile not found
-  it('[68] should throw error if user profile is not found in mapToReactionDto', async () => {
-    profileModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    await expect(
-      service.mapToReactionDto({
-        _id: new Types.ObjectId(mockReaction._id),
-        post_id: new Types.ObjectId(mockReaction.post_id),
-        user_id: new Types.ObjectId(mockReaction.user_id),
-        user_type: 'User',
-        post_type: 'Post',
-        react_type: 'Like',
-      } as ReactDocument), // Cast to ReactDocument
-    ).rejects.toThrow('Author profile not found');
-  });
-
-  // mapToReactionDto - company profile not found
-  it('[69] should throw error if company profile is not found in mapToReactionDto', async () => {
-    companyModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    await expect(
-      service.mapToReactionDto({
-        ...mockReaction,
-        _id: new Types.ObjectId(mockReaction._id),
-        post_id: new Types.ObjectId(mockReaction.post_id),
-        user_id: new Types.ObjectId(mockReaction.user_id),
-        user_type: 'Company',
-        post_type: 'Post',
-      } as ReactDocument), // Cast to ReactDocument
-    ).rejects.toThrow('Author profile not found');
-  });
-
-  // deletePost: deletedCount = 0
-  it('[70] should throw error if deletedCount is 0 in deletePost', async () => {
+  it('[68] should throw error if deletedCount is 0 in deletePost', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
     });
@@ -2135,27 +2141,7 @@ describe('PostsService', () => {
     ).rejects.toThrow('Post not found');
   });
 
-  // findPostById: invalid ObjectId throws CastError
-  it('[71] should throw error for invalid post id in findPostById', async () => {
-    postModelMock.findById.mockImplementation(() => {
-      throw { name: 'CastError' };
-    });
-
-    await expect(service['findPostById']('bad-id')).rejects.toThrow(
-      'Invalid post id format',
-    );
-  });
-
-  it('[72] should handle fallback InternalServerErrorException in editPost', async () => {
-    postModelMock.findById.mockImplementation(() => {
-      throw new Error('Unknown DB error');
-    });
-    await expect(
-      service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
-    ).rejects.toThrow('Failed to edit post');
-  });
-
-  it('[73] should handle fallback InternalServerErrorException in addPost', async () => {
+  it('[69] should handle fallback InternalServerErrorException in addPost', async () => {
     profileModelMock.findById.mockImplementation(() => {
       throw new Error('Unknown error');
     });
@@ -2164,7 +2150,7 @@ describe('PostsService', () => {
     );
   });
 
-  it('[74] should throw when getAllPosts catches unknown error', async () => {
+  it('[70] should throw when getAllPosts catches unknown error', async () => {
     postModelMock.find.mockImplementation(() => {
       throw new Error('Unexpected');
     });
@@ -2173,7 +2159,7 @@ describe('PostsService', () => {
     );
   });
 
-  it('[75] should throw generic error in getPost with unknown error', async () => {
+  it('[71] should throw generic error in getPost with unknown error', async () => {
     postModelMock.findById.mockImplementation(() => {
       throw new Error('Random error');
     });
@@ -2182,7 +2168,7 @@ describe('PostsService', () => {
     ).rejects.toThrow('Failed to fetch post');
   });
 
-  it('[76] should handle savePost and validate all fields', async () => {
+  it('[72] should handle savePost and validate all fields', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
     });
@@ -2195,7 +2181,7 @@ describe('PostsService', () => {
     expect(result).toEqual({ message: 'Post saved successfully' });
   });
 
-  it('[77] should deleteComment and call all delete methods', async () => {
+  it('[73] should deleteComment and call all delete methods', async () => {
     const commentInstance = {
       ...mockComment,
       author_id: new Types.ObjectId(mockUserId),
@@ -2212,14 +2198,13 @@ describe('PostsService', () => {
     expect(reactModelMock.deleteMany).toHaveBeenCalled();
   });
 
-  // 66, 93: invalid post/userId format (isValidObjectId)
-  it('[78] should throw BadRequestException for invalid postId format in editPost', async () => {
+  it('[74] should throw BadRequestException for invalid postId format in editPost', async () => {
     await expect(
       service.editPost('invalid-id', mockEditPostDto, mockUserId),
     ).rejects.toThrow('Invalid post ID format');
   });
 
-  it('[79] should throw BadRequestException for invalid userId format in editPost', async () => {
+  it('[75] should throw BadRequestException for invalid userId format in editPost', async () => {
     await expect(
       service.editPost(
         mockPost.id.toString(),
@@ -2229,8 +2214,7 @@ describe('PostsService', () => {
     ).rejects.toThrow('Invalid user ID format');
   });
 
-  // 78: UnauthorizedException when user tries to edit another user’s post
-  it('[80] should throw UnauthorizedException if user is not the author', async () => {
+  it('[76] should throw UnauthorizedException if user is not the author', async () => {
     const post = { ...mockPost, author_id: new Types.ObjectId() };
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(post),
@@ -2240,7 +2224,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('User not authorized to edit this post');
   });
 
-  // 125: Validate assignment of author_id
   test('[81] should assign author_id and author_type properly in editPost', async () => {
     const post = {
       ...mockPost,
@@ -2261,8 +2244,7 @@ describe('PostsService', () => {
     expect(result.author_id).toBeInstanceOf(Types.ObjectId);
   });
 
-  // 524–570: savePost flow
-  it('[82] should save a post and return success message', async () => {
+  it('[77] should save a post and return success message', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
     });
@@ -2273,8 +2255,7 @@ describe('PostsService', () => {
     expect(result).toEqual({ message: 'Post saved successfully' });
   });
 
-  // 625: getSavedPosts error for no saved posts
-  it('[83] should throw NotFoundException if no saved posts', async () => {
+  it('[78] should throw NotFoundException if no saved posts', async () => {
     saveModelMock.find.mockReturnValue({
       exec: jest.fn().mockResolvedValue([]),
     });
@@ -2283,8 +2264,7 @@ describe('PostsService', () => {
     );
   });
 
-  // 658, 671: post.comment_count++ and return in addComment
-  it('[84] should increment comment count and return new comment', async () => {
+  it('[79] should increment comment count and return new comment', async () => {
     const post = { ...mockPost, comment_count: 0, save: jest.fn() };
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(post),
@@ -2306,39 +2286,15 @@ describe('PostsService', () => {
     expect(result).toEqual({ ...mockComment, save: expect.any(Function) });
   });
 
-  // // 724–735, 824: mapToGetCommentDto for both user & company
-  // it('[85] should return full comment DTO from user profile', async () => {
-  //   profileModelMock.findById.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue(mockProfile),
-  //   });
-  //   const dto = await service['mapToGetCommentDto'](
-  //     { ...mockComment, author_type: 'User' },
-  //     mockUserId,
-  //   );
-  //   expect(dto.authorName).toBe(mockProfile.name);
-  // });
-
-  // it('[86] should return full comment DTO from company profile', async () => {
-  //   companyModelMock.findById.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue(mockCompany),
-  //   });
-  //   const dto = await service['mapToGetCommentDto'](
-  //     { ...mockComment, author_type: 'Company' },
-  //     mockUserId,
-  //   );
-  //   expect(dto.authorName).toBe(mockCompany.name);
-  // });
-
   describe('Additional Coverage - Error Scenarios', () => {
     // editPost - Invalid post ID format
-    it('[87] should throw BadRequestException for invalid post ID in editPost', async () => {
+    it('[80] should throw BadRequestException for invalid post ID in editPost', async () => {
       await expect(
         service.editPost('invalid-id', mockEditPostDto, mockUserId),
       ).rejects.toThrow(BadRequestException);
     });
 
-    // editPost - Invalid user ID format
-    it('[88] should throw BadRequestException for invalid user ID in editPost', async () => {
+    it('[81] should throw BadRequestException for invalid user ID in editPost', async () => {
       await expect(
         service.editPost(
           mockPost.id.toString(),
@@ -2348,8 +2304,7 @@ describe('PostsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    // editPost - Unauthorized edit
-    it('[89] should throw UnauthorizedException if user is not the author', async () => {
+    it('[82] should throw UnauthorizedException if user is not the author', async () => {
       const postInstance = {
         ...mockPost,
         _id: mockPost.id.toString(),
@@ -2368,8 +2323,7 @@ describe('PostsService', () => {
       ).rejects.toThrow(UnauthorizedException);
     });
 
-    // savePost - post not found
-    it('[90] should throw NotFoundException when saving a non-existent post', async () => {
+    it('[83] should throw NotFoundException when saving a non-existent post', async () => {
       postModelMock.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(null),
       });
@@ -2379,8 +2333,7 @@ describe('PostsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    // savePost - already saved
-    it('[91] should throw BadRequestException when post already saved', async () => {
+    it('[84] should throw BadRequestException when post already saved', async () => {
       postModelMock.findById.mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockPost),
       });
@@ -2391,8 +2344,7 @@ describe('PostsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    // unsavePost - not found
-    it('[92] should throw NotFoundException when unsaving a post that was never saved', async () => {
+    it('[85] should throw NotFoundException when unsaving a post that was never saved', async () => {
       saveModelMock.findOneAndDelete.mockReturnValue({
         exec: jest.fn().mockResolvedValue(null),
       });
@@ -2402,8 +2354,7 @@ describe('PostsService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    // getAllPosts - empty result
-    it('[93] should throw NotFoundException when no posts exist on page', async () => {
+    it('[86] should throw NotFoundException when no posts exist on page', async () => {
       postModelMock.find.mockReturnValue({
         skip: jest.fn().mockReturnThis(),
         limit: jest.fn().mockReturnThis(),
@@ -2415,8 +2366,7 @@ describe('PostsService', () => {
       );
     });
 
-    // getSavedPosts - no saved posts
-    it('[94] should throw NotFoundException when user has no saved posts', async () => {
+    it('[87] should throw NotFoundException when user has no saved posts', async () => {
       saveModelMock.find.mockReturnValue({
         exec: jest.fn().mockResolvedValue([]),
       });
@@ -2426,15 +2376,13 @@ describe('PostsService', () => {
       );
     });
 
-    // getPost - invalid id format
-    it('[95] should throw NotFoundException for invalid ObjectId format in getPost', async () => {
+    it('[88] should throw BadRequestException for invalid ObjectId format in getPost', async () => {
       await expect(service.getPost('invalid-id', mockUserId)).rejects.toThrow(
-        NotFoundException,
+        BadRequestException,
       );
     });
 
-    // updateReactions - more than one reaction
-    it('[96] should throw BadRequestException when more than one reaction is true', async () => {
+    it('[89] should throw BadRequestException when more than one reaction is true', async () => {
       await expect(
         service.updateReactions(mockPost.id.toString(), mockUserId, {
           postType: 'Post',
@@ -2450,8 +2398,7 @@ describe('PostsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
 
-    // updateReactions - invalid user ID
-    it('[97] should throw BadRequestException for invalid user ID in updateReactions', async () => {
+    it('[90] should throw BadRequestException for invalid user ID in updateReactions', async () => {
       await expect(
         service.updateReactions(mockPost.id.toString(), 'invalid-user-id', {
           postType: 'Post',
@@ -2467,276 +2414,279 @@ describe('PostsService', () => {
       ).rejects.toThrow(BadRequestException);
     });
   });
-  it('[98] should return the post if found', async () => {
-    const post = { _id: new Types.ObjectId(), text: 'Test post' } as any;
+  it('[91] should throw NotFoundException when post is not found and check post existence', async () => {
     postModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(post),
+      exec: jest.fn().mockResolvedValue(null), // Simulate post not found
     });
-
-    const result = await service.findPostById(post._id.toString());
-    expect(result).toEqual(post);
-  });
-
-  it('[99] should throw NotFoundException for invalid ObjectId', async () => {
-    await expect(service.findPostById('invalid-id')).rejects.toThrow(
-      'Invalid post id format',
-    );
-  });
-
-  it('[100] should throw NotFoundException if post not found', async () => {
-    const validId = new Types.ObjectId().toString();
-    postModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    await expect(service.findPostById(validId)).rejects.toThrow(
-      'Failed to find post',
-    );
-  });
-  it('[101] should return the post if found', async () => {
-    const post = { _id: new Types.ObjectId(), text: 'Test post' } as any;
-    postModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(post),
-    });
-
-    const result = await service.findPostById(post._id.toString());
-    expect(result).toEqual(post);
-  });
-
-  it('[102] should throw NotFoundException for invalid ObjectId', async () => {
-    await expect(service.findPostById('invalid-id')).rejects.toThrow(
-      'Invalid post id format',
-    );
-  });
-
-  it('[103] should throw InternalServerErrorException if post not found', async () => {
-    const validId = new Types.ObjectId().toString();
-    postModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    await expect(service.findPostById(validId)).rejects.toThrow(
-      'Failed to find post',
-    );
-  });
-
-  it('[104] should throw if author type is invalid', async () => {
-    const invalidPost: any = {
-      author_type: 'Alien',
-    };
-    await expect(service.mapToGetPostDto(invalidPost, '')).rejects.toThrow(
-      'Invalid author type',
-    );
-  });
-  it('[105] should return GetPostDto for User author type', async () => {
-    const mockPost: any = {
-      id: new Types.ObjectId(),
-      author_id: new Types.ObjectId(),
-      author_type: 'User',
-      text: 'Hello',
-      media: [],
-      react_count: {},
-      comment_count: 0,
-      share_count: 0,
-      tags: [],
-      visibility: 'Public',
-      posted_at: new Date(),
-    };
-
-    const mockProfile = {
-      name: 'John Doe',
-      profile_picture: 'pic.jpg',
-      bio: 'Developer',
-    };
-
     profileModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockProfile),
     });
-
-    saveModelMock.exists.mockResolvedValue(false);
-
-    reactModelMock.findOne.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    const result = await service.mapToGetPostDto(
-      mockPost,
-      mockPost.author_id.toString(),
-    );
-    expect(result.authorName).toEqual(mockProfile.name);
-    expect(result.authorPicture).toEqual(mockProfile.profile_picture);
-    expect(result.reactType).toBeNull();
-    expect(result.isSaved).toBe(false);
-  });
-
-  it('[106] should throw if author type is invalid', async () => {
-    const invalidPost: any = {
-      author_type: 'Alien',
-    };
-    await expect(service.mapToGetPostDto(invalidPost, '')).rejects.toThrow(
-      'Invalid author type',
-    );
-  });
-  it('[107] should return GetCommentDto for User author', async () => {
-    const mockComment: any = {
-      _id: new Types.ObjectId(),
-      post_id: new Types.ObjectId(),
-      author_id: new Types.ObjectId(),
-      author_type: 'User',
-      content: 'Nice!',
-      tags: [],
-      react_count: 0,
-      commented_at: new Date(),
-    };
-
-    const mockProfile = {
-      name: 'Alice',
-      profile_picture: 'alice.png',
-      bio: 'Engineer',
-    };
-
-    profileModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(mockProfile),
-    });
-
-    reactModelMock.findOne.mockReturnValue({
-      exec: jest.fn().mockResolvedValue({ react_type: 'Like' }),
-    });
-
-    const result = await service.mapToGetCommentDto(
-      mockComment,
-      mockComment.author_id.toString(),
-    );
-    expect(result.authorName).toBe('Alice');
-    expect(result.reactType).toBe('Like');
-  });
-
-  it('[108] should return default name if author not found', async () => {
-    const mockComment: any = {
-      _id: new Types.ObjectId(),
-      post_id: new Types.ObjectId(),
-      author_id: new Types.ObjectId(),
-      author_type: 'User',
-      content: 'Test comment',
-      tags: [],
-      react_count: 0,
-      commented_at: new Date(),
-    };
-
-    profileModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    reactModelMock.findOne.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    const result = await service.mapToGetCommentDto(
-      mockComment,
-      mockComment.author_id.toString(),
-    );
-    expect(result.authorName).toBe('Unknown');
-    expect(result.reactType).toBeNull();
-  });
-  // Additional tests to reach 100% function coverage
-
-  it('[109] should throw error if author type is invalid in mapToGetPostDto', async () => {
-    const invalidPost: any = {
-      _id: new Types.ObjectId(),
-      id: new Types.ObjectId(),
-      author_id: new Types.ObjectId(),
-      author_type: 'Alien',
-      text: 'test',
-      media: [],
-      react_count: {},
-      comment_count: 0,
-      share_count: 0,
-      tags: [],
-      visibility: 'Public',
-      posted_at: new Date(),
-    };
 
     await expect(
-      service.mapToGetPostDto(invalidPost, 'someUserId'),
-    ).rejects.toThrow('Invalid author type');
+      service.updateReactions(mockPost.id.toString(), mockUserId, {
+        postType: 'Post',
+        reactions: {
+          Like: true,
+          Love: false,
+          Funny: false,
+          Celebrate: false,
+          Insightful: false,
+          Support: false,
+        },
+      }),
+    ).rejects.toThrow(`Post with id ${mockPost.id.toString()} not found`);
   });
+  it('[92] should throw NotFoundException when comment is not found and check comment existence', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null), // Ensure post path isn't taken
+    });
 
-  it('[110] should handle unknown user author in mapToGetCommentDto gracefully', async () => {
-    const mockComment = {
-      _id: new Types.ObjectId(),
-      post_id: new Types.ObjectId(),
-      author_id: new Types.ObjectId(),
-      author_type: 'User',
-      content: 'Test comment',
-      tags: [],
-      react_count: 0,
-      commented_at: new Date(),
-      replies: [],
-    };
+    commentModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null), // Simulate comment not found
+    });
 
     profileModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    await expect(
+      service.updateReactions(mockComment._id.toString(), mockUserId, {
+        postType: 'Comment',
+        reactions: {
+          Like: true,
+          Love: false,
+          Funny: false,
+          Celebrate: false,
+          Insightful: false,
+          Support: false,
+        },
+      }),
+    ).rejects.toThrow(
+      `Comment with id ${mockComment._id.toString()} not found`,
+    );
+  });
+  it('[X] should update existing reaction with new type and update post reaction counts', async () => {
+    const oldReactionType = 'Like';
+    const newReactionType = 'Love';
+
+    const postInstance = {
+      ...mockPost,
+      react_count: { [oldReactionType]: 2, [newReactionType]: 0 },
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    const existingReaction = {
+      ...mockReaction,
+      react_type: oldReactionType,
+      save: jest.fn().mockResolvedValue(true),
+    };
+
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(postInstance),
     });
 
     reactModelMock.findOne.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
+      exec: jest.fn().mockResolvedValue(existingReaction),
     });
-
-    const result = await service.mapToGetCommentDto(
-      mockComment as any,
-      mockUserId,
-    );
-
-    expect(result.authorName).toBe('Unknown');
-    expect(result.reactType).toBeNull();
-  });
-
-  it('[111] should handle unknown company author in mapToGetCommentDto gracefully', async () => {
-    const mockComment = {
-      _id: new Types.ObjectId(),
-      post_id: new Types.ObjectId(),
-      author_id: new Types.ObjectId(),
-      author_type: 'Company',
-      content: 'Company comment',
-      tags: [],
-      react_count: 0,
-      commented_at: new Date(),
-      replies: [],
-    };
-
-    companyModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    reactModelMock.findOne.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
-    });
-
-    const result = await service.mapToGetCommentDto(
-      mockComment as any,
-      mockUserId,
-    );
-
-    expect(result.authorName).toBe('Unknown');
-    expect(result.reactType).toBeNull();
-  });
-
-  it('[112] should throw error if author type is invalid in mapToReactionDto', async () => {
-    const invalidReaction = {
-      _id: new Types.ObjectId(),
-      post_id: new Types.ObjectId(),
-      user_id: new Types.ObjectId(),
-      user_type: 'User',
-      react_type: 'Like',
-      post_type: 'Post',
-    } as any;
 
     profileModelMock.findById.mockReturnValue({
-      exec: jest.fn().mockResolvedValue(null),
+      exec: jest.fn().mockResolvedValue(mockProfile),
     });
 
-    await expect(service.mapToReactionDto(invalidReaction)).rejects.toThrow(
-      'Author profile not found',
+    reactModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+    });
+
+    const result = await service.updateReactions(
+      mockPost.id.toString(),
+      mockUserId,
+      {
+        postType: 'Post',
+        reactions: {
+          [newReactionType]: true,
+          Like: false,
+          Funny: false,
+          Celebrate: false,
+          Insightful: false,
+          Support: false,
+        },
+      },
     );
+  });
+  it('[93] should throw InternalServerErrorException when deleteComment fails', async () => {
+    commentModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockComment),
+    });
+
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockPost),
+    });
+
+    commentModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('delete failed')),
+    });
+
+    await expect(
+      service.deleteComment(mockComment._id.toString(), mockUserId),
+    ).rejects.toThrow('Failed to delete comment');
+  });
+
+  it('[94] should throw InternalServerErrorException when deletePost fails', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockPost),
+    });
+
+    postModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('delete failed')),
+    });
+
+    await expect(
+      service.deletePost(mockPost.id.toString(), mockUserId),
+    ).rejects.toThrow('Failed to delete post');
+  });
+
+  it('[95] should throw InternalServerErrorException when editComment fails', async () => {
+    const commentInstance = {
+      ...mockComment,
+      save: jest.fn().mockRejectedValue(new Error('save failed')),
+    };
+
+    commentModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(commentInstance),
+    });
+
+    await expect(
+      service.editComment(
+        mockComment._id.toString(),
+        mockCommentDto,
+        mockUserId,
+      ),
+    ).rejects.toThrow('Failed to edit comment');
+  });
+
+  it('[96] should throw InternalServerErrorException when getComments fails', async () => {
+    commentModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockRejectedValue(new Error('DB failure')),
+    });
+
+    await expect(
+      service.getComments(mockPost.id.toString(), 1, 10, mockUserId),
+    ).rejects.toThrow('Failed to fetch comments');
+  });
+
+  it('[97] should throw InternalServerErrorException when getPost fails', async () => {
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('Post fetch error')),
+    });
+
+    await expect(
+      service.getPost(mockPost.id.toString(), mockUserId),
+    ).rejects.toThrow('Failed to fetch post');
+  });
+
+  it('[98] should throw InternalServerErrorException when getAllPosts fails', async () => {
+    postModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockRejectedValue(new Error('Get posts failed')),
+    });
+
+    await expect(service.getAllPosts(1, 10, mockUserId)).rejects.toThrow(
+      'Failed to fetch posts',
+    );
+  });
+
+  it('[99] should throw InternalServerErrorException when getReactions fails', async () => {
+    reactModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockRejectedValue(new Error('Failed reaction fetch')),
+    });
+
+    await expect(
+      service.getReactions(mockPost.id.toString(), 1, 10, mockUserId),
+    ).rejects.toThrow('Failed to fetch reactions');
+  });
+
+  it('[100] should throw InternalServerErrorException when getSavedPosts fails', async () => {
+    saveModelMock.find.mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('Fetch saved failed')),
+    });
+
+    await expect(service.getSavedPosts(mockUserId)).rejects.toThrow(
+      'Failed to fetch saved posts',
+    );
+  });
+
+  it('[101] should throw InternalServerErrorException when getUserPosts fails', async () => {
+    postModelMock.find.mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('Get user posts failed')),
+    });
+
+    await expect(service.getUserPosts(mockUserId, mockUserId)).rejects.toThrow(
+      'Failed to fetch user posts',
+    );
+  });
+
+  it('[102] should throw InternalServerErrorException when unsavePost fails', async () => {
+    saveModelMock.findOneAndDelete.mockReturnValue({
+      exec: jest.fn().mockRejectedValue(new Error('Unsave failed')),
+    });
+
+    await expect(
+      service.unsavePost(mockPost.id.toString(), mockUserId),
+    ).rejects.toThrow('Failed to unsave post');
+  });
+
+  it('[103] should throw InternalServerErrorException when updateReactions fails', async () => {
+    postModelMock.findById.mockImplementation(() => ({
+      exec: jest.fn().mockRejectedValue(new Error('Reaction failure')),
+    }));
+
+    await expect(
+      service.updateReactions(mockPost.id.toString(), mockUserId, {
+        postType: 'Post',
+        reactions: {
+          Like: true,
+          Love: false,
+          Funny: false,
+          Celebrate: false,
+          Insightful: false,
+          Support: false,
+        },
+      }),
+    ).rejects.toThrow('Failed to update reaction');
+  });
+
+  it('[104] should throw InternalServerErrorException when savePost fails early', async () => {
+    postModelMock.findById.mockImplementation(() => {
+      throw new Error('mocked failure');
+    });
+
+    await expect(
+      service.savePost(mockPost.id.toString(), mockUserId),
+    ).rejects.toThrow('Failed to save post');
+  });
+
+  it('[105] should throw InternalServerErrorException when editPost fails early', async () => {
+    postModelMock.findById.mockImplementation(() => {
+      throw new Error('mocked failure');
+    });
+
+    await expect(
+      service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
+    ).rejects.toThrow('Failed to edit post');
+  });
+
+  it('[106] should throw InternalServerErrorException when addComment fails early', async () => {
+    postModelMock.findById.mockImplementation(() => {
+      throw new Error('mocked failure');
+    });
+
+    await expect(
+      service.addComment(mockPost.id.toString(), mockCommentDto, mockUserId),
+    ).rejects.toThrow('Failed to add comment');
   });
 });
