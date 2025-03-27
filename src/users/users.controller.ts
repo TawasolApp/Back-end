@@ -20,9 +20,11 @@ export class UsersController {
 
   @Patch('request-email-update')
   @UseGuards(JwtAuthGuard)
-  async requestEmailUpdate(@Req() req, @Body() dto: UpdateEmailRequestDto) {
-  
-    return this.usersService.requestEmailUpdate(req.user.sub, dto);
+  async requestEmailUpdate(@Req() req: Request, @Body() dto: UpdateEmailRequestDto) {
+    if (!req.user || !req.user['sub']) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.usersService.requestEmailUpdate(req.user['sub'], dto);
   }
 
   @Get('confirm-email-change')

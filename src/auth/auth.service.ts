@@ -11,6 +11,9 @@ import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
+import { ResendConfirmationDto } from './dtos/resend-confirmation.dto';
+import { ForgotPasswordDto } from './dtos/forgot-password.dto';
+import { ResetPasswordDto } from './dtos/reset-password.dto';
 import {
   User,
   UserDocument,
@@ -18,8 +21,6 @@ import {
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
-import { OAuth2Client } from 'google-auth-library';
-const googleClient = new OAuth2Client();
 
 @Injectable()
 export class AuthService {
@@ -29,10 +30,14 @@ export class AuthService {
     private readonly mailerService: MailerService,
   ) {}
 
-  async register(registerDto: RegisterDto) {
+  /**
+   * Registers a new user by validating CAPTCHA, checking email availability, hashing the password, and sending a verification email.
+   * @param dto - Registration data
+   * @returns Success message
+   */
+  async register(dto: RegisterDto) {
     try {
-      const { firstName, lastName, email, password, captchaToken } =
-        registerDto;
+      const { firstName, lastName, email, password, captchaToken } = dto;
 
       const isCaptchaValid = await this.verifyCaptcha(captchaToken);
       if (!isCaptchaValid) throw new BadRequestException('Invalid CAPTCHA');
@@ -59,36 +64,39 @@ export class AuthService {
         message:
           'Registration successful. Please check your email to verify your account.',
       };
-    } catch (err) {
+    } catch (error) {
       if (
-        err instanceof ConflictException ||
-        err instanceof BadRequestException
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
       ) {
-        throw err; // Rethrow specific exceptions
+        throw error;
       }
-      throw new InternalServerErrorException(
-        err.message || 'Something went wrong',
-      );
+      throw new InternalServerErrorException('Unexpected error occurred');
     }
   }
 
-  async checkEmailAvailability(email: string) {
-    try {
-      const existingUser = await this.userModel.findOne({ email });
-      if (existingUser) throw new ConflictException('Email is already in use');
+  /**
+   * Checks if an email is available for registration.
+   * @param dto - Email data
+   * @returns Success message if available, otherwise throws ConflictException
+   */
+  async checkEmailAvailability(dto: { email: string }) {
+    const { email } = dto;
 
-      return { message: 'Email is available' };
-    } catch (err) {
-      if (err instanceof ConflictException) {
-        throw err; // Rethrow specific exceptions
-      }
-      throw new InternalServerErrorException(
-        'Server error while checking email',
-      );
-    }
+    const existingUser = await this.userModel.findOne({ email });
+    if (existingUser) throw new ConflictException('Email is already in use');
+
+    return { message: 'Email is available' };
   }
 
-  async login(email: string, password: string) {
+  /**
+   * Logs in a user by validating credentials.
+   * @param dto - Login data
+   * @returns Access and refresh tokens
+   */
+  async login(dto: LoginDto) {
+    const { email, password } = dto;
+
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('User not found');
 
@@ -105,23 +113,40 @@ export class AuthService {
     return { token: accessToken, refreshToken };
   }
 
+  /**
+   * Verifies a CAPTCHA token.
+   * @param token - CAPTCHA token
+   * @returns True if valid, otherwise false
+   */
   private async verifyCaptcha(token: string): Promise<boolean> {
     if (token === 'test-token') return true;
 
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
-    const response = await axios.post(
-      `https://www.google.com/recaptcha/api/siteverify`,
-      null,
-      { params: { secret: secretKey, response: token } },
-    );
+    try {
+      const response = await axios.post(
+        `https://www.google.com/recaptcha/api/siteverify`,
+        null,
+        { params: { secret: secretKey, response: token } },
+      );
 
-    return (
-      response.data.success &&
-      (!response.data.score || response.data.score > 0.5)
-    );
+      return (
+        response.data.success &&
+        (!response.data.score || response.data.score > 0.5)
+      );
+    } catch (error) {
+      console.error('Error verifying CAPTCHA:', error.message);
+      return false;
+    }
   }
 
-  async verifyEmail(token: string): Promise<{ message: string }> {
+  /**
+   * Verifies a user's email using a token.
+   * @param dto - Token data
+   * @returns Success message
+   */
+  async verifyEmail(dto: { token: string }) {
+    const { token } = dto;
+
     try {
       const decoded = this.jwtService.verify(token);
       const user = await this.userModel.findOne({ email: decoded.email });
@@ -138,7 +163,14 @@ export class AuthService {
     }
   }
 
-  async resendConfirmationEmail(email: string): Promise<{ message: string }> {
+  /**
+   * Resends a confirmation email to the user.
+   * @param dto - Email data
+   * @returns Success message
+   */
+  async resendConfirmationEmail(dto: ResendConfirmationDto) {
+    const { email } = dto;
+
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('Email not found');
     if (user.isVerified) return { message: 'Email is already verified' };
@@ -149,7 +181,14 @@ export class AuthService {
     return { message: 'Confirmation email resent' };
   }
 
-  async refreshToken(refreshToken: string) {
+  /**
+   * Refreshes an access token using a refresh token.
+   * @param dto - Refresh token data
+   * @returns New access token and the same refresh token
+   */
+  async refreshToken(dto: { refreshToken: string }) {
+    const { refreshToken } = dto;
+
     try {
       const decoded = this.jwtService.verify(refreshToken);
       const payload = { sub: decoded.sub };
@@ -163,7 +202,14 @@ export class AuthService {
     }
   }
 
-  async forgotPassword(email: string) {
+  /**
+   * Sends a password reset email to the user.
+   * @param dto - Email data
+   * @returns Success message
+   */
+  async forgotPassword(dto: ForgotPasswordDto) {
+    const { email } = dto;
+
     const user = await this.userModel.findOne({ email });
     if (user?.isVerified) {
       const token = this.jwtService.sign(
@@ -179,7 +225,14 @@ export class AuthService {
     };
   }
 
-  async resetPassword(token: string, newPassword: string) {
+  /**
+   * Resets the user's password using a token.
+   * @param dto - Token and new password data
+   * @returns Success message
+   */
+  async resetPassword(dto: ResetPasswordDto) {
+    const { token, newPassword } = dto;
+
     try {
       const { sub: userId } = await this.jwtService.verify(token);
       const user = await this.userModel.findById(userId);
@@ -201,7 +254,7 @@ export class AuthService {
         err instanceof BadRequestException ||
         err instanceof NotFoundException
       ) {
-        throw err; // Rethrow specific exceptions
+        throw err;
       }
       throw new BadRequestException('Invalid or expired token');
     }

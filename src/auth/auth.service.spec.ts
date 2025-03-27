@@ -14,13 +14,7 @@ import {
 } from '@nestjs/common';
 import axios from 'axios';
 
-jest.mock('google-auth-library', () => {
-  return {
-    OAuth2Client: jest.fn().mockImplementation(() => ({
-      verifyIdToken: jest.fn(),
-    })),
-  };
-});
+jest.mock('axios');
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -29,23 +23,22 @@ describe('AuthService', () => {
   let mailerService: MailerService;
 
   beforeEach(async () => {
-    const userModelMock = {
-      findOne: jest.fn(),
-      findById: jest.fn(),
-      save: jest.fn(),
-    };
-
-    const userModelClassMock = jest.fn().mockImplementation((userData) => ({
+    const userModelMock = jest.fn().mockImplementation((userData) => ({
       ...userData,
       save: jest.fn().mockResolvedValue(userData), // Mock save method
     }));
+
+    Object.assign(userModelMock, {
+      findOne: jest.fn(),
+      findById: jest.fn(),
+    });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         {
           provide: getModelToken(User.name),
-          useValue: Object.assign(userModelClassMock, userModelMock), // Combine class and static methods
+          useValue: userModelMock,
         },
         {
           provide: JwtService,
@@ -132,6 +125,22 @@ describe('AuthService', () => {
         }),
       ).rejects.toThrow(ConflictException);
     });
+
+    it('should throw InternalServerErrorException for unexpected errors', async () => {
+      jest.spyOn(userModel, 'findOne').mockImplementation(() => {
+        throw new Error('Unexpected error');
+      });
+
+      await expect(
+        service.register({
+          firstName: 'John',
+          lastName: 'Doe',
+          email: 'test@example.com',
+          password: 'password123',
+          captchaToken: 'test-token',
+        }),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
   });
 
   describe('login', () => {
@@ -145,7 +154,10 @@ describe('AuthService', () => {
       });
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true); // Mock valid password
 
-      const result = await service.login('test@example.com', 'password123');
+      const result = await service.login({
+        email: 'test@example.com',
+        password: 'password123',
+      });
 
       expect(result.token).toBe('test-token');
       expect(result.refreshToken).toBe('test-token');
@@ -160,7 +172,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false); // Mock invalid password
 
       await expect(
-        service.login('test@example.com', 'wrong-password'),
+        service.login({
+          email: 'test@example.com',
+          password: 'wrong-password',
+        }),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -173,7 +188,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true); // Mock valid password
 
       await expect(
-        service.login('test@example.com', 'password123'),
+        service.login({
+          email: 'test@example.com',
+          password: 'password123',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -186,15 +204,15 @@ describe('AuthService', () => {
         save: jest.fn(),
       });
 
-      const result = await service.verifyEmail('valid-token');
+      const result = await service.verifyEmail({ token: 'valid-token' }); // Pass an object with the 'token' property
 
       expect(result.message).toBe('Email verified successfully.');
     });
 
     it('should throw BadRequestException for invalid token', async () => {
-      await expect(service.verifyEmail('invalid-token')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.verifyEmail({ token: 'invalid-token' }), // Pass an object with the 'token' property
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if user is not found', async () => {
@@ -203,9 +221,9 @@ describe('AuthService', () => {
         .mockReturnValue({ email: 'test@example.com' });
       jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
 
-      await expect(service.verifyEmail('valid-token')).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.verifyEmail({ token: 'valid-token' }),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should return a message if email is already verified', async () => {
@@ -217,7 +235,7 @@ describe('AuthService', () => {
         isVerified: true,
       });
 
-      const result = await service.verifyEmail('valid-token');
+      const result = await service.verifyEmail({ token: 'valid-token' });
       expect(result.message).toBe('Email is already verified.');
     });
 
@@ -232,9 +250,32 @@ describe('AuthService', () => {
         .mockReturnValue({ email: 'test@example.com' });
       jest.spyOn(userModel, 'findOne').mockResolvedValue(mockUser);
 
-      const result = await service.verifyEmail('valid-token');
+      const result = await service.verifyEmail({ token: 'valid-token' });
       expect(result.message).toBe('Email verified successfully.');
       expect(mockUser.save).toHaveBeenCalled();
+    });
+
+    it('should throw BadRequestException for an expired token', async () => {
+      jest.spyOn(jwtService, 'verify').mockImplementation(() => {
+        throw new Error('Token expired');
+      });
+
+      await expect(
+        service.verifyEmail({ token: 'expired-token' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return a message if the user is already verified', async () => {
+      jest
+        .spyOn(jwtService, 'verify')
+        .mockReturnValue({ email: 'test@example.com' });
+      jest.spyOn(userModel, 'findOne').mockResolvedValue({
+        email: 'test@example.com',
+        isVerified: true,
+      });
+
+      const result = await service.verifyEmail({ token: 'valid-token' });
+      expect(result.message).toBe('Email is already verified.');
     });
   });
 
@@ -245,7 +286,9 @@ describe('AuthService', () => {
         isVerified: true,
       });
 
-      const result = await service.forgotPassword('test@example.com');
+      const result = await service.forgotPassword({
+        email: 'test@example.com',
+      });
 
       expect(result.message).toBe(
         'If an account with that email exists, a password reset link has been sent.',
@@ -259,11 +302,29 @@ describe('AuthService', () => {
     it('should not throw an error if user does not exist', async () => {
       jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
 
-      const result = await service.forgotPassword('nonexistent@example.com');
+      const result = await service.forgotPassword({
+        email: 'nonexistent@example.com',
+      });
 
       expect(result.message).toBe(
         'If an account with that email exists, a password reset link has been sent.',
       );
+    });
+
+    it('should not send a password reset email if the user is not verified', async () => {
+      jest.spyOn(userModel, 'findOne').mockResolvedValue({
+        email: 'test@example.com',
+        isVerified: false,
+      });
+
+      const result = await service.forgotPassword({
+        email: 'test@example.com',
+      });
+
+      expect(result.message).toBe(
+        'If an account with that email exists, a password reset link has been sent.',
+      );
+      expect(mailerService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
   });
 
@@ -276,7 +337,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true); // Mock same password comparison
 
       await expect(
-        service.resetPassword('valid-token', 'same-password'),
+        service.resetPassword({
+          token: 'valid-token',
+          newPassword: 'same-password',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -288,7 +352,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false); // Mock different password comparison
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('new-hashed-password');
 
-      const result = await service.resetPassword('valid-token', 'new-password');
+      const result = await service.resetPassword({
+        token: 'valid-token',
+        newPassword: 'new-password',
+      });
 
       expect(result.message).toBe('Password reset successfully');
     });
@@ -299,7 +366,10 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.resetPassword('invalid-token', 'new-password'),
+        service.resetPassword({
+          token: 'invalid-token',
+          newPassword: 'new-password',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -308,7 +378,10 @@ describe('AuthService', () => {
       jest.spyOn(userModel, 'findById').mockResolvedValue(null);
 
       await expect(
-        service.resetPassword('valid-token', 'new-password'),
+        service.resetPassword({
+          token: 'valid-token',
+          newPassword: 'new-password',
+        }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -321,7 +394,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true);
 
       await expect(
-        service.resetPassword('valid-token', 'same-password'),
+        service.resetPassword({
+          token: 'valid-token',
+          newPassword: 'same-password',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -334,7 +410,10 @@ describe('AuthService', () => {
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(false);
       jest.spyOn(bcrypt, 'hash').mockResolvedValue('new-hashed-password');
 
-      const result = await service.resetPassword('valid-token', 'new-password');
+      const result = await service.resetPassword({
+        token: 'valid-token',
+        newPassword: 'new-password',
+      });
       expect(result.message).toBe('Password reset successfully');
     });
   });
@@ -344,7 +423,9 @@ describe('AuthService', () => {
       jest.spyOn(jwtService, 'verify').mockReturnValue({ sub: 'userId' });
       jest.spyOn(jwtService, 'sign').mockReturnValue('new-access-token');
 
-      const result = await service.refreshToken('valid-refresh-token');
+      const result = await service.refreshToken({
+        refreshToken: 'valid-refresh-token',
+      });
       expect(result).toEqual({
         token: 'new-access-token',
         refreshToken: 'valid-refresh-token',
@@ -357,7 +438,18 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.refreshToken('invalid-refresh-token'),
+        service.refreshToken({ refreshToken: 'invalid-refresh-token' }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if signing a new token fails', async () => {
+      jest.spyOn(jwtService, 'verify').mockReturnValue({ sub: 'userId' });
+      jest.spyOn(jwtService, 'sign').mockImplementation(() => {
+        throw new Error('Signing error');
+      });
+
+      await expect(
+        service.refreshToken({ refreshToken: 'valid-refresh-token' }),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -384,7 +476,9 @@ describe('AuthService', () => {
     it('should return a message if the email is available', async () => {
       jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
 
-      const result = await service.checkEmailAvailability('test@example.com');
+      const result = await service.checkEmailAvailability({
+        email: 'test@example.com',
+      }); // Pass an object
       expect(result).toEqual({ message: 'Email is available' });
     });
 
@@ -394,7 +488,7 @@ describe('AuthService', () => {
         .mockResolvedValue({ email: 'test@example.com' });
 
       await expect(
-        service.checkEmailAvailability('test@example.com'),
+        service.checkEmailAvailability({ email: 'test@example.com' }), // Pass an object
       ).rejects.toThrow(ConflictException);
     });
   });
@@ -404,7 +498,7 @@ describe('AuthService', () => {
       jest.spyOn(userModel, 'findOne').mockResolvedValue(null);
 
       await expect(
-        service.resendConfirmationEmail('nonexistent@example.com'),
+        service.resendConfirmationEmail({ email: 'nonexistent@example.com' }),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -414,7 +508,10 @@ describe('AuthService', () => {
         isVerified: true,
       });
 
-      const result = await service.resendConfirmationEmail('test@example.com');
+      const result = await service.resendConfirmationEmail({
+        email: 'test@example.com',
+      });
+
       expect(result).toEqual({ message: 'Email is already verified' });
     });
 
@@ -425,7 +522,10 @@ describe('AuthService', () => {
       });
       jest.spyOn(jwtService, 'sign').mockReturnValue('test-token');
 
-      const result = await service.resendConfirmationEmail('test@example.com');
+      const result = await service.resendConfirmationEmail({
+        email: 'test@example.com',
+      });
+
       expect(result).toEqual({ message: 'Confirmation email resent' });
       expect(mailerService.sendVerificationEmail).toHaveBeenCalledWith(
         'test@example.com',
@@ -435,7 +535,7 @@ describe('AuthService', () => {
   });
 
   describe('verifyCaptcha', () => {
-    it('should return true for a valid CAPTCHA token', async () => {
+    it('should return true for a valid CAPTCHA token with a high score', async () => {
       jest
         .spyOn(axios, 'post')
         .mockResolvedValue({ data: { success: true, score: 0.9 } });
@@ -444,10 +544,26 @@ describe('AuthService', () => {
       expect(result).toBe(true);
     });
 
+    it('should return false for a valid CAPTCHA token with a low score', async () => {
+      jest
+        .spyOn(axios, 'post')
+        .mockResolvedValue({ data: { success: true, score: 0.4 } });
+
+      const result = await service['verifyCaptcha']('valid-captcha-token');
+      expect(result).toBe(false);
+    });
+
     it('should return false for an invalid CAPTCHA token', async () => {
       jest.spyOn(axios, 'post').mockResolvedValue({ data: { success: false } });
 
       const result = await service['verifyCaptcha']('invalid-captcha-token');
+      expect(result).toBe(false);
+    });
+
+    it('should handle errors from the CAPTCHA verification API', async () => {
+      jest.spyOn(axios, 'post').mockRejectedValue(new Error('API error'));
+
+      const result = await service['verifyCaptcha']('captcha-token');
       expect(result).toBe(false);
     });
   });

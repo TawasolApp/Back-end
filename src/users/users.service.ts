@@ -6,12 +6,11 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { User, UserDocument } from './infrastructure/database/user.schema';
 import { UpdateEmailRequestDto } from './dtos/update-email-request.dto';
 import { UpdatePasswordDto } from './dtos/update-password.dto';
-import { Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { MailerService } from '../common/services/mailer.service';
 
@@ -23,6 +22,13 @@ export class UsersService {
     private readonly mailerService: MailerService,
   ) {}
 
+  /**
+   * Handles a user's request to update their email.
+   * Validates the user's password, checks if the new email is available, and sends a confirmation email.
+   * @param userId - The ID of the user requesting the email update
+   * @param dto - The email update request data
+   * @returns A success message
+   */
   async requestEmailUpdate(userId: string, dto: UpdateEmailRequestDto) {
     const { newEmail, password } = dto;
     const user = await this.userModel.findById(userId);
@@ -45,6 +51,12 @@ export class UsersService {
     return { message: 'Please check your new email to confirm the change.' };
   }
 
+  /**
+   * Confirms a user's email change using a token.
+   * Updates the user's email if the token is valid.
+   * @param token - The email change confirmation token
+   * @returns A success message
+   */
   async confirmEmailChange(token: string) {
     try {
       const { userId, newEmail } = this.jwtService.verify(token);
@@ -56,14 +68,23 @@ export class UsersService {
 
       return { message: 'Email updated successfully.' };
     } catch (err) {
-      if (err instanceof NotFoundException) throw err;
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
       throw new BadRequestException('Invalid or expired token');
     }
   }
 
-  async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
-    const { currentPassword, newPassword } = updatePasswordDto;
-    const user = await this.userModel.findById(userId); // Removed Types.ObjectId conversion
+  /**
+   * Updates a user's password.
+   * Validates the current password and ensures the new password is different.
+   * @param userId - The ID of the user updating their password
+   * @param dto - The password update data
+   * @returns A success message
+   */
+  async updatePassword(userId: string, dto: UpdatePasswordDto) {
+    const { currentPassword, newPassword } = dto;
+    const user = await this.userModel.findById(new Types.ObjectId(userId));
     if (!user) throw new NotFoundException('User not found');
 
     if (!(await bcrypt.compare(currentPassword, user.password))) {
@@ -82,6 +103,11 @@ export class UsersService {
     return { message: 'Password updated successfully' };
   }
 
+  /**
+   * Finds a user by their email address.
+   * @param email - The email address to search for
+   * @returns The user document if found, or null if not found
+   */
   async findByEmail(email: string): Promise<UserDocument | null> {
     try {
       return await this.userModel.findOne({ email });
@@ -90,4 +116,3 @@ export class UsersService {
     }
   }
 }
-
