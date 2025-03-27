@@ -6,18 +6,20 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  // Enable global validation pipes
   app.useGlobalPipes(new ValidationPipe());
 
+  // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('Tawasol API')
-    .setDescription('API Documentation for Tawasol App - Linkedin Clone')
+    .setTitle('User Profile API')
+    .setDescription('API documentation for Module 2 (User Profile)')
     .setVersion('1.0.0')
-    .addBearerAuth()
+    .addBearerAuth() // Add Bearer token authentication
     .build();
-
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api-docs', app, document); // Swagger UI available at /api-docs
 
+  // Start the application
   await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
