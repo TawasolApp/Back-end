@@ -85,7 +85,12 @@ describe('PostsController', () => {
   ];
 
   const reqWithoutUser = {} as any;
-
+  for (const { name, args } of methods) {
+    it(`should call ${name}`, async () => {
+      await controller[name](...args);
+      expect(service[name]).toHaveBeenCalled();
+    });
+  }
   it('addPost should throw UnauthorizedException if user is missing', async () => {
     await expect(
       controller.addPost({ content: 'test' }, reqWithoutUser),
