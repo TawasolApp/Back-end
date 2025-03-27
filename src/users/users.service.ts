@@ -41,7 +41,7 @@ export class UsersService {
     if (await this.userModel.findOne({ email: newEmail })) {
       throw new ConflictException('Email already exists');
     }
-
+    
     const token = this.jwtService.sign(
       { userId, newEmail },
       { expiresIn: '1h' },

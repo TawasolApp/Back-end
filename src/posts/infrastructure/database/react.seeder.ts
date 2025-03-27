@@ -16,6 +16,10 @@ import {
 } from '../../../posts/infrastructure/database/post.schema';
 import { faker } from '@faker-js/faker';
 import { Comment, CommentDocument } from './comment.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from '../../../profiles/infrastructure/database/profile.schema';
 
 @Injectable()
 export class ReactSeeder {
@@ -25,13 +29,11 @@ export class ReactSeeder {
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
   ) {}
 
   async seedReacts(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
+    const users = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
     const posts = await this.postModel.find().select('_id').lean();
 
@@ -74,8 +76,10 @@ export class ReactSeeder {
         react_type: faker.helpers.arrayElement([
           'Like',
           'Love',
-          'Laugh',
-          'Clap',
+          'Funny',
+          'Celebrate',
+          'Insightful',
+          'Support',
         ]),
         post_type: 'Post',
       });
@@ -129,8 +133,10 @@ export class ReactSeeder {
         react_type: faker.helpers.arrayElement([
           'Like',
           'Love',
-          'Laugh',
-          'Clap',
+          'Funny',
+          'Celebrate',
+          'Insightful',
+          'Support',
         ]),
         post_type: 'Comment',
       });

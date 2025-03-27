@@ -18,6 +18,7 @@ import { APP_PIPE } from '@nestjs/core';
     MongooseModule.forFeature([
       { name: UserConnection.name, schema: UserConnectionSchema },
     ]),
+    AuthModule,
     UsersModule,
     AuthModule,
     forwardRef(() => ProfilesModule),
