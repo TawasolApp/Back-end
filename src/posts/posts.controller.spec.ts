@@ -84,19 +84,6 @@ describe('PostsController', () => {
     { name: 'deleteComment', args: ['888', { user: mockRequest.user }] },
   ];
 
-  for (const { name, args } of methods) {
-    it(`should call ${name}`, async () => {
-      await controller[name](...args);
-      expect(service[name]).toHaveBeenCalled();
-    });
-
-    it(`should throw InternalServerErrorException in ${name}`, async () => {
-      service[name].mockRejectedValueOnce(new Error('unexpected'));
-      await expect(controller[name](...args)).rejects.toThrow(
-        InternalServerErrorException,
-      );
-    });
-  }
   const reqWithoutUser = {} as any;
 
   it('addPost should throw UnauthorizedException if user is missing', async () => {

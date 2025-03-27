@@ -39,14 +39,9 @@ export class PostsController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async addPost(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      const userId = req.user['sub'];
-      return await this.postsService.addPost(createPostDto, userId);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to create post');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    const userId = req.user['sub'];
+    return await this.postsService.addPost(createPostDto, userId);
   }
 
   @Get()
@@ -56,13 +51,8 @@ export class PostsController {
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.getAllPosts(page, limit, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to fetch posts');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getAllPosts(page, limit, req.user['sub']);
   }
 
   @Post('react/:postId')
@@ -72,18 +62,13 @@ export class PostsController {
     @Body() updateReactionsDto: UpdateReactionsDto,
     @Req() req: Request,
   ) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      const userIdFromToken = req.user['sub'];
-      return await this.postsService.updateReactions(
-        postId,
-        userIdFromToken,
-        updateReactionsDto,
-      );
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to update reaction');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    const userIdFromToken = req.user['sub'];
+    return await this.postsService.updateReactions(
+      postId,
+      userIdFromToken,
+      updateReactionsDto,
+    );
   }
 
   @Get('reactions/:postId')
@@ -94,18 +79,13 @@ export class PostsController {
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<ReactionDto[]> {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.getReactions(
-        postId,
-        page,
-        limit,
-        req.user['sub'],
-      );
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to fetch reactions');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getReactions(
+      postId,
+      page,
+      limit,
+      req.user['sub'],
+    );
   }
 
   @Get('comments/:postId')
@@ -116,42 +96,27 @@ export class PostsController {
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetCommentDto[]> {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.getComments(
-        postId,
-        page,
-        limit,
-        req.user['sub'],
-      );
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to fetch comments');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getComments(
+      postId,
+      page,
+      limit,
+      req.user['sub'],
+    );
   }
 
   @Post('save/:postId')
   @HttpCode(HttpStatus.OK)
   async savePost(@Param('postId') postId: string, @Req() req: Request) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.savePost(postId, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to save post');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.savePost(postId, req.user['sub']);
   }
 
   @Get('saved')
   @HttpCode(HttpStatus.OK)
   async getSavedPosts(@Req() req: Request): Promise<GetPostDto[]> {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.getSavedPosts(req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to fetch saved posts');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getSavedPosts(req.user['sub']);
   }
 
   @Post('comment/:postId')
@@ -161,41 +126,26 @@ export class PostsController {
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request,
   ) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.addComment(
-        postId,
-        createCommentDto,
-        req.user['sub'],
-      );
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to add comment');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.addComment(
+      postId,
+      createCommentDto,
+      req.user['sub'],
+    );
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   async getPost(@Param('id') id: string, @Req() req: Request) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.getPost(id, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to fetch post');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getPost(id, req.user['sub']);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deletePost(@Param('id') id: string, @Req() req: Request) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      await this.postsService.deletePost(id, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to delete post');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    await this.postsService.deletePost(id, req.user['sub']);
   }
 
   @Patch(':id')
@@ -205,13 +155,8 @@ export class PostsController {
     @Body() editPostDto: EditPostDto,
     @Req() req: Request,
   ) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.editPost(id, editPostDto, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to edit post');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.editPost(id, editPostDto, req.user['sub']);
   }
 
   @Get('user/:userId')
@@ -220,28 +165,18 @@ export class PostsController {
     @Param('userId') searchedUserId: string,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.getUserPosts(
-        searchedUserId,
-        req.user['sub'],
-      );
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to fetch user posts');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getUserPosts(
+      searchedUserId,
+      req.user['sub'],
+    );
   }
 
   @Delete('save/:postId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async unsavePost(@Param('postId') postId: string, @Req() req: Request) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      await this.postsService.unsavePost(postId, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to unsave post');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    await this.postsService.unsavePost(postId, req.user['sub']);
   }
 
   @Patch('comment/:commentId')
@@ -251,17 +186,12 @@ export class PostsController {
     @Body() editCommentDto: EditCommentDto,
     @Req() req: Request,
   ) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      return await this.postsService.editComment(
-        commentId,
-        editCommentDto,
-        req.user['sub'],
-      );
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to edit comment');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.editComment(
+      commentId,
+      editCommentDto,
+      req.user['sub'],
+    );
   }
 
   @Delete('comment/:commentId')
@@ -270,12 +200,7 @@ export class PostsController {
     @Param('commentId') commentId: string,
     @Req() req: Request,
   ) {
-    try {
-      if (!req.user) throw new UnauthorizedException('User not authenticated');
-      await this.postsService.deleteComment(commentId, req.user['sub']);
-    } catch (error) {
-      if (error instanceof HttpException) throw error;
-      throw new InternalServerErrorException('Failed to delete comment');
-    }
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    await this.postsService.deleteComment(commentId, req.user['sub']);
   }
 }
