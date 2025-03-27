@@ -11,10 +11,14 @@ import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConnectionsModule } from '../connections/connections.module';
+import { User, UserSchema } from '../users/infrastructure/database/user.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: Profile.name, schema: ProfileSchema }]),
+    MongooseModule.forFeature([
+      { name: Profile.name, schema: ProfileSchema },
+      { name: User.name, schema: UserSchema },
+    ]),
     AuthModule,
     UsersModule, 
     ConnectionsModule,
@@ -26,5 +30,6 @@ import { ConnectionsModule } from '../connections/connections.module';
   providers: [ProfileSeeder, ProfilesService],
   exports: [ProfileSeeder],
   controllers: [ProfilesController],
+
 })
 export class ProfilesModule {}
