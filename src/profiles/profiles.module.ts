@@ -28,7 +28,7 @@ import { User, UserSchema } from '../users/infrastructure/database/user.schema';
     }),
   ],
   providers: [ProfileSeeder, ProfilesService],
-  exports: [ProfileSeeder],
+  exports: [ProfileSeeder,MongooseModule],
   controllers: [ProfilesController],
 
 })
