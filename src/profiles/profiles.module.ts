@@ -20,16 +20,17 @@ import { User, UserSchema } from '../users/infrastructure/database/user.schema';
       { name: User.name, schema: UserSchema },
     ]),
     AuthModule,
-    UsersModule, 
+    UsersModule,
     ConnectionsModule,
     JwtModule.register({
-      secret: process.env.JWT_SECRET ||'4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
+      secret:
+        process.env.JWT_SECRET ||
+        '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
       signOptions: { expiresIn: '1h' },
     }),
   ],
   providers: [ProfileSeeder, ProfilesService],
-  exports: [ProfileSeeder],
+  exports: [MongooseModule, ProfileSeeder],
   controllers: [ProfilesController],
-
 })
 export class ProfilesModule {}
