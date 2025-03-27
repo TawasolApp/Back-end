@@ -324,21 +324,19 @@ export class PostsService {
       }
 
       const objectIdUserId = new Types.ObjectId(userId);
-      let count = 0;
+      const objectIdPostId = new Types.ObjectId(postId);
 
-      for (const reaction in updateReactionsDto.reactions) {
-        if (updateReactionsDto.reactions[reaction] === true) {
-          count++;
-        }
-      }
+      const reactions = updateReactionsDto.reactions;
+      const reactionTypes = Object.entries(reactions).filter(
+        ([, value]) => value === true,
+      );
 
-      if (count > 1) {
+      if (reactionTypes.length > 1) {
         throw new BadRequestException('Only one reaction is allowed');
       }
 
       let post: PostDocument | null = null;
       let comment: CommentDocument | null = null;
-      const objectIdPostId = new Types.ObjectId(postId);
 
       if (updateReactionsDto.postType === 'Post') {
         post = await this.postModel.findById(objectIdPostId).exec();
@@ -352,13 +350,12 @@ export class PostsService {
         }
       }
 
-      const reactions = updateReactionsDto.reactions;
-      for (const [reactionType, value] of Object.entries(reactions)) {
-        const reactorProfile = await this.profileModel
-          .findById(objectIdUserId)
-          .exec();
-        const reactorType = reactorProfile ? 'User' : 'Company';
+      const reactorProfile = await this.profileModel
+        .findById(objectIdUserId)
+        .exec();
+      const reactorType = reactorProfile ? 'User' : 'Company';
 
+      for (const [reactionType, value] of Object.entries(reactions)) {
         if (value) {
           const existingReaction = await this.reactModel
             .findOne({
@@ -390,17 +387,17 @@ export class PostsService {
             }
 
             await newReaction.save();
-          } else {
-            if (existingReaction.react_type !== reactionType) {
-              if (post) {
-                post.react_count[existingReaction.react_type]--;
-                post.react_count[reactionType] =
-                  (post.react_count[reactionType] || 0) + 1;
-                await post.save();
-              }
-              existingReaction.react_type = reactionType;
-              await existingReaction.save();
+          } else if (existingReaction.react_type !== reactionType) {
+            if (post) {
+              post.react_count[existingReaction.react_type] =
+                (post.react_count[existingReaction.react_type] || 1) - 1;
+              post.react_count[reactionType] =
+                (post.react_count[reactionType] || 0) + 1;
+              await post.save();
             }
+
+            existingReaction.react_type = reactionType;
+            await existingReaction.save();
           }
         } else {
           const existingReaction = await this.reactModel
@@ -418,7 +415,8 @@ export class PostsService {
               .exec();
 
             if (post) {
-              post.react_count[reactionType]--;
+              post.react_count[reactionType] =
+                (post.react_count[reactionType] || 1) - 1;
               await post.save();
             }
 
@@ -429,15 +427,9 @@ export class PostsService {
           }
         }
       }
-
-      let returned;
-      if (post) {
-        returned = post;
-      }
-      if (comment) {
-        returned = comment;
-      }
-      return returned;
+      if (post) return post;
+      if (comment) return comment;
+      throw new InternalServerErrorException('Failed to update reaction');
     } catch (error) {
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Failed to update reaction');
