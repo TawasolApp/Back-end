@@ -32,7 +32,7 @@ async function bootstrap() {
   await userConnectionSeeder.seedUserConnections(5);
   await profileSeeder.updateConnectionCounts();
   await companySeeder.clearCompanies();
-  await companySeeder.seedCompanies(10);
+  await companySeeder.seedCompanies(15);
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(5);
 

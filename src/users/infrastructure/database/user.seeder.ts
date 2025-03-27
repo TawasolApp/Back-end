@@ -27,9 +27,8 @@ export class UserSeeder {
     }
 
     const inserted = await this.userModel.insertMany(users);
-    console.log(`✅ ${inserted.length} users seeded successfully.`);
+  
 
-    // Log each user's _id and email for verification
     inserted.forEach((user) => {
       console.log(`🆔 User ID: ${user._id} | 📧 Email: ${user.email}`);
     });
