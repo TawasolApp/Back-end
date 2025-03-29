@@ -23,7 +23,10 @@ export class React {
   @Prop({ enum: ['Post', 'Comment'] })
   post_type: string;
 
-  @Prop({ enum: ['Like', 'Love', 'Laugh', 'Clap'], required: true })
+  @Prop({
+    enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support'],
+    required: true,
+  })
   react_type: string;
 }
 

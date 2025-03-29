@@ -35,11 +35,11 @@ Create a `.env` file in the root directory and add the following:
 
 ```env
 PORT=3000
-MONGO_URI=mongodb://localhost:27017/tawasolapp
+MONGO_URI=mongodb+srv://noorahmedalhadidi:mongodbatlaspassword@tawasolcluster.5irka.mongodb.net/TawasolDB?retryWrites=true&w=majority&appName=TawasolCluster
 JWT_SECRET=4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4
 EMAIL_USER=noreply.tawasolapp@gmail.com
 EMAIL_PASS=gknjkmsddprpcanb
-RECAPTCHA_SECRET_KEY= 6LdMDv0qAAAAAH2f77XnX3AN3RO01m26yTNTUUWR
+RECAPTCHA_SECRET_KEY=6LdMDv0qAAAAAH2f77XnX3AN3RO01m26yTNTUUWR
 ```
 
 ### 4. Run the application:
@@ -76,6 +76,20 @@ To populate the database with test data, run the following command:
 
 ```sh
 ts-node src/seed.ts
+```
+
+## Running Unit Tests
+
+To run unit test files using jest:
+
+```sh
+npm run test
+```
+
+To check unit test coverage:
+
+```sh
+npm run test:cov
 ```
 
 ## API Documentation
@@ -144,10 +158,6 @@ Each commit message should follow this format:
  │   ├── guards/
  │   ├── interceptors/
  │   ├── utils/
- ├── config/
- │   ├── database.ts
- │   ├── jwt.ts
- │   ├── swagger.ts
  ├── main.ts
  ├── seed.ts
  ├── app.module.ts
@@ -165,6 +175,13 @@ Each commit message should follow this format:
 | Constants                   | UPPER_SNAKE_CASE  |
 | Database Collections        | PascalCase        |
 | Database Collections Fields | snake_case        |
+
+Examples:
+
+camelCase
+PascalCase
+snake_case
+kebab-case
 
 ## Additional Notes
 
