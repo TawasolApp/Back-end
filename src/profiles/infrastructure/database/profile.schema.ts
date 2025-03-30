@@ -14,7 +14,7 @@ export class Skill {
 
 @Schema({ _id: false })
 export class Education {
-  @Prop({ type: Types.ObjectId,  default: () => new Types.ObjectId()})
+  @Prop({ type: Types.ObjectId, required: true })
   _id: Types.ObjectId;
 
   @Prop({ required: true })
@@ -41,7 +41,7 @@ export class Education {
 
 @Schema({ _id: false })
 export class Certification {
-  @Prop({ type: Types.ObjectId,  default: () => new Types.ObjectId()})
+  @Prop({ type: Types.ObjectId, required: true })
   _id: Types.ObjectId;
 
   @Prop({ required: true })

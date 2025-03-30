@@ -5,16 +5,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Profile } from './infrastructure/database/profile.schema';
+import { Education, Profile } from './infrastructure/database/profile.schema';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import {
+  toCreateCertificationSchema,
+  toCreateEducationSchema,
   toCreateProfileSchema,
+  toCreateSkillSchema,
   toGetProfileDto,
+  toUpdateEducationSchema,
   toUpdateProfileSchema,
 } from './dto/profile.mapper';
+import { EducationDto } from './dto/education.dto';
+import { CertificationDto } from './dto/certification.dto';
 
 @Injectable()
 export class ProfilesService {
@@ -178,11 +184,12 @@ export class ProfilesService {
     ) {
       throw new ConflictException(`Skill '${skill.skillName}' already exists`);
     }
+    const newSkill = toCreateSkillSchema(skill);
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id) },
       {
         $addToSet: {
-          skills: { skill_name: skill.skillName, endorsements: [] },
+          skills: newSkill,
         },
       },
       { new: true, runValidators: true },
@@ -210,6 +217,118 @@ export class ProfilesService {
     );
     if (!updatedProfile) {
       throw new NotFoundException(`Skill '${skillName}' not found in profile`);
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async addEducation(education: EducationDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+    const newEducation = toCreateEducationSchema(education);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id) },
+      {
+        $addToSet: {
+          education: newEducation,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Updated Profile not found');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+
+  async editEducation(
+    education: Partial<EducationDto>,
+    id: Types.ObjectId,
+    educationId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found 1');
+    }
+    if (!(profile.education?.some(e => e._id.toString() === educationId.toString()))) {
+      throw new NotFoundException(`Education entry with ID ${educationId} not found in profile`);
+    }
+    const updateData = toUpdateEducationSchema(education);
+    console.log('editEducation service data id: ' + updateData.degree);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'education._id': new Types.ObjectId(educationId) }, // Find profile and specific education entry
+      { 
+        $set: { 
+          'education.$.school': updateData.school,
+        'education.$.degree': updateData.degree,
+        'education.$.field': updateData.field,
+        'education.$.start_date': updateData.start_date,
+        'education.$.end_date': updateData.end_date,
+        'education.$.grade': updateData.grade,
+        'education.$.description': updateData.description
+        } 
+      },
+      { new: true, runValidators: true }
+    );
+  
+    
+    console.log('editEducation service updated profile: ' + updatedProfile);
+    if (!updatedProfile) {
+      throw new NotFoundException('Education not found in profile');
+    }
+  
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async deleteEducation(educationId: Types.ObjectId, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'education._id': educationId },
+      { $pull: { education: { _id: educationId } } },
+      { new: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Education not found in profile');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async addCertification(certification: CertificationDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const newCertification = toCreateCertificationSchema(certification);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id) },
+      {
+        $addToSet: {
+          certification: newCertification,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Updated Profile not found');
     }
     return toGetProfileDto(updatedProfile);
   }

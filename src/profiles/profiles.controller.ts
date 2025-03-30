@@ -22,6 +22,9 @@ import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EducationDto } from './dto/education.dto';
+import { ApiBody } from '@nestjs/swagger';
+import { CertificationDto } from './dto/certification.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
@@ -250,6 +253,74 @@ export class ProfilesController {
       return await this.profilesService.deleteSkill(skillName, req.user.sub);
     } catch (error) {
       this.handleException(error, `Failed to delete skill: ${skillName}`);
+    }
+  }
+
+  @Post('education')
+  @UsePipes(new ValidationPipe())
+
+  async addEducation(@Req() req, @Body() education: EducationDto) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.addEducation(education, req.user.sub);
+    } catch (error) {
+      this.handleException(error, 'Failed to add education.');
+    }
+  }
+
+  @Patch('education/:education_id')
+  @UsePipes(new ValidationPipe())
+  @ApiBody({ type: EducationDto, description: 'Fields to update', isArray: false })
+  async editEducation(
+    @Req() req,
+    @Body() updateEducationDto: Partial<EducationDto>,
+    @Param('education_id') educationId: Types.ObjectId,
+  ) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.editEducation(
+        updateEducationDto,
+        req.user.sub,
+        educationId,
+      );
+    } catch (error) {
+      this.handleException(error, `Failed to edit education.`);
+    }
+  }
+
+  @Delete('education/:education_id')
+  @UsePipes(new ValidationPipe())
+  async deleteEducation(
+    @Req() req,
+    @Param('education_id') educationId: string,
+  ) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteEducation(
+        new Types.ObjectId(educationId),
+        req.user.sub,
+      );
+    } catch (error) {
+      this.handleException(error, `Failed to delete education.`);
+    }
+  }
+
+  @Post('certifications')
+  @UsePipes(new ValidationPipe())
+  async addCertification(@Req() req, @Body() certification: CertificationDto) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.addCertification(certification, req.user.sub);
+    } catch (error) {
+      this.handleException(error, 'Failed to add certification.');
     }
   }
 }
