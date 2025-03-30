@@ -3,6 +3,8 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { SkillDto } from './skill.dto';
 import { Types } from 'mongoose';
+import { Skill } from '../infrastructure/database/profile.schema';
+import { CertificationDto } from './certification.dto';
 
 
 
@@ -217,8 +219,8 @@ export class GetProfileDto {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Certification)
-  certifications?: Certification[];
+  @Type(() => CertificationDto)
+  certification?: CertificationDto[];
 
   @ApiPropertyOptional({ description: 'Work experience', type: [WorkExperience] })
   @IsOptional()

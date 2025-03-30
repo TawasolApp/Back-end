@@ -1,21 +1,22 @@
 import { Types } from 'mongoose';
-import {
-  Profile,
- 
-} from '../infrastructure/database/schemas/profile.schema';
+import { Education, Profile } from '../infrastructure/database/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
 import { GetProfileDto } from './get-profile.dto';
 
 import { UpdateProfileDto } from './update-profile.dto';
+import { EducationDto } from './education.dto';
+import { SkillDto } from './skill.dto';
+import { CertificationDto } from './certification.dto';
 
 /**
  * Maps CreateProfileDto to the Profile schema.
  */
-export function toCreateProfileSchema(id: Types.ObjectId,
+export function toCreateProfileSchema(
+  id: Types.ObjectId,
   createProfileDto: Partial<CreateProfileDto>,
-){
+) {
   return {
-    _id:new Types.ObjectId(id),
+    _id: new Types.ObjectId(id),
     name: createProfileDto.name,
     profile_picture: createProfileDto.profilePicture,
     cover_photo: createProfileDto.coverPhoto,
@@ -27,7 +28,7 @@ export function toCreateProfileSchema(id: Types.ObjectId,
 
     skills: createProfileDto.skills?.map((skillDto) => ({
       skill_name: skillDto.skillName,
-      endorsements: skillDto.endorsements || [],
+      endorsements: [] as Types.ObjectId[],
     })),
 
     education:
@@ -42,7 +43,7 @@ export function toCreateProfileSchema(id: Types.ObjectId,
       })) ?? [],
 
     certification:
-      createProfileDto.certifications?.map((cert) => ({
+      createProfileDto.certification?.map((cert) => ({
         name: cert?.name ?? null,
         company: cert?.company ?? null,
         issue_date: cert?.issueDate ? new Date(cert.issueDate) : new Date(),
@@ -84,7 +85,6 @@ export function toUpdateProfileSchema(
     ...(updateProfileDto.resume && { resume: updateProfileDto.resume }),
     ...(updateProfileDto.headline && { headline: updateProfileDto.headline }),
 
-
     ...(updateProfileDto.visibility && {
       visibility: updateProfileDto.visibility,
     }),
@@ -123,12 +123,12 @@ export function toUpdateProfileSchema(
         description: education?.description ?? null,
       })) ?? [],
 
-    certifications:
+    certification:
       profile.certification?.map((cert) => ({
         _id: cert?._id ?? null,
         name: cert?.name ?? null,
         company: cert?.company ?? null,
-        issueDate: cert?.issue_date?.toISOString() ?? null,
+        issueDate: cert?.issue_date ?? null,
       })) ?? [],
 
     workExperience:
@@ -146,5 +146,64 @@ export function toUpdateProfileSchema(
 
     visibility: profile.visibility ?? 'public', // Defaulting to 'public'
     connectionCount: profile.connection_count ?? 0, // Defaulting to 0
+  };
+}
+
+/**
+ * Maps the EducationDto to the education schema.
+ */
+export function toCreateEducationSchema(educationDto: Partial<EducationDto>) {
+  return {
+    _id: new Types.ObjectId(),
+    school: educationDto.school,
+    degree: educationDto.degree,
+    field: educationDto.field,
+    start_date: educationDto.startDate,
+    end_date: educationDto.endDate,
+    grade: educationDto.grade,
+    description: educationDto.description,
+  };
+}
+
+/**
+ * Maps Partial<EducationDto> to the education schema for updates.
+ */
+export function toUpdateEducationSchema(
+  educationDto: Partial<EducationDto>
+): Partial<Education> {
+  return {
+    ...(educationDto.school && { school: educationDto.school }),
+    ...(educationDto.degree && { degree: educationDto.degree }),
+    ...(educationDto.field && { field: educationDto.field }),
+    ...(educationDto.startDate && { start_date: educationDto.startDate }),
+    ...(educationDto.endDate && { end_date: educationDto.endDate }),
+    ...(educationDto.grade && { grade: educationDto.grade }),
+    ...(educationDto.description && { description: educationDto.description }),
+  };
+}
+
+
+/**
+ * Maps the EducationDto to the education schema.
+ */
+export function toCreateSkillSchema(skillDto: Partial<SkillDto>) {
+  return {
+    skill_name: skillDto.skillName,
+    endorsements: [] as Types.ObjectId[],
+
+  };
+}
+
+
+/**
+ * Maps the CertificationDto to the Certification schema.
+ */
+export function toCreateCertificationSchema(
+  certificationDto: Partial<CertificationDto>,) {
+  return {
+    _id: new Types.ObjectId(),
+    name: certificationDto.name,
+    company: certificationDto.company,
+    issue_date: certificationDto.issueDate,
   };
 }

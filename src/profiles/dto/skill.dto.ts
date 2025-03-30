@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEmpty, IsNotEmpty, IsString } from 'class-validator';
-import { Types } from 'mongoose';
+import {  IsNotEmpty, IsString } from 'class-validator';
+
 
 export class SkillDto {
   @ApiPropertyOptional({
@@ -11,6 +11,5 @@ export class SkillDto {
   @IsString()
   skillName: string;
 
-  @IsEmpty()
-  endorsements?: Types.ObjectId[];
+ 
 }
