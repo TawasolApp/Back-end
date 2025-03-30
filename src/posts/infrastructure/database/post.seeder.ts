@@ -5,7 +5,7 @@ import { Post, PostDocument } from './post.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Company,
   CompanyDocument,
@@ -25,7 +25,10 @@ export class PostSeeder {
   ) {}
 
   async seedPosts(count: number): Promise<void> {
-    const users = await this.userModel.find().select('_id').lean();
+    const users = await this.userModel
+      .find({ role: 'customer' })
+      .select('_id')
+      .lean();
     const companies = await this.companyModel.find().select('_id').lean();
 
     if (users.length === 0 || companies.length === 0) {
@@ -55,7 +58,14 @@ export class PostSeeder {
         author_id: creator._id,
         text: faker.lorem.paragraph(),
         media: [faker.image.url()],
-        react_count: 0,
+        react_count: {
+          Like: 0,
+          Love: 0,
+          Funny: 0,
+          Celebrate: 0,
+          Insightful: 0,
+          Support: 0,
+        },
         comment_count: 0,
         share_count: 0,
         tags,
@@ -79,10 +89,27 @@ export class PostSeeder {
   async updatePostCounts() {
     const posts = await this.postModel.find().exec();
     for (const post of posts) {
-      const reactCount = await this.reactModel
-        .countDocuments({ post_id: post._id })
-        .exec();
-      post.react_count = reactCount;
+      const reacts = await this.reactModel.find({ post_id: post._id }).exec();
+
+      // Reset react counts
+      post.react_count = {
+        Like: 0,
+        Love: 0,
+        Funny: 0,
+        Celebrate: 0,
+        Insightful: 0,
+        Support: 0,
+      };
+
+      // Update react counts
+      for (const react of reacts) {
+        post.react_count[react.react_type]++;
+      }
+      console.log(post);
+      console.log(post.react_count);
+
+      // Mark react_count as modified and save the post
+      post.markModified('react_count');
       await post.save();
     }
   }

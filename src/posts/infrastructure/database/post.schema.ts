@@ -8,10 +8,9 @@ export type PostDocument = Post & Document;
   versionKey: false,
 })
 export class Post {
-
-  @Prop({ type: Types.ObjectId, auto: true })
+  // @Prop({ type: Types.ObjectId, auto: true })
   _id: Types.ObjectId;
-  
+
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   author_id: Types.ObjectId;
 
@@ -21,8 +20,25 @@ export class Post {
   @Prop({ type: [String], default: [] })
   media: string[];
 
-  @Prop({ default: 0 })
-  react_count: number;
+  @Prop({
+    type: Object,
+    default: {
+      Like: 0,
+      Love: 0,
+      Funny: 0,
+      Celebrate: 0,
+      Insightful: 0,
+      Support: 0,
+    },
+  })
+  react_count: {
+    Like: number;
+    Love: number;
+    Funny: number;
+    Celebrate: number;
+    Insightful: number;
+    Support: number;
+  };
 
   @Prop({ default: 0 })
   comment_count: number;

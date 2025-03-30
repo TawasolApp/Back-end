@@ -5,7 +5,7 @@ import { Save, SaveDocument } from './save.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Post,
   PostDocument,
@@ -21,7 +21,10 @@ export class SaveSeeder {
   ) {}
 
   async seedSaves(count: number): Promise<void> {
-    const users = await this.userModel.find().select('_id').lean();
+    const users = await this.userModel
+      .find({ role: 'customer' })
+      .select('_id')
+      .lean();
     const posts = await this.postModel.find().select('_id').lean();
 
     if (users.length === 0 || posts.length === 0) {

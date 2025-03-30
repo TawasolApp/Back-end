@@ -1,6 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UserSeeder } from './auth/infrastructure/database/user.seeder';
+import { UserSeeder } from './users/infrastructure/database/user.seeder';
 import { UserConnectionSeeder } from './connections/infrastructure/database/user-connection.seeder';
 import { CompanySeeder } from './companies/infrastructure/database/company.seeder';
 import { CompanyConnectionSeeder } from './companies/infrastructure/database/company-connection.seeder';
@@ -25,25 +25,32 @@ async function bootstrap() {
   const shareSeeder = app.get(ShareSeeder);
 
   await userSeeder.clearUsers();
-  await userSeeder.seedUsers(15);
-  // await profileSeeder.clearProfiles();
-  // await profileSeeder.seedProfiles(10);
-  // await userConnectionSeeder.clearUserConnections();
-  // await userConnectionSeeder.seedUserConnections(5);
+  await userSeeder.seedUsers(20);
+  await profileSeeder.clearProfiles();
+  await profileSeeder.seedProfiles();
+  await userConnectionSeeder.clearUserConnections();
+  await userConnectionSeeder.seedUserConnections(5);
+  await profileSeeder.updateConnectionCounts();
   await companySeeder.clearCompanies();
-  await companySeeder.seedCompanies(10);
+  await companySeeder.seedCompanies(15);
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(5);
-  // await postSeeder.clearPosts();
-  // await postSeeder.seedPosts(10);
-  // await commentSeeder.clearComments();
-  // await commentSeeder.seedComments(15);
-  // await reactSeeder.clearReacts();
-  // await reactSeeder.seedReacts(20);
-  // await saveSeeder.clearSaves();
-  // await saveSeeder.seedSaves(5);
-  // await shareSeeder.clearShares();
-  // await shareSeeder.seedShares(5);
+
+  await postSeeder.clearPosts();
+  await postSeeder.clearPosts();
+  await postSeeder.seedPosts(10);
+  await commentSeeder.clearComments();
+  await commentSeeder.seedComments(15);
+  await reactSeeder.clearReacts();
+  await reactSeeder.seedReacts(30);
+  await reactSeeder.seedCommentReacts(30);
+  await saveSeeder.clearSaves();
+  await saveSeeder.seedSaves(20);
+  await shareSeeder.clearShares();
+  await shareSeeder.seedShares(5);
+  await postSeeder.updatePostCounts();
+  await commentSeeder.updateCommentReactCounts();
+  await postSeeder.updateCommentCounts();
 
   await app.close();
 }

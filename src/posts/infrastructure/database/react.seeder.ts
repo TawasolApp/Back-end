@@ -5,7 +5,7 @@ import { React, ReactDocument } from './react.schema';
 import {
   User,
   UserDocument,
-} from '../../../auth/infrastructure/database/user.schema';
+} from '../../../users/infrastructure/database/user.schema';
 import {
   Company,
   CompanyDocument,
@@ -16,6 +16,10 @@ import {
 } from '../../../posts/infrastructure/database/post.schema';
 import { faker } from '@faker-js/faker';
 import { Comment, CommentDocument } from './comment.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from '../../../profiles/infrastructure/database/profile.schema';
 
 @Injectable()
 export class ReactSeeder {
@@ -25,10 +29,11 @@ export class ReactSeeder {
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
   ) {}
 
   async seedReacts(count: number): Promise<void> {
-    const users = await this.userModel.find().select('_id').lean();
+    const users = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
     const posts = await this.postModel.find().select('_id').lean();
 
@@ -47,7 +52,7 @@ export class ReactSeeder {
         ? faker.helpers.arrayElement(users)
         : faker.helpers.arrayElement(companies);
 
-      let post = faker.helpers.arrayElement(posts);
+      const post = faker.helpers.arrayElement(posts);
 
       let existingReact = await this.reactModel.find({
         post_id: post._id,
@@ -71,8 +76,10 @@ export class ReactSeeder {
         react_type: faker.helpers.arrayElement([
           'Like',
           'Love',
-          'Laugh',
-          'Clap',
+          'Funny',
+          'Celebrate',
+          'Insightful',
+          'Support',
         ]),
         post_type: 'Post',
       });
@@ -102,7 +109,7 @@ export class ReactSeeder {
         ? faker.helpers.arrayElement(users)
         : faker.helpers.arrayElement(companies);
 
-      let comment = faker.helpers.arrayElement(comments);
+      const comment = faker.helpers.arrayElement(comments);
 
       let existingReact = await this.reactModel.find({
         post_id: comment._id,
@@ -126,8 +133,10 @@ export class ReactSeeder {
         react_type: faker.helpers.arrayElement([
           'Like',
           'Love',
-          'Laugh',
-          'Clap',
+          'Funny',
+          'Celebrate',
+          'Insightful',
+          'Support',
         ]),
         post_type: 'Comment',
       });
