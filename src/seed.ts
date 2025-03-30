@@ -1,15 +1,17 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { UserSeeder } from './users/infrastructure/database/user.seeder';
-import { UserConnectionSeeder } from './connections/infrastructure/database/user-connection.seeder';
-import { CompanySeeder } from './companies/infrastructure/database/company.seeder';
-import { CompanyConnectionSeeder } from './companies/infrastructure/database/company-connection.seeder';
+import { UserConnectionSeeder } from './connections/infrastructure/database/seeders/user-connection.seeder';
+import { CompanySeeder } from './companies/infrastructure/database/seeders/company.seeder';
+import { CompanyConnectionSeeder } from './companies/infrastructure/database/seeders/company-connection.seeder';
 import { ProfileSeeder } from './profiles/infrastructure/database/profile.seeder';
 import { PostSeeder } from './posts/infrastructure/database/post.seeder';
 import { CommentSeeder } from './posts/infrastructure/database/comment.seeder';
 import { ReactSeeder } from './posts/infrastructure/database/react.seeder';
 import { SaveSeeder } from './posts/infrastructure/database/save.seeder';
 import { ShareSeeder } from './posts/infrastructure/database/share.seeder';
+import { JobSeeder } from './jobs/infrastructure/database/seeders/job.seeder';
+import { ApplicationSeeder } from './jobs/infrastructure/database/seeders/application.seeder';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -23,6 +25,8 @@ async function bootstrap() {
   const reactSeeder = app.get(ReactSeeder);
   const saveSeeder = app.get(SaveSeeder);
   const shareSeeder = app.get(ShareSeeder);
+  const jobSeeder = app.get(JobSeeder);
+  const applicationSeeder = app.get(ApplicationSeeder);
 
   await userSeeder.clearUsers();
   await userSeeder.seedUsers(20);
@@ -35,6 +39,11 @@ async function bootstrap() {
   await companySeeder.seedCompanies(15);
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(5);
+  await jobSeeder.clearJobs();
+  await jobSeeder.seedJobs(10);
+  await applicationSeeder.clearApplications();
+  await applicationSeeder.seedApplications(20);
+  await jobSeeder.updateApplicantCounts();
 
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();

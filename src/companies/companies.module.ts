@@ -5,13 +5,13 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   Company,
   CompanySchema,
-} from './infrastructure/database/company.schema';
+} from './infrastructure/database/schemas/company.schema';
 import {
   CompanyConnection,
   CompanyConnectionSchema,
-} from './infrastructure/database/company-connection.schema';
-import { CompanySeeder } from './infrastructure/database/company.seeder';
-import { CompanyConnectionSeeder } from './infrastructure/database/company-connection.seeder';
+} from './infrastructure/database/schemas/company-connection.schema';
+import { CompanySeeder } from './infrastructure/database/seeders/company.seeder';
+import { CompanyConnectionSeeder } from './infrastructure/database/seeders/company-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';

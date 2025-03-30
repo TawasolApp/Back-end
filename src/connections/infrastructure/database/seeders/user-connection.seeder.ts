@@ -4,12 +4,12 @@ import { Model } from 'mongoose';
 import {
   UserConnection,
   UserConnectionDocument,
-} from './user-connection.schema';
+} from '../schemas/user-connection.schema';
 import {
   User,
   UserDocument,
-} from '../../../users/infrastructure/database/user.schema';
-import { ConnectionStatus } from '../connection-status.enum';
+} from '../../../../users/infrastructure/database/user.schema';
+import { ConnectionStatus } from '../../../enums/connection-status.enum';
 import { faker } from '@faker-js/faker';
 
 @Injectable()

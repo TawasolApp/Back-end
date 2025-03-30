@@ -2,10 +2,10 @@ import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
-import { User, UserSchema } from './infrastructure/database/user.schema';
-import { UserSeeder } from './infrastructure/database/user.seeder';
 import { JwtModule } from '@nestjs/jwt';
 import { MailerModule } from '../common/services/mailer.module';
+import { User, UserSchema } from './infrastructure/database/user.schema';
+import { UserSeeder } from './infrastructure/database/user.seeder';
 
 @Module({
   imports: [

@@ -4,12 +4,17 @@ import { Model } from 'mongoose';
 import {
   CompanyConnection,
   CompanyConnectionDocument,
-} from './company-connection.schema';
+} from '../schemas/company-connection.schema';
 import {
   User,
   UserDocument,
+<<<<<<< HEAD:src/companies/infrastructure/database/company-connection.seeder.ts
 } from '../../../users/infrastructure/database/user.schema';
 import { Company, CompanyDocument } from './company.schema';
+=======
+} from '../../../../users/infrastructure/database/user.schema';
+import { Company, CompanyDocument } from '../schemas/company.schema';
+>>>>>>> feature/db-setup:src/companies/infrastructure/database/seeders/company-connection.seeder.ts
 import { faker } from '@faker-js/faker';
 
 @Injectable()

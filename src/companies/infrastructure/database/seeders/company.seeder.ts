@@ -1,14 +1,23 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Company, CompanyDocument } from './company.schema';
+import { Company, CompanyDocument } from '../schemas/company.schema';
 import { faker } from '@faker-js/faker';
+<<<<<<< HEAD:src/companies/infrastructure/database/company.seeder.ts
 import { CompanyType } from '../company-type.enum';
 import { CompanySize } from '../company-size.enum';
 import {
   CompanyConnection,
   CompanyConnectionDocument,
 } from './company-connection.schema';
+=======
+import { CompanyType } from '../../../enums/company-type.enum';
+import { CompanySize } from '../../../enums/company-size.enum';
+import {
+  CompanyConnection,
+  CompanyConnectionDocument,
+} from '../schemas/company-connection.schema';
+>>>>>>> feature/db-setup:src/companies/infrastructure/database/seeders/company.seeder.ts
 
 @Injectable()
 export class CompanySeeder {
