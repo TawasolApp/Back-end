@@ -12,6 +12,8 @@ import { toGetProfileDto } from './dto/profile.mapper';
 
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
+import { EducationDto } from './dto/education.dto';
+import { CertificationDto } from './dto/certification.dto';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -26,8 +28,8 @@ const mockProfile = {
   resume: '',
   visibility: 'public',
   connection_count: 0,
-  education: [],
-  certification: [],
+  education: [{ _id: new Types.ObjectId(), school: 'Test University', degree: 'BSc' ,field:'science',start_date: new Date(),end_date: new Date(),grade:'4',description:'easy'}],
+  certification: [{ _id: new Types.ObjectId(), name: 'AWS Certified',company:'',issue_date: new Date()}],
   work_experience: [],
   plan_details: 
     {
@@ -329,7 +331,9 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           headline: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
         });
 
       await service.deleteHeadline(mockProfile._id);
@@ -344,7 +348,10 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           bio: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+    
         });
       await service.deleteBio(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'bio');
@@ -358,7 +365,10 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           location: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+    
         });
       await service.deleteLocation(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'location');
@@ -372,7 +382,10 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           industry: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+    
         });
       await service.deleteIndustry(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'industry');
@@ -386,7 +399,10 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           profilePicture: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+    
         });
       await service.deleteProfilePicture(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'profile_picture');
@@ -400,7 +416,10 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           coverPhoto: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+    
         });
   
       await service.deleteCoverPhoto(mockProfile._id);
@@ -415,11 +434,351 @@ describe('ProfilesService', () => {
         .mockResolvedValue({ 
           ...mockProfile, 
           resume: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements }))
+          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
+          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
+          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+    
         });
   
       await service.deleteResume(mockProfile._id);
       expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'resume');
+    });
+  });
+  describe('addEducation', () => {
+    it('should add an education entry to profile', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
+        ...mockProfile,
+        education: [...mockProfile.education, { 
+          school: 'New Uni', 
+          degree: 'MSc', 
+          field: '', 
+          startDate: new Date(), 
+          grade: '', 
+          description: '' 
+        }],
+      });
+  
+      const result = await service.addEducation(
+        { 
+          school: 'New Uni', 
+          degree: 'MSc', 
+          field: '', 
+          startDate: new Date(), 
+          grade: '', 
+          description: '' 
+        }, 
+        mockProfile._id
+      );
+  
+      expect(result.education?.length).toBe(2);
+    });
+  
+    it('should throw NotFoundException if profile is not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+  
+      await expect(service.addEducation(
+        { 
+          school: 'New Uni', 
+          degree: 'MSc', 
+          field: '', 
+          startDate: new Date(), 
+          grade: '', 
+          description: '' 
+        }, 
+        new Types.ObjectId()
+      )).rejects.toThrow(NotFoundException);
+    });
+  
+   
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+  
+      await expect(service.addEducation(
+        { 
+          school: 'New Uni', 
+          degree: 'MSc', 
+          field: '', 
+          startDate: new Date(), 
+          grade: '', 
+          description: '' 
+        }, 
+        invalidId as any
+      )).rejects.toThrow(BadRequestException);
+    });
+  
+    it('should throw NotFoundException when updated profile is not found after adding education', async () => {
+      const id = new Types.ObjectId();
+      const education: EducationDto = { 
+        school: 'New Uni', 
+        degree: 'MSc', 
+        field: '', 
+        startDate: new Date(), 
+        grade: '', 
+        description: '' 
+      };
+  
+      // Mock `findById().exec()` to return a profile
+      jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: id, education: [] }),
+      } as any);
+  
+      // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.addEducation(education, id)).rejects.toThrow(
+        new NotFoundException('Updated Profile not found'),
+      );
+    });
+  
+  });
+  
+
+  describe('editEducation', () => {
+    it('should edit an education entry successfully', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
+        ...mockProfile,
+        education: [
+          { ...mockProfile.education[0], degree: 'Updated Degree' },
+        ],
+      });
+  
+      const result = await service.editEducation(
+        { degree: 'Updated Degree' },
+        mockProfile._id,
+        mockProfile.education[0]._id
+      );
+      expect(result.education?.[0]?.degree).toBe('Updated Degree');
+    });
+  
+    it('should throw BadRequestException if profile ID is invalid', async () => {
+      await expect(
+        service.editEducation({ degree: 'Updated' }, 'invalidId' as any, new Types.ObjectId())
+      ).rejects.toThrow(BadRequestException);
+    });
+  
+    it('should throw NotFoundException if profile is not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+  
+      await expect(
+        service.editEducation({ degree: 'Updated' }, new Types.ObjectId(), new Types.ObjectId())
+      ).rejects.toThrow(NotFoundException);
+    });
+  
+    it('should throw NotFoundException if education entry is not found in profile', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+  
+      await expect(
+        service.editEducation({ degree: 'Updated' }, mockProfile._id, new Types.ObjectId())
+      ).rejects.toThrow(NotFoundException);
+    });
+  
+    it('should throw NotFoundException if updated profile is not found after edit', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(
+        service.editEducation({ degree: 'Updated' }, mockProfile._id, mockProfile.education[0]._id)
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('deleteEducation', () => {
+    const educationId = new Types.ObjectId();
+    const profileId = new Types.ObjectId();
+    
+    it('should delete an education entry successfully', async () => {
+      const mockProfile = { _id: profileId, education: [{ _id: educationId }] };
+  
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
+        ...mockProfile,
+        education: [], // Simulating education entry removal
+      });
+  
+      const result = await service.deleteEducation(educationId, profileId);
+      expect(result?.education?.length).toBe(0);
+    });
+  
+    it('should throw BadRequestException if profile ID is invalid', async () => {
+      await expect(service.deleteEducation(educationId, '12345' as any)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  
+    it('should throw NotFoundException if profile is not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+  
+      await expect(service.deleteEducation(educationId, profileId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  
+    it('should throw NotFoundException if education entry is not found', async () => {
+      const mockProfile = { _id: profileId, education: [] };
+  
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.deleteEducation(educationId, profileId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  
+    it('should throw NotFoundException when updated profile is not found after deletion', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue({ _id: profileId, education: [{ _id: educationId }] });
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.deleteEducation(educationId, profileId)).rejects.toThrow(
+        new NotFoundException('Education not found in profile'),
+      );
+    });
+  });
+  
+
+  describe('addCertification', () => {
+    const profileId = new Types.ObjectId();
+    const certification: CertificationDto = {
+      name: 'AWS Certified Solutions Architect',
+      company: 'Amazon',
+      issueDate: new Date(),
+    };
+  
+    it('should add a certification successfully', async () => {
+      const mockProfile = { _id: profileId, certification: [] };
+  
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
+        ...mockProfile,
+        certification: [certification], // Simulating addition of certification
+      });
+  
+      const result = await service.addCertification(certification, profileId);
+      expect((result.certification ?? []).length).toBe(1);
+      expect((result.certification ?? [])[0].name).toBe(certification.name);
+    });
+  
+    it('should throw BadRequestException if profile ID is invalid', async () => {
+      await expect(service.addCertification(certification, '12345' as any)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  
+    it('should throw NotFoundException if profile is not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+  
+      await expect(service.addCertification(certification, profileId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  
+    it('should throw NotFoundException when updated profile is not found after adding certification', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue({ _id: profileId, certification: [] });
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.addCertification(certification, profileId)).rejects.toThrow(
+        new NotFoundException('Updated Profile not found'),
+      );
+    });
+  });
+  
+
+  describe('editCertification', () => {
+    const profileId = new Types.ObjectId();
+    const certificationId = new Types.ObjectId();
+    const updatedCertification: Partial<CertificationDto> = {
+      name: 'AWS Certified Developer',
+      company: 'Amazon',
+      issueDate: new Date(),
+    };
+  
+    it('should edit a certification successfully', async () => {
+      const mockProfile = {
+        _id: profileId,
+        certification: [{ _id: certificationId, name: 'Old Cert', company: 'Old Company', issueDate: new Date() }],
+      };
+  
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
+        ...mockProfile,
+        certification: [{ _id: certificationId, ...updatedCertification }],
+      });
+  
+      const result = await service.editCertification(updatedCertification, profileId, certificationId);
+      expect((result.certification ?? [])[0]?.name).toBe(updatedCertification.name);
+    });
+  
+    it('should throw BadRequestException if profile ID is invalid', async () => {
+      await expect(service.editCertification(updatedCertification, '12345' as any, certificationId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  
+    it('should throw NotFoundException if profile is not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+  
+      await expect(service.editCertification(updatedCertification, profileId, certificationId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  
+    it('should throw NotFoundException if certification is not found in the profile', async () => {
+      const mockProfile = { _id: profileId, certification: [] }; // No certification found
+  
+      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
+  
+      await expect(service.editCertification(updatedCertification, profileId, certificationId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+  
+    it('should throw NotFoundException when updated profile is not found after updating certification', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValue({
+        _id: profileId,
+        certification: [{ _id: certificationId, name: 'Old Cert', company: 'Old Company', issueDate: new Date() }],
+      });
+  
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.editCertification(updatedCertification, profileId, certificationId)).rejects.toThrow(
+        new NotFoundException('Certification not found in profile'),
+      );
+    });
+  });
+  
+
+  describe('deleteCertification', () => {
+    const profileId = new Types.ObjectId();
+    const certificationId = new Types.ObjectId();
+  
+    it('should delete a certification successfully', async () => {
+      const mockProfile = {
+        _id: profileId,
+        certification: [{ _id: certificationId, name: 'AWS Certified Developer' }],
+      };
+  
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
+        ...mockProfile,
+        certification: [], // Certification removed
+      });
+  
+      const result = await service.deleteCertification(certificationId, profileId);
+      expect((result.certification ?? []).length).toBe(0);
+    });
+  
+    it('should throw BadRequestException if profile ID is invalid', async () => {
+      await expect(service.deleteCertification(certificationId, '12345' as any)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  
+    it('should throw NotFoundException if certification is not found in profile', async () => {
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+  
+      await expect(service.deleteCertification(certificationId, profileId)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
   
