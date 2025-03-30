@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, HttpCode, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
@@ -12,53 +12,41 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto);
+    return this.authService.register(registerDto); 
   }
 
   @Post('check-email')
-  async checkEmail(@Body('email') email: string) {
-    return this.authService.checkEmailAvailability(email);
+  async checkEmail(@Body() dto: { email: string }) {
+    return this.authService.checkEmailAvailability(dto);
   }
 
   @Post('login')
   async login(@Body() loginDto: LoginDto) {
-    return this.authService.login(loginDto.email, loginDto.password);
-  }
-
-  @Post('social-login/google')
-  async googleLogin(@Body('idToken') idToken: string) {
-    return this.authService.googleLogin(idToken);
+    return this.authService.login(loginDto);
   }
 
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
-    const message = await this.authService.verifyEmail(token);
-    return { message };
+    return this.authService.verifyEmail({ token }); 
   }
 
   @Post('resend-confirmation')
-  async resendConfirmation(@Body() { email }: ResendConfirmationDto) {
-    const message = await this.authService.resendConfirmationEmail(email);
-    return { message };
+  async resendConfirmation(@Body() dto: ResendConfirmationDto) {
+    return this.authService.resendConfirmationEmail(dto);
   }
 
   @Post('refresh-token')
-  async refresh(@Body('refreshToken') refreshToken: string) {
-    return this.authService.refreshToken(refreshToken);
+  async refresh(@Body() dto: { refreshToken: string }) {
+    return this.authService.refreshToken(dto);
   }
 
   @Post('forgot-password')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    const message = await this.authService.forgotPassword(dto.email);
-    return { message };
+    return this.authService.forgotPassword(dto);
   }
 
   @Post('reset-password')
   async resetPassword(@Body() dto: ResetPasswordDto) {
-    const message = await this.authService.resetPassword(
-      dto.token,
-      dto.newPassword,
-    );
-    return { message };
+    return this.authService.resetPassword(dto);
   }
 }

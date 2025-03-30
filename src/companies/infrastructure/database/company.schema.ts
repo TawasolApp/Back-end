@@ -42,7 +42,6 @@ export class Company {
   })
   company_type: CompanyType;
 
-
   @Prop({ required: true })
   industry: string;
 
