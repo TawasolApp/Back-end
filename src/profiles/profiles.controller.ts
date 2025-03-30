@@ -35,7 +35,7 @@ export class ProfilesController {
    * @param error - The error object
    * @param defaultMessage - The default error message
    */
-  private handleException(error: any, defaultMessage: string) {
+   handleException(error: any, defaultMessage: string) {
     if (error instanceof HttpException) {
       throw error;
     }
