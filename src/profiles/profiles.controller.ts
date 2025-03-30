@@ -311,7 +311,7 @@ export class ProfilesController {
     }
   }
 
-  @Post('certifications')
+  @Post('certification')
   @UsePipes(new ValidationPipe())
   async addCertification(@Req() req, @Body() certification: CertificationDto) {
     try {
@@ -321,6 +321,47 @@ export class ProfilesController {
       return await this.profilesService.addCertification(certification, req.user.sub);
     } catch (error) {
       this.handleException(error, 'Failed to add certification.');
+    }
+  }
+
+  @Patch('certification/:certification_id')
+  @UsePipes(new ValidationPipe())
+  @ApiBody({ type: CertificationDto, description: 'Fields to update', isArray: false })
+  async editCertification(
+    @Req() req,
+    @Body() updateCertificationDto: Partial<CertificationDto>,
+    @Param('certification_id') certificationId: Types.ObjectId,
+  ) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.editCertification(
+        updateCertificationDto,
+        req.user.sub,
+        certificationId,
+      );
+    } catch (error) {
+      this.handleException(error, `Failed to edit certification.`);
+    }
+  }
+
+  @Delete('certification/:certification_id')
+  @UsePipes(new ValidationPipe())
+  async deleteCertification(
+    @Req() req,
+    @Param('certification_id') certificationId: string,
+  ) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.deleteCertification(
+        new Types.ObjectId(certificationId),
+        req.user.sub,
+      );
+    } catch (error) {
+      this.handleException(error, `Failed to delete certification.`);
     }
   }
 }
