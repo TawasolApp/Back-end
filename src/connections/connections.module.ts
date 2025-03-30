@@ -3,8 +3,8 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   UserConnection,
   UserConnectionSchema,
-} from './infrastructure/database/user-connection.schema';
-import { UserConnectionSeeder } from './infrastructure/database/user-connection.seeder';
+} from './infrastructure/database/schemas/user-connection.schema';
+import { UserConnectionSeeder } from './infrastructure/database/seeders/user-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
 
 @Module({

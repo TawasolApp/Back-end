@@ -1,4 +1,24 @@
 import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { Job, JobSchema
+} from './infrastructure/database/schemas/job.schema';
+import {
+  Application,
+  ApplicationSchema,
+} from './infrastructure/database/schemas/application.schema';
+import { JobSeeder } from './infrastructure/database/seeders/job.seeder';
+import { ApplicationSeeder } from './infrastructure/database/seeders/application.seeder';
+import { AuthModule } from '../auth/auth.module';
 
-@Module({})
+@Module({
+  imports: [
+    MongooseModule.forFeature([
+      { name: Job.name, schema: JobSchema },
+      { name: Application.name, schema: ApplicationSchema },
+    ]),
+    AuthModule,
+  ],
+  exports: [MongooseModule, JobSeeder, ApplicationSeeder],
+  providers: [JobSeeder, ApplicationSeeder],
+})
 export class JobsModule {}

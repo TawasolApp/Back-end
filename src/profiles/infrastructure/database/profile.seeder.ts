@@ -9,9 +9,9 @@ import {
 import {
   UserConnection,
   UserConnectionDocument,
-} from '../../../connections/infrastructure/database/user-connection.schema';
+} from '../../../connections/infrastructure/database/schemas/user-connection.schema';
 import { faker } from '@faker-js/faker';
-import { ConnectionStatus } from '../../../connections/infrastructure/connection-status.enum';
+import { ConnectionStatus } from '../../../connections/enums/connection-status.enum';
 
 @Injectable()
 export class ProfileSeeder {

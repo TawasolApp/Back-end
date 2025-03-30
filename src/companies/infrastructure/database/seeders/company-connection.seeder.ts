@@ -4,12 +4,12 @@ import { Model } from 'mongoose';
 import {
   CompanyConnection,
   CompanyConnectionDocument,
-} from './company-connection.schema';
+} from '../schemas/company-connection.schema';
 import {
   User,
   UserDocument,
-} from '../../../users/infrastructure/database/user.schema';
-import { Company, CompanyDocument } from './company.schema';
+} from '../../../../users/infrastructure/database/user.schema';
+import { Company, CompanyDocument } from '../schemas/company.schema';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
