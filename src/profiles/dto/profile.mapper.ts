@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { Education, Profile } from '../infrastructure/database/profile.schema';
+import { Certification, Education, Profile } from '../infrastructure/database/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
 import { GetProfileDto } from './get-profile.dto';
 
@@ -205,5 +205,18 @@ export function toCreateCertificationSchema(
     name: certificationDto.name,
     company: certificationDto.company,
     issue_date: certificationDto.issueDate,
+  };
+}
+
+/**
+ * Maps Partial<CertificationDto> to the Certification schema for updates.
+ */
+export function toUpdateCertificationSchema(
+  certificationDto: Partial<CertificationDto>
+): Partial<Certification> {
+  return {
+    ...(certificationDto.name && { name: certificationDto.name }),
+    ...(certificationDto.company && { company: certificationDto.company }),
+    ...(certificationDto.issueDate && { issue_date: certificationDto.issueDate }),
   };
 }

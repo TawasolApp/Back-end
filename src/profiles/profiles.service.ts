@@ -16,6 +16,7 @@ import {
   toCreateProfileSchema,
   toCreateSkillSchema,
   toGetProfileDto,
+  toUpdateCertificationSchema,
   toUpdateEducationSchema,
   toUpdateProfileSchema,
 } from './dto/profile.mapper';
@@ -332,4 +333,62 @@ export class ProfilesService {
     }
     return toGetProfileDto(updatedProfile);
   }
+  
+    async editCertification(
+    certification: Partial<CertificationDto>, // Assuming you have a CertificationDto
+    id: Types.ObjectId,
+    certificationId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+  
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+  
+    if (!(profile.certification?.some(c => c._id.toString() === certificationId.toString()))) {
+      throw new NotFoundException(`Certification entry with ID ${certificationId} not found in profile`);
+    }
+  
+    const updateData = toUpdateCertificationSchema(certification); // Assuming you have a similar transformation function
+    console.log('editCertification service data name: ' + updateData.name);
+  
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'certification._id': new Types.ObjectId(certificationId) }, // Find profile and specific certification entry
+      {
+        $set: {
+          'certification.$.name': updateData.name,
+          'certification.$.company': updateData.company,
+          'certification.$.issue_date': updateData.issue_date,
+         
+        },
+      },
+      { new: true, runValidators: true }
+    );
+  
+    console.log('editCertification service updated profile: ' + updatedProfile);
+    if (!updatedProfile) {
+      throw new NotFoundException('Certification not found in profile');
+    }
+  
+    return toGetProfileDto(updatedProfile); // Assuming this function converts the profile to a DTO
+  }
+
+  async deleteCertification(certificationId: Types.ObjectId, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'certification._id': certificationId },
+      { $pull: { certification: { _id: certificationId } } },
+      { new: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Certification not found in profile');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
 }
