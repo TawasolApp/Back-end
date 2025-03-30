@@ -21,6 +21,7 @@ import {
 import { CompaniesService } from './companies.service';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
+import { GetCompanyDto } from './dtos/get-company.dto';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
