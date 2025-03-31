@@ -47,6 +47,7 @@ export class JobSeeder {
           Object.values(EmploymentType),
         ),
         applicants: 0,
+        location: faker.location.street(),
       });
     }
 

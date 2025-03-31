@@ -1,5 +1,9 @@
 import { forwardRef, Module, ValidationPipe } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
+import { JwtModule } from '@nestjs/jwt';
+import { APP_PIPE } from '@nestjs/core';
+import { ConnectionsController } from './connections.controller';
+import { ConnectionsService } from './connections.service';
 import {
   UserConnection,
   UserConnectionSchema,
@@ -8,10 +12,6 @@ import { UserConnectionSeeder } from './infrastructure/database/seeders/user-con
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
-import { ConnectionsController } from './connections.controller';
-import { ConnectionsService } from './connections.service';
-import { JwtModule } from '@nestjs/jwt';
-import { APP_PIPE } from '@nestjs/core';
 
 @Module({
   imports: [

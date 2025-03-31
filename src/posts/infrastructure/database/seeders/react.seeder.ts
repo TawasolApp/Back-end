@@ -1,25 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { React, ReactDocument } from './react.schema';
+import { React, ReactDocument } from '../schemas/react.schema';
 import {
   User,
   UserDocument,
-} from '../../../users/infrastructure/database/user.schema';
+} from '../../../../users/infrastructure/database/schemas/user.schema';
 import {
   Company,
   CompanyDocument,
-} from '../../../companies/infrastructure/database/company.schema';
+} from '../../../../companies/infrastructure/database/schemas/company.schema';
 import {
   Post,
   PostDocument,
-} from '../../../posts/infrastructure/database/post.schema';
+} from '../schemas/post.schema';
 import { faker } from '@faker-js/faker';
-import { Comment, CommentDocument } from './comment.schema';
+import { Comment, CommentDocument } from '../schemas/comment.schema';
 import {
   Profile,
   ProfileDocument,
-} from '../../../profiles/infrastructure/database/profile.schema';
+} from '../../../../profiles/infrastructure/database/schemas/profile.schema';
 
 @Injectable()
 export class ReactSeeder {

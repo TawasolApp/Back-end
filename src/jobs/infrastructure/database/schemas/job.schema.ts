@@ -17,21 +17,20 @@ export class Job {
   @Prop({ type: Types.ObjectId, ref: 'Company', required: true })
   company_id: Types.ObjectId;
 
-  @Prop()
+  @Prop({ required: true })
   position: string;
 
   @Prop()
   salary: number;
 
+  @Prop()
+  description: string;
+
   @Prop({
     type: String,
     enum: Object.values(ExperienceLevel),
-    required: true,
   })
   experience_level: ExperienceLevel;
-
-  @Prop()
-  description: string;
 
   @Prop({
     type: String,
@@ -50,7 +49,7 @@ export class Job {
   @Prop()
   applicants: number;
 
-  @Prop()
+  @Prop({ required: true })
   location: string;
 
   @Prop({

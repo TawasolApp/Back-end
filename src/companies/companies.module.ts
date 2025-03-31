@@ -1,7 +1,9 @@
 import { Module, ValidationPipe } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_PIPE } from '@nestjs/core';
-import { MongooseModule } from '@nestjs/mongoose';
+import { CompaniesService } from './companies.service';
+import { CompaniesController } from './companies.controller';
 import {
   Company,
   CompanySchema,
@@ -16,8 +18,6 @@ import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConnectionsModule } from '../connections/connections.module';
-import { CompaniesService } from './companies.service';
-import { CompaniesController } from './companies.controller';
 
 @Module({
   imports: [

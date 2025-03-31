@@ -18,7 +18,6 @@ export class Application {
   @Prop({
     type: String,
     enum: Object.values(ApplicationStatus),
-    required: true,
   })
   status: ApplicationStatus;
 

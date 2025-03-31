@@ -17,7 +17,7 @@ import { ResetPasswordDto } from './dtos/reset-password.dto';
 import {
   User,
   UserDocument,
-} from '../users/infrastructure/database/user.schema';
+} from '../users/infrastructure/database/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';

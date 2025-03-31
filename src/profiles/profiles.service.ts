@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Profile } from './infrastructure/database/profile.schema';
+import { Profile } from './infrastructure/database/schemas/profile.schema';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';

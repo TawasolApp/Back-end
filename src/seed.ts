@@ -1,15 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { UserSeeder } from './users/infrastructure/database/user.seeder';
+import { UserSeeder } from './users/infrastructure/database/seeders/user.seeder';
 import { UserConnectionSeeder } from './connections/infrastructure/database/seeders/user-connection.seeder';
 import { CompanySeeder } from './companies/infrastructure/database/seeders/company.seeder';
 import { CompanyConnectionSeeder } from './companies/infrastructure/database/seeders/company-connection.seeder';
-import { ProfileSeeder } from './profiles/infrastructure/database/profile.seeder';
-import { PostSeeder } from './posts/infrastructure/database/post.seeder';
-import { CommentSeeder } from './posts/infrastructure/database/comment.seeder';
-import { ReactSeeder } from './posts/infrastructure/database/react.seeder';
-import { SaveSeeder } from './posts/infrastructure/database/save.seeder';
-import { ShareSeeder } from './posts/infrastructure/database/share.seeder';
+import { ProfileSeeder } from './profiles/infrastructure/database/seeders/profile.seeder';
+import { PostSeeder } from './posts/infrastructure/database/seeders/post.seeder';
+import { CommentSeeder } from './posts/infrastructure/database/seeders/comment.seeder';
+import { ReactSeeder } from './posts/infrastructure/database/seeders/react.seeder';
+import { SaveSeeder } from './posts/infrastructure/database/seeders/save.seeder';
+import { ShareSeeder } from './posts/infrastructure/database/seeders/share.seeder';
 import { JobSeeder } from './jobs/infrastructure/database/seeders/job.seeder';
 import { ApplicationSeeder } from './jobs/infrastructure/database/seeders/application.seeder';
 

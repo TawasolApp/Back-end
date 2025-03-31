@@ -1,17 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Profile, ProfileDocument } from './profile.schema';
+import { Profile, ProfileDocument } from '../schemas/profile.schema';
 import {
   User,
   UserDocument,
-} from '../../../users/infrastructure/database/user.schema';
+} from '../../../../users/infrastructure/database/schemas/user.schema';
 import {
   UserConnection,
   UserConnectionDocument,
-} from '../../../connections/infrastructure/database/schemas/user-connection.schema';
+} from '../../../../connections/infrastructure/database/schemas/user-connection.schema';
 import { faker } from '@faker-js/faker';
-import { ConnectionStatus } from '../../../connections/enums/connection-status.enum';
+import { ConnectionStatus } from '../../../../connections/enums/connection-status.enum';
 
 @Injectable()
 export class ProfileSeeder {

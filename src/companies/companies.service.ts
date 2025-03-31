@@ -1,7 +1,6 @@
 import {
   ConflictException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -9,15 +8,19 @@ import { Model, Types } from 'mongoose';
 import {
   Company,
   CompanyDocument,
-} from './infrastructure/database/company.schema';
+} from './infrastructure/database/schemas/company.schema';
 import {
   CompanyConnection,
   CompanyConnectionDocument,
-} from './infrastructure/database/company-connection.schema';
+} from './infrastructure/database/schemas/company-connection.schema';
 import {
   Profile,
   ProfileDocument,
-} from '../profiles/infrastructure/database/profile.schema';
+} from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  UserConnection,
+  UserConnectionDocument,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { GetCompanyDto } from './dtos/get-company.dto';
@@ -26,13 +29,9 @@ import {
   toCreateCompanySchema,
   toUpdateCompanySchema,
   toGetCompanyDto,
-} from './dtos/company.mapper';
-import { toGetFollowerDto } from './dtos/get-follower.mapper';
-import {
-  UserConnection,
-  UserConnectionDocument,
-} from '../connections/infrastructure/database/user-connection.schema';
-import { ConnectionStatus } from '../connections/infrastructure/connection-status.enum';
+} from './mappers/company.mapper';
+import { toGetFollowerDto } from './mappers/get-follower.mapper';
+import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 
 @Injectable()
 export class CompaniesService {

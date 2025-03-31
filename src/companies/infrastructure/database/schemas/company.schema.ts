@@ -1,12 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-<<<<<<< HEAD:src/companies/infrastructure/database/company.schema.ts
-import { CompanyType } from '../company-type.enum';
-import { CompanySize } from '../company-size.enum';
-=======
 import { CompanyType } from '../../../enums/company-type.enum';
 import { CompanySize } from '../../../enums/company-size.enum';
->>>>>>> feature/db-setup:src/companies/infrastructure/database/schemas/company.schema.ts
 
 export type CompanyDocument = Company & Document;
 

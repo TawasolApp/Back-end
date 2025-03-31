@@ -4,10 +4,11 @@ import { Model } from 'mongoose';
 import {
   User,
   UserDocument,
-} from '../../../../users/infrastructure/database/user.schema';
+} from '../../../../users/infrastructure/database/schemas/user.schema';
 import { faker } from '@faker-js/faker';
 import { Application, ApplicationDocument } from '../schemas/application.schema';
 import { Job, JobDocument } from '../schemas/job.schema';
+import { ApplicationStatus } from '../../../enums/application-status.enum';
 
 @Injectable()
 export class ApplicationSeeder {
@@ -51,6 +52,7 @@ export class ApplicationSeeder {
         applications.push({
           user_id: randomUser._id,
           job_id: randomJob._id,
+          status: faker.helpers.arrayElement(Object.values(ApplicationStatus))
         });
       }
     }

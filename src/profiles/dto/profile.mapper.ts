@@ -2,7 +2,7 @@ import { Types } from 'mongoose';
 import {
   Profile,
  
-} from '../infrastructure/database/profile.schema';
+} from '../infrastructure/database/schemas/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
 import { GetProfileDto } from './get-profile.dto';
 

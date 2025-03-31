@@ -1,23 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Company, CompanyDocument } from '../schemas/company.schema';
 import { faker } from '@faker-js/faker';
-<<<<<<< HEAD:src/companies/infrastructure/database/company.seeder.ts
-import { CompanyType } from '../company-type.enum';
-import { CompanySize } from '../company-size.enum';
-import {
-  CompanyConnection,
-  CompanyConnectionDocument,
-} from './company-connection.schema';
-=======
-import { CompanyType } from '../../../enums/company-type.enum';
-import { CompanySize } from '../../../enums/company-size.enum';
+import { Company, CompanyDocument } from '../schemas/company.schema';
 import {
   CompanyConnection,
   CompanyConnectionDocument,
 } from '../schemas/company-connection.schema';
->>>>>>> feature/db-setup:src/companies/infrastructure/database/seeders/company.seeder.ts
+import { CompanyType } from '../../../enums/company-type.enum';
+import { CompanySize } from '../../../enums/company-size.enum';
 
 @Injectable()
 export class CompanySeeder {
@@ -41,21 +32,8 @@ export class CompanySeeder {
         banner: faker.image.url(),
         description: faker.lorem.sentence(),
         followers: 0,
-        company_size: faker.helpers.arrayElement([
-          CompanySize.Mini,
-          CompanySize.Small,
-          CompanySize.Medium,
-          CompanySize.Large,
-        ]),
-        company_type: faker.helpers.arrayElement([
-          CompanyType.Public,
-          CompanyType.SelfEmployed,
-          CompanyType.Government,
-          CompanyType.NonProfit,
-          CompanyType.Sole,
-          CompanyType.Private,
-          CompanyType.Partnership,
-        ]),
+        company_size: faker.helpers.arrayElement(Object.values(CompanySize)),
+        company_type: faker.helpers.arrayElement(Object.values(CompanyType)),
         industry: faker.commerce.department(),
         overview: faker.lorem.paragraph(),
         founded: faker.number.int({ min: 1900, max: new Date().getFullYear() }),

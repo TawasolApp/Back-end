@@ -1,4 +1,4 @@
-import { GetUserDto } from './get-user.dto';
+import { GetUserDto } from '../dtos/get-user.dto';
 
 export function toGetUserDto(profile: any): GetUserDto {
   const dto: Partial<GetUserDto> = {};
