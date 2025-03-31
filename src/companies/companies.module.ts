@@ -1,4 +1,4 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { forwardRef, Module, ValidationPipe } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_PIPE } from '@nestjs/core';
@@ -18,6 +18,7 @@ import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConnectionsModule } from '../connections/connections.module';
+import { JobsModule } from '../jobs/jobs.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { ConnectionsModule } from '../connections/connections.module';
     UsersModule,
     ProfilesModule,
     ConnectionsModule,
+    forwardRef(() => JobsModule),
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||

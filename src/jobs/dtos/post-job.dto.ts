@@ -5,6 +5,7 @@ import {
   IsOptional,
   IsEnum,
   IsUrl,
+  Min,
 } from 'class-validator';
 import { ExperienceLevel } from '../enums/experience-level.enum';
 import { EmploymentType } from '../enums/employment-type.enum';
@@ -16,6 +17,7 @@ export class PostJobDto {
   readonly position: string;
 
   @IsNumber()
+  @Min(1, { message: 'Salary must be a positive number' })
   @IsOptional()
   readonly salary?: number;
 

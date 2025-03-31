@@ -22,20 +22,23 @@ import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { CompaniesService } from './companies.service';
+import { JobsService } from '../jobs/jobs.service';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
+import { PostJobDto } from '../jobs/dtos/post-job.dto';
 
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe())
 @Controller('companies')
 export class CompaniesController {
-  constructor(private readonly companiesService: CompaniesService) {}
+  constructor(
+    private readonly companiesService: CompaniesService,
+    private readonly jobsService: JobsService,
+  ) {}
 
-  private loggedIn: string = '';
+  private loggedInUser: string = '67ead2a413bb1a3bc8d01460';
+  private loggedInCompany: string = '';
 
-  /*
-    creates a new company with required fields: name, company size, company type, industry
-  */
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createCompany(
@@ -44,7 +47,7 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       const newCompanyDto =
         await this.companiesService.createCompany(createCompanyDto);
@@ -57,9 +60,6 @@ export class CompaniesController {
     }
   }
 
-  /*
-    updates company with ID as route parameter with fields presented in DTO 
-  */
   @Patch('/:companyId')
   @HttpCode(HttpStatus.OK)
   async updateCompany(
@@ -69,7 +69,7 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
@@ -92,9 +92,6 @@ export class CompaniesController {
     }
   }
 
-  /*
-    deletes company with ID as route parameter
-  */
   @Delete('/:companyId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteCompany(
@@ -103,7 +100,7 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
@@ -117,12 +114,6 @@ export class CompaniesController {
     }
   }
 
-  /*
-    searches for companies:
-    - applies at least one filter to companies
-    - filter is applied with partial matching and case insensitive
-    - returns only essential fields: id, name, logo, industry, follow
-  */
   @Get()
   @HttpCode(HttpStatus.OK)
   async filterCompanies(
@@ -132,7 +123,7 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!name && !industry) {
         throw new BadRequestException(
@@ -142,7 +133,7 @@ export class CompaniesController {
       name = name?.trim();
       industry = industry?.trim();
       // const userId = request.user['sub'];
-      const userId = this.loggedIn;
+      const userId = this.loggedInUser;
       const companiesDto = await this.companiesService.filterCompanies(
         userId,
         name,
@@ -159,9 +150,6 @@ export class CompaniesController {
     }
   }
 
-  /*
-    gets all company details present in the record associated with ID in route parameter
-  */
   @Get('/:companyId')
   @HttpCode(HttpStatus.OK)
   async getCompanyDetails(
@@ -170,13 +158,13 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
       }
       // const userId = request.user['sub'];
-      const userId = this.loggedIn;
+      const userId = this.loggedInUser;
       const companyDto = await this.companiesService.getCompanyDetails(
         companyId,
         userId,
@@ -186,14 +174,12 @@ export class CompaniesController {
       if (error instanceof HttpException) {
         throw error;
       }
-      throw new InternalServerErrorException('Failed to get company details.');
+      throw new InternalServerErrorException(
+        'Failed to retrieve company details.',
+      );
     }
   }
 
-  /*
-    - retrieves all users following the company with ID as route parameter
-    - returns only essential fields: id, name, profile picture, headline
-  */
   @Get('/:companyId/followers')
   @HttpCode(HttpStatus.OK)
   async getCompanyFollowers(
@@ -202,7 +188,7 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
@@ -215,34 +201,35 @@ export class CompaniesController {
         throw error;
       }
       throw new InternalServerErrorException(
-        'Failed to get company followers.',
+        'Failed to retrieve company followers.',
       );
     }
   }
 
-  // @Get('/followed')
-  // @HttpCode(HttpStatus.OK)
-  // async getFollowedCompanies(@Req() request: Request) {
-  //   try {
-  //     if (!request.user) {
-  //       throw new UnauthorizedException('User not authenticated');
-  //     }
-  //     // const userId = request.user['sub'];
-  //     const userId = this.loggedIn;
-  //     await this.companiesService.getSuggestedCompanies(this.loggedIn);
-  //   } catch (error) {
-  //     if (error instanceof HttpException) {
-  //       throw error;
-  //     }
-  //     throw new InternalServerErrorException(
-  //       'Failed to retrieve list of followed companies.',
-  //     );
-  //   }
-  // }
+  @Get('/:userId/followed')
+  @HttpCode(HttpStatus.OK)
+  async getFollowedCompanies(
+    @Param('userId') userId: string,
+    @Req() request: Request,
+  ) {
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      // const requestUserId = request.user['sub'];
+      const requestUserId = this.loggedInUser;
+      const companiesDto = await this.companiesService.getFollowedCompanies(userId);
+      return companiesDto;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of followed companies.',
+      );
+    }
+  }
 
-  /*
-    allows logged in user to follow company with ID as route parameter
-  */
   @Post('/:companyId/follow')
   @HttpCode(HttpStatus.CREATED)
   async followCompany(
@@ -251,13 +238,13 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
       }
       // const userId = request.user['sub'];
-      const userId = this.loggedIn;
+      const userId = this.loggedInUser;
       await this.companiesService.followCompany(userId, companyId);
     } catch (error) {
       if (error instanceof HttpException) {
@@ -267,9 +254,6 @@ export class CompaniesController {
     }
   }
 
-  /*
-    allows logged in user to unfollow company with ID as route parameter
-  */
   @Delete('/:companyId/unfollow')
   @HttpCode(HttpStatus.NO_CONTENT)
   async unfollowCompany(
@@ -284,7 +268,7 @@ export class CompaniesController {
         throw new BadRequestException('Invalid company ID format.');
       }
       // const userId = request.user['sub'];
-      const userId = this.loggedIn;
+      const userId = this.loggedInUser;
       await this.companiesService.unfollowCompany(userId, companyId);
     } catch (error) {
       if (error instanceof HttpException) {
@@ -294,10 +278,7 @@ export class CompaniesController {
     }
   }
 
-  /*
-    - retrieves companies with the same industry and size as company with ID as route parameter
-  */
-  @Get('/suggested/:companyId')
+  @Get('/:companyId/suggested')
   @HttpCode(HttpStatus.OK)
   async getSuggestedCompanies(
     @Param('companyId') companyId: string,
@@ -305,7 +286,7 @@ export class CompaniesController {
   ) {
     try {
       if (!request.user) {
-        throw new UnauthorizedException('User not authenticated');
+        throw new UnauthorizedException('User not authenticated.');
       }
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
@@ -321,29 +302,126 @@ export class CompaniesController {
     }
   }
 
-  // @Get('/:companyId/common')
-  // @HttpCode(HttpStatus.OK)
-  // async getCommonFollowers(
-  //   @Param('companyId') companyId: string,
-  //   @Req() request: Request,
-  // ) {
-  //   try {
-  //     if (!request.user) {
-  //       throw new UnauthorizedException('User not authenticated');
-  //     }
-  //     if (!Types.ObjectId.isValid(companyId)) {
-  //       throw new BadRequestException('Invalid company ID format.');
-  //     }
-  //     // const userId = request.user['sub'];
-  //     const userId = this.loggedIn;
-  //     return await this.companiesService.getCommonFollowers(userId, companyId);
-  //   } catch (error) {
-  //     if (error instanceof HttpException) {
-  //       throw error;
-  //     }
-  //     throw new InternalServerErrorException(
-  //       'Failed to retrieve list of common followers.',
-  //     );
-  //   }
-  // }
+  @Get('/:companyId/common')
+  @HttpCode(HttpStatus.OK)
+  async getCommonFollowers(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      // const userId = request.user['sub'];
+      const userId = this.loggedInUser;
+      return await this.companiesService.getCommonFollowers(userId, companyId);
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of common followers.',
+      );
+    }
+  }
+
+  @Post('/:companyId/jobs')
+  @HttpCode(HttpStatus.CREATED)
+  async postJob(
+    @Param('companyId') companyId: string,
+    @Body() postJobDto: PostJobDto,
+    @Req() request: Request,
+  ) {
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const newJobDto = await this.jobsService.postJob(companyId, postJobDto);
+      return newJobDto;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to add job listing.');
+    }
+  }
+
+  @Get('/jobs/:jobId')
+  @HttpCode(HttpStatus.OK)
+  async getJob(@Param('jobId') jobId: string, @Req() request: Request) {
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      if (!Types.ObjectId.isValid(jobId)) {
+        throw new BadRequestException('Invalid job ID format.');
+      }
+      // const userId = request.user['sub'];
+      const userId = this.loggedInUser;
+      const jobDto = await this.jobsService.getJob(jobId);
+      return jobDto;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to retrieve job details.');
+    }
+  }
+
+  @Get('/:companyId/jobs')
+  @HttpCode(HttpStatus.OK)
+  async getCompanyJobs(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const jobsDto = await this.companiesService.getCompanyJobs(companyId);
+      return jobsDto;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to retrieve company jobs.',
+      );
+    }
+  }
+
+  // TODO: add applicant filter by name
+  @Get('jobs/:jobId/applicants')
+  @HttpCode(HttpStatus.OK)
+  async getJobApplicants(
+    @Param('jobId') jobId: string,
+    @Req() request: Request,
+  ) {
+    try {
+      if (!request.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      if (!Types.ObjectId.isValid(jobId)) {
+        throw new BadRequestException('Invalid job ID format.');
+      }
+      const applicantsDto = await this.jobsService.getJobApplicants(jobId);
+      return applicantsDto;
+    } catch (error) {
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to retrieve job applicants.',
+      );
+    }
+  }
 }

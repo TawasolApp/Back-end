@@ -40,6 +40,8 @@ import {
 } from './mappers/company.mapper';
 import { toGetFollowerDto } from './mappers/follower.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
+import { GetJobDto } from '../jobs/dtos/get-job.dto';
+import { toGetJobDto } from '../jobs/mappers/job.mapper';
 
 @Injectable()
 export class CompaniesService {
@@ -370,5 +372,18 @@ export class CompaniesService {
       .select('_id name profile_picture headline')
       .lean();
     return profiles.map(toGetFollowerDto);
+  }
+
+  async getCompanyJobs(companyId: string): Promise<GetJobDto[]> {
+    const company = await this.companyModel
+      .findById(new Types.ObjectId(companyId))
+      .lean();
+    if (!company) {
+      throw new NotFoundException('Company not found.');
+    }
+    const jobs = await this.jobModel
+      .find({ company_id: new Types.ObjectId(companyId) })
+      .lean();
+    return jobs.map(toGetJobDto);
   }
 }
