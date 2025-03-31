@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { CompanyType } from '../company-type.enum';
-import { CompanySize } from '../company-size.enum';
+import { CompanyType } from '../../../enums/company-type.enum';
+import { CompanySize } from '../../../enums/company-size.enum';
 
 export type CompanyDocument = Company & Document;
 

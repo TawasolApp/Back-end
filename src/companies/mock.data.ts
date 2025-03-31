@@ -1,6 +1,5 @@
 import { Types } from 'mongoose';
-import { CompanySize } from './infrastructure/company-size.enum';
-import { CompanyType } from './infrastructure/company-type.enum';
+import { CompanySize } from './enums/company-size.enum';
 
 const companyId1 = new Types.ObjectId();
 const companyId2 = new Types.ObjectId();

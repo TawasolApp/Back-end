@@ -1,15 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { Save, SaveDocument } from './save.schema';
+import { Save, SaveDocument } from '../schemas/save.schema';
 import {
   User,
   UserDocument,
-} from '../../../users/infrastructure/database/user.schema';
+} from '../../../../users/infrastructure/database/schemas/user.schema';
 import {
   Post,
   PostDocument,
-} from '../../../posts/infrastructure/database/post.schema';
+} from '../schemas/post.schema';
 import { faker } from '@faker-js/faker';
 
 @Injectable()

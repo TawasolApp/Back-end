@@ -1,4 +1,4 @@
-import { GetFollowerDto } from "./get-follower.dto";
+import { GetFollowerDto } from "../dtos/get-follower.dto";
 
 export function toGetFollowerDto(connection: any): GetFollowerDto {
   return {

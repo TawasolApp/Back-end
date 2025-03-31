@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { ConnectionStatus } from './infrastructure/connection-status.enum';
+import { ConnectionStatus } from './enums/connection-status.enum';
 
 const profileId1 = new Types.ObjectId();
 const profileId2 = new Types.ObjectId();

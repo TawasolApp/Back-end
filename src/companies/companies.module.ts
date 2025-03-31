@@ -1,23 +1,23 @@
 import { Module, ValidationPipe } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_PIPE } from '@nestjs/core';
-import { MongooseModule } from '@nestjs/mongoose';
+import { CompaniesService } from './companies.service';
+import { CompaniesController } from './companies.controller';
 import {
   Company,
   CompanySchema,
-} from './infrastructure/database/company.schema';
+} from './infrastructure/database/schemas/company.schema';
 import {
   CompanyConnection,
   CompanyConnectionSchema,
-} from './infrastructure/database/company-connection.schema';
-import { CompanySeeder } from './infrastructure/database/company.seeder';
-import { CompanyConnectionSeeder } from './infrastructure/database/company-connection.seeder';
+} from './infrastructure/database/schemas/company-connection.schema';
+import { CompanySeeder } from './infrastructure/database/seeders/company.seeder';
+import { CompanyConnectionSeeder } from './infrastructure/database/seeders/company-connection.seeder';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConnectionsModule } from '../connections/connections.module';
-import { CompaniesService } from './companies.service';
-import { CompaniesController } from './companies.controller';
 
 @Module({
   imports: [

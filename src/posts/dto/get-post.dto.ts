@@ -10,7 +10,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Repost } from '../infrastructure/database/repost.schema';
+import { Repost } from '../infrastructure/database/schemas/repost.schema';
 
 export class GetPostDto {
   @IsString()

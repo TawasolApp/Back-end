@@ -3,15 +3,15 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {
   Profile,
   ProfileSchema,
-} from './infrastructure/database/profile.schema';
-import { ProfileSeeder } from './infrastructure/database/profile.seeder';
+} from './infrastructure/database/schemas/profile.schema';
+import { ProfileSeeder } from './infrastructure/database/seeders/profile.seeder';
 import { AuthModule } from '../auth/auth.module';
 import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConnectionsModule } from '../connections/connections.module';
-import { User, UserSchema } from '../users/infrastructure/database/user.schema';
+import { User, UserSchema } from '../users/infrastructure/database/schemas/user.schema';
 
 @Module({
   imports: [

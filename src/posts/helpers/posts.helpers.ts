@@ -3,13 +3,13 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
-import { PostDocument } from '../infrastructure/database/post.schema';
-import { CommentDocument } from '../infrastructure/database/comment.schema';
-import { ProfileDocument } from '../../profiles/infrastructure/database/profile.schema';
-import { CompanyDocument } from '../../companies/infrastructure/database/company.schema';
+import { PostDocument } from '../infrastructure/database/schemas/post.schema';
+import { CommentDocument } from '../infrastructure/database/schemas/comment.schema';
+import { ProfileDocument } from '../../profiles/infrastructure/database/schemas/profile.schema';
+import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
 import { GetCommentDto } from '../dto/get-comment.dto';
 import { mapCommentToDto } from '../mappers/post.map';
-import { ReactDocument } from '../infrastructure/database/react.schema';
+import { ReactDocument } from '../infrastructure/database/schemas/react.schema';
 import { GetPostDto } from '../dto/get-post.dto';
 import { ReactionDto } from '../dto/get-reactions.dto';
 import { mapPostToDto, mapReactionToDto } from '../mappers/post.map';
