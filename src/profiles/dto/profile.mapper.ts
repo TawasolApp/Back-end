@@ -7,6 +7,7 @@ import { UpdateProfileDto } from './update-profile.dto';
 import { EducationDto } from './education.dto';
 import { SkillDto } from './skill.dto';
 import { CertificationDto } from './certification.dto';
+import { WorkExperienceDto } from './work-experience.dto';
 
 /**
  * Maps CreateProfileDto to the Profile schema.
@@ -220,3 +221,21 @@ export function toUpdateCertificationSchema(
     ...(certificationDto.issueDate && { issue_date: certificationDto.issueDate }),
   };
 }
+
+
+/**
+ * Maps the WorkExperienceDto to the WorkExperience schema.
+ */
+
+export function toCreateWorkExperienceSchema(workExperienceDto: Partial<WorkExperienceDto>) {
+  return {
+    _id: new Types.ObjectId(),
+    title: workExperienceDto.title,
+    company: workExperienceDto.company,
+    employment_type: workExperienceDto.employmentType,
+    start_date: workExperienceDto.startDate,
+    end_date: workExperienceDto.endDate,
+    location: workExperienceDto.location,
+    location_type: workExperienceDto.locationType,
+    description: workExperienceDto.description,
+  };}
