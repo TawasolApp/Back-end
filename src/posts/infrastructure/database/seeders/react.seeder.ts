@@ -15,19 +15,11 @@ import {
   PostDocument,
 } from '../schemas/post.schema';
 import { faker } from '@faker-js/faker';
-<<<<<<< HEAD:src/posts/infrastructure/database/react.seeder.ts
-import { Comment, CommentDocument } from './comment.schema';
-import {
-  Profile,
-  ProfileDocument,
-} from '../../../profiles/infrastructure/database/profile.schema';
-=======
 import { Comment, CommentDocument } from '../schemas/comment.schema';
 import {
   Profile,
   ProfileDocument,
 } from '../../../../profiles/infrastructure/database/schemas/profile.schema';
->>>>>>> develop:src/posts/infrastructure/database/seeders/react.seeder.ts
 
 @Injectable()
 export class ReactSeeder {
