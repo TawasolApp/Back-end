@@ -30,7 +30,7 @@ import {
   toUpdateCompanySchema,
   toGetCompanyDto,
 } from './mappers/company.mapper';
-import { toGetFollowerDto } from './mappers/get-follower.mapper';
+import { toGetFollowerDto } from './mappers/follower.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 
 @Injectable()
