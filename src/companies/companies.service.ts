@@ -59,6 +59,21 @@ export class CompaniesService {
     private readonly userConnectionModel: Model<UserConnectionDocument>,
   ) {}
 
+  /**
+   * creates a new company in the database.
+   *
+   * @param createCompanyDto - partial object containing company details.
+   * @returns GetCompanyDto - created company object.
+   * @throws ConflictException - if a company with the same name, website, email, or contact number already exists.
+   *
+   * function flow:
+   * 1. convert the input data to a company creation schema.
+   * 2. check for existing companies with duplicate fields (name, website, email, contact number).
+   * 3. if a duplicate exists, throw a ConflictException.
+   * 4. if no duplicates are found, create a new company document.
+   * 5. save the new company to the database.
+   * 6. return the newly created company as a DTO.
+   */
   async createCompany(
     createCompanyDto: Partial<CreateCompanyDto>,
   ): Promise<GetCompanyDto> {
@@ -88,6 +103,21 @@ export class CompaniesService {
     return toGetCompanyDto(createdCompany);
   }
 
+  /**
+   * updates an existing company in the database.
+   *
+   * @param companyId - ID of the company to update.
+   * @param updateCompanyDto - partial object containing updated company details.
+   * @returns GetCompanyDto - the updated company object.
+   * @throws NotFoundException - if the company does not exist.
+   * @throws ConflictException - if a company with the same name, website, email, or contact number already exists.
+   *
+   * function flow:
+   * 1. validate the existence of the company.
+   * 2. check for existing companies with duplicate fields (name, website, email, contact number).
+   * 3. update the company if no conflicts are found.
+   * 4. return the updated company as a DTO.
+   */
   async updateCompany(
     companyId: string,
     updateCompanyDto: Partial<UpdateCompanyDto>,
@@ -122,6 +152,17 @@ export class CompaniesService {
     return toGetCompanyDto(updatedCompany!);
   }
 
+  /**
+   * deletes a company and associated data from the database.
+   *
+   * @param companyId - ID of the company to delete.
+   * @throws NotFoundException - if the company does not exist.
+   *
+   * function flow:
+   * 1. check if the company exists.
+   * 2. delete the company and associated connections.
+   * 3. remove related jobs and applications.
+   */
   async deleteCompany(companyId: string) {
     const existingCompany = await this.companyModel
       .findById(new Types.ObjectId(companyId))
@@ -148,6 +189,19 @@ export class CompaniesService {
     return;
   }
 
+  /**
+   * retrieves company details including follow status for the logged in user.
+   *
+   * @param companyId - ID of the company.
+   * @param userId - ID of the user to check follow status.
+   * @returns GetCompanyDto - detailed company information with follow status.
+   * @throws NotFoundException - if the company does not exist.
+   *
+   * function flow:
+   * 1. fetch company details by ID.
+   * 2. check if the user is following the company.
+   * 3. return the company details with follow status.
+   */
   async getCompanyDetails(
     companyId: string,
     userId: string,
@@ -167,6 +221,20 @@ export class CompaniesService {
     return companyDto;
   }
 
+  /**
+   * filters companies based on name and industry.
+   *
+   * @param userId - ID of the user for follow status.
+   * @param name - optional company name filter.
+   * @param industry - optional company industry filter.
+   * @returns array of GetCompanyDto - filtered companies with follow status.
+   *
+   * function flow:
+   * 1. build a dynamic filter based on the input.
+   * 2. retrieve matching companies from the database.
+   * 3. check which companies the user is following.
+   * 4. return filtered companies with follow status.
+   */
   async filterCompanies(
     userId: string,
     name?: string,
@@ -201,6 +269,19 @@ export class CompaniesService {
     });
   }
 
+  /**
+   * retrieves the list of followers for a given company.
+   *
+   * @param companyId - ID of the company.
+   * @returns array of GetFollowerDto - list of followers with profile information.
+   * @throws NotFoundException - if the company does not exist.
+   *
+   * function flow:
+   * 1. verify the company's existence.
+   * 2. fetch followers from the database.
+   * 3. retrieve profile details for each follower.
+   * 4. map profile data to follower DTO and return.
+   */
   async getCompanyFollowers(companyId: string): Promise<GetFollowerDto[]> {
     const company = await this.companyModel
       .findById(new Types.ObjectId(companyId))
@@ -243,6 +324,19 @@ export class CompaniesService {
     return companies.map(toGetCompanyDto);
   }
 
+  /**
+   * follows a company for the logged in user.
+   *
+   * @param userId - ID of the user.
+   * @param companyId - ID of the company to follow.
+   * @throws NotFoundException - if the company does not exist.
+   * @throws ConflictException - if the user already follows the company.
+   *
+   * function flow:
+   * 1. verify the company's existence.
+   * 2. check if the user already follows the company.
+   * 3. create a new follow record and increment follower count.
+   */
   async followCompany(userId: string, companyId: string) {
     const company = await this.companyModel
       .findById(new Types.ObjectId(companyId))
@@ -272,6 +366,17 @@ export class CompaniesService {
     );
   }
 
+  /**
+   * unfollows a company for the logged in user.
+   *
+   * @param userId - ID of the user.
+   * @param companyId - ID of the company to unfollow.
+   * @throws NotFoundException - if the follow record does not exist.
+   *
+   * function flow:
+   * 1. delete the follow record from the database.
+   * 2. decrement the follower count of the company.
+   */
   async unfollowCompany(userId: string, companyId: string) {
     const company = await this.companyModel
       .findById(new Types.ObjectId(companyId))
@@ -295,6 +400,18 @@ export class CompaniesService {
     );
   }
 
+  /**
+   * suggests companies similar to the given company.
+   *
+   * @param companyId - ID of the company to base suggestions on.
+   * @returns array of GetCompanyDto - suggested companies.
+   * @throws NotFoundException - if the company does not exist.
+   *
+   * function flow:
+   * 1. fetch the company details for industry and size.
+   * 2. find similar companies excluding the original one.
+   * 3. return the suggested companies sorted by follower count.
+   */
   async getSuggestedCompanies(companyId: string): Promise<GetCompanyDto[]> {
     const company = await this.companyModel
       .findById(new Types.ObjectId(companyId))
@@ -315,6 +432,19 @@ export class CompaniesService {
     return suggestedCompanies.map(toGetCompanyDto);
   }
 
+  /**
+   * retrieves common followers between a user and a company.
+   *
+   * @param userId - ID of the user.
+   * @param companyId - ID of the company.
+   * @returns array of GetFollowerDto - list of common followers.
+   * @throws NotFoundException - if the company does not exist.
+   *
+   * function flow:
+   * 1. get the user's connections.
+   * 2. find common followers who are also connected with the user.
+   * 3. return profiles of common followers as DTOs.
+   */
   async getCommonFollowers(
     userId: string,
     companyId: string,
@@ -361,6 +491,18 @@ export class CompaniesService {
     return profiles.map(toGetFollowerDto);
   }
 
+  /**
+   * retrieves the list of jobs posted for a given company.
+   *
+   * @param companyId - ID of the company.
+   * @returns array of GetJobDto - list of jobs with their information.
+   * @throws NotFoundException - if the company does not exist.
+   *
+   * function flow:
+   * 1. verify the company's existence.
+   * 2. fetch jobs from the database.
+   * 4. map job data to job DTO and return.
+   */
   async getCompanyJobs(companyId: string): Promise<GetJobDto[]> {
     const company = await this.companyModel
       .findById(new Types.ObjectId(companyId))

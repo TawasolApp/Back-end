@@ -32,6 +32,19 @@ export class JobsService {
     private readonly profileModel: Model<ProfileDocument>,
   ) {}
 
+    /**
+   * creates a new job in the database.
+   *
+   * @param postJobDto - partial object containing job details.
+   * @returns GetJobDto - created job object.
+   * @throws NotFoundException - if company does not exist.
+   *
+   * function flow:
+   * 1. verify the company's existence.
+   * 2. convert the input data to a job creation schema.
+   * 3. create a new job document and save to database.
+   * 4. return the newly created job as a DTO.
+   */
   async postJob(companyId: string, postJobDto: PostJobDto): Promise<GetJobDto> {
     const existingCompany = await this.companyModel
       .findById(new Types.ObjectId(companyId))
@@ -59,6 +72,19 @@ export class JobsService {
     return toGetJobDto(job);
   }
 
+    /**
+   * retrieves the list of applicants for a given job.
+   *
+   * @param jobId - ID of the job.
+   * @returns array of GetFollowerDto - list of applicants with profile information.
+   * @throws NotFoundException - if the job does not exist.
+   *
+   * function flow:
+   * 1. verify the job's existence.
+   * 2. fetch applicants from the database.
+   * 3. retrieve profile details for each applicants.
+   * 4. map profile data to DTO and return.
+   */
   async getJobApplicants(jobId: string): Promise<GetFollowerDto[]> {
     const job = await this.jobModel.findById(new Types.ObjectId(jobId)).lean();
     if (!job) {
