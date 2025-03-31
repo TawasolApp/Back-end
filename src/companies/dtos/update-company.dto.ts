@@ -10,8 +10,8 @@ import {
   IsEnum,
   Max,
 } from 'class-validator';
-import { CompanyType } from '../infrastructure/company-type.enum';
-import { CompanySize } from '../infrastructure/company-size.enum';
+import { CompanyType } from '../enums/company-type.enum';
+import { CompanySize } from '../enums/company-size.enum';
 
 export class UpdateCompanyDto {
   @IsString()

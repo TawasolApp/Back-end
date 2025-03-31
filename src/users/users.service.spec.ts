@@ -3,7 +3,7 @@ import { UsersService } from './users.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { MailerService } from '../common/services/mailer.service';
-import { User } from './infrastructure/database/user.schema';
+import { User } from './infrastructure/database/schemas/user.schema';
 import * as bcrypt from 'bcrypt';
 import {
   ConflictException,

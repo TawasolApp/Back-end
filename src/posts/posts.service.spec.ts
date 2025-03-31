@@ -1,12 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PostsService } from './posts.service';
 import { getModelToken } from '@nestjs/mongoose';
-import { Post } from './infrastructure/database/post.schema';
-import { Profile } from '../profiles/infrastructure/database/profile.schema';
-import { Company } from '../companies/infrastructure/database/company.schema';
-import { React, ReactDocument } from './infrastructure/database/react.schema';
-import { Save } from './infrastructure/database/save.schema';
-import { Comment } from './infrastructure/database/comment.schema';
+import { Post } from './infrastructure/database/schemas/post.schema';
+import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
+import { Company } from '../companies/infrastructure/database/schemas/company.schema';
+import { React, ReactDocument } from './infrastructure/database/schemas/react.schema';
+import { Save } from './infrastructure/database/schemas/save.schema';
+import { Comment } from './infrastructure/database/schemas/comment.schema';
 import { Types } from 'mongoose';
 import {
   mockUserId,

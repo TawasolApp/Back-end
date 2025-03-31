@@ -9,26 +9,26 @@ import {
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types, isValidObjectId } from 'mongoose';
-import { Post, PostDocument } from './infrastructure/database/post.schema';
+import { Post, PostDocument } from './infrastructure/database/schemas/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { GetPostDto } from './dto/get-post.dto';
 import {
   Profile,
   ProfileDocument,
-} from '../profiles/infrastructure/database/profile.schema';
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 import {
   Company,
   CompanyDocument,
-} from '../companies/infrastructure/database/company.schema';
-import { React, ReactDocument } from './infrastructure/database/react.schema';
+} from '../companies/infrastructure/database/schemas/company.schema';
+import { React, ReactDocument } from './infrastructure/database/schemas/react.schema';
 import { UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto';
-import { Save, SaveDocument } from './infrastructure/database/save.schema';
+import { Save, SaveDocument } from './infrastructure/database/schemas/save.schema';
 import { EditPostDto } from './dto/edit-post.dto';
 import {
   Comment,
   CommentDocument,
-} from './infrastructure/database/comment.schema';
+} from './infrastructure/database/schemas/comment.schema';
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { EditCommentDto } from './dto/edit-comment.dto';

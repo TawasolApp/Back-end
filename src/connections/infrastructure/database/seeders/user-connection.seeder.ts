@@ -1,16 +1,16 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { faker } from '@faker-js/faker';
 import {
   UserConnection,
   UserConnectionDocument,
-} from './user-connection.schema';
+} from '../schemas/user-connection.schema';
 import {
   User,
   UserDocument,
-} from '../../../users/infrastructure/database/user.schema';
-import { ConnectionStatus } from '../connection-status.enum';
-import { faker } from '@faker-js/faker';
+} from '../../../../users/infrastructure/database/schemas/user.schema';
+import { ConnectionStatus } from '../../../enums/connection-status.enum';
 
 @Injectable()
 export class UserConnectionSeeder {

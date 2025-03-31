@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getModelToken } from '@nestjs/mongoose';
-import { CompaniesService } from './companies.service';
-import { Company } from './infrastructure/database/company.schema';
-import { CompanyConnection } from './infrastructure/database/company-connection.schema';
-import { Profile } from '../profiles/infrastructure/database/profile.schema';
-import { UserConnection } from '../connections/infrastructure/database/user-connection.schema';
-import { mockProfiles, mockCompanies, mockConnections } from './mock.data';
-import { CompanySize } from './infrastructure/company-size.enum';
-import { CompanyType } from './infrastructure/company-type.enum';
-import { CreateCompanyDto } from './dtos/create-company.dto';
-import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Types } from 'mongoose';
+import { getModelToken } from '@nestjs/mongoose';
+import { ConflictException, NotFoundException } from '@nestjs/common';
+import { mockProfiles, mockCompanies, mockConnections } from './mock.data';
+import { CompaniesService } from './companies.service';
+import { Company } from './infrastructure/database/schemas/company.schema';
+import { CompanyConnection } from './infrastructure/database/schemas/company-connection.schema';
+import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
+import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
+import { CompanySize } from './enums/company-size.enum';
+import { CompanyType } from './enums/company-type.enum';
+import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 
 describe('CompaniesService', () => {

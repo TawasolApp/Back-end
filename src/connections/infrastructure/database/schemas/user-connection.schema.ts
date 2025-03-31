@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ConnectionStatus } from '../connection-status.enum';
+import { ConnectionStatus } from '../../../enums/connection-status.enum';
 
 export type UserConnectionDocument = UserConnection & Document;
 

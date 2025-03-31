@@ -1,19 +1,19 @@
 import { Module } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Post, PostSchema } from './infrastructure/database/post.schema';
+import { Post, PostSchema } from './infrastructure/database/schemas/post.schema';
 import {
   Comment,
   CommentSchema,
-} from './infrastructure/database/comment.schema';
-import { React, ReactSchema } from './infrastructure/database/react.schema';
-import { Save, SaveSchema } from './infrastructure/database/save.schema';
-import { Share, ShareSchema } from './infrastructure/database/share.schema';
-import { PostSeeder } from './infrastructure/database/post.seeder';
-import { CommentSeeder } from './infrastructure/database/comment.seeder';
-import { ReactSeeder } from './infrastructure/database/react.seeder';
-import { SaveSeeder } from './infrastructure/database/save.seeder';
-import { ShareSeeder } from './infrastructure/database/share.seeder';
+} from './infrastructure/database/schemas/comment.schema';
+import { React, ReactSchema } from './infrastructure/database/schemas/react.schema';
+import { Save, SaveSchema } from './infrastructure/database/schemas/save.schema';
+import { Share, ShareSchema } from './infrastructure/database/schemas/share.schema';
+import { PostSeeder } from './infrastructure/database/seeders/post.seeder';
+import { CommentSeeder } from './infrastructure/database/seeders/comment.seeder';
+import { ReactSeeder } from './infrastructure/database/seeders/react.seeder';
+import { SaveSeeder } from './infrastructure/database/seeders/save.seeder';
+import { ShareSeeder } from './infrastructure/database/seeders/share.seeder';
 import { PostsController } from './posts.controller';
 import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
@@ -21,11 +21,11 @@ import { CompaniesModule } from '../companies/companies.module';
 import {
   Company,
   CompanySchema,
-} from '../companies/infrastructure/database/company.schema';
+} from '../companies/infrastructure/database/schemas/company.schema';
 import {
   Profile,
   ProfileSchema,
-} from '../profiles/infrastructure/database/profile.schema';
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
