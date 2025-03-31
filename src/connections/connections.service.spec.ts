@@ -12,7 +12,7 @@ import { UserConnection } from './infrastructure/database/schemas/user-connectio
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { CreateRequestDto } from './dtos/create-request.dto';
 import { UpdateRequestDto } from './dtos/update-request.dto';
-import { ConnectionStatus } from './infrastructure/connection-status.enum';
+import { ConnectionStatus } from './enums/connection-status.enum';
 
 describe('ConnectionsService', () => {
   let service: ConnectionsService;
