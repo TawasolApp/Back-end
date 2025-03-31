@@ -44,6 +44,7 @@ export class JobsService {
       _id: new Types.ObjectId(),
       company_id: new Types.ObjectId(companyId),
       applicants: 0,
+      open: true,
       ...jobData,
     });
     const createdJob = await newJob.save();

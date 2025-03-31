@@ -210,6 +210,7 @@ export class CompaniesService {
     }
     const followers = await this.companyConnectionModel
       .find({ company_id: new Types.ObjectId(companyId) })
+      .sort({ created_at: -1 })
       .select('user_id')
       .lean();
     const result = await Promise.all(
@@ -223,27 +224,12 @@ export class CompaniesService {
       }),
     );
     return result;
-    // const result = await Promise.all(
-    //   followers.map(async (follower) => {
-    //     const userId = follower.user_id;
-    //     const profile = await this.profileModel
-    //       .findById(userId)
-    //       .select('_id name profile_picture headline')
-    //       .lean();
-    //     return {
-    //       userId: profile?._id,
-    //       username: profile?.name,
-    //       profilePicture: profile?.profile_picture,
-    //       headline: profile?.headline,
-    //     };
-    //   }),
-    // );
-    // return result.map(toGetFollowerDto);
   }
 
   async getFollowedCompanies(userId: string): Promise<GetCompanyDto[]> {
     const connections = await this.companyConnectionModel
       .find({ user_id: new Types.ObjectId(userId) })
+      .sort({ created_at: -1 })
       .select('company_id')
       .lean();
     const followedCompanyIds = connections.map(
@@ -364,6 +350,7 @@ export class CompaniesService {
         user_id: { $in: connectionIds },
         company_id: new Types.ObjectId(companyId),
       })
+      .sort({ created_at: -1 })
       .select('user_id')
       .lean();
     const followerIds = followers.map((follower) => follower.user_id);
@@ -383,6 +370,7 @@ export class CompaniesService {
     }
     const jobs = await this.jobModel
       .find({ company_id: new Types.ObjectId(companyId) })
+      .sort({ posted_at: -1 })
       .lean();
     return jobs.map(toGetJobDto);
   }

@@ -9,6 +9,7 @@ import {
   Min,
   IsEnum,
   Max,
+  IsISO8601,
 } from 'class-validator';
 import { ExperienceLevel } from '../enums/experience-level.enum';
 import { EmploymentType } from '../enums/employment-type.enum';
@@ -58,5 +59,13 @@ export class GetJobDto {
   @IsOptional()
   applicants: number;
 
+  @IsBoolean()
+  @IsNotEmpty()
+  isOpen: boolean;
+
   // TODO: add postedAt field 
+  @IsString()
+  @IsISO8601()
+  @IsNotEmpty()
+  postedAt: string;
 }

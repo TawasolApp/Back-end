@@ -2,9 +2,7 @@ import { Job } from '../infrastructure/database/schemas/job.schema';
 import { PostJobDto } from '../dtos/post-job.dto';
 import { GetJobDto } from '../dtos/get-job.dto';
 
-export function toPostJobSchema(
-  postJobDto: Partial<PostJobDto>,
-): Partial<Job> {
+export function toPostJobSchema(postJobDto: Partial<PostJobDto>): Partial<Job> {
   return {
     position: postJobDto.position,
     salary: postJobDto.salary,
@@ -17,10 +15,7 @@ export function toPostJobSchema(
   };
 }
 
-
-export function toGetJobDto(
-  job: Partial<Job>,
-): GetJobDto {
+export function toGetJobDto(job: Partial<Job>): GetJobDto {
   const dto: Partial<GetJobDto> = {};
 
   if (job._id) dto.jobId = job._id.toString();
@@ -33,6 +28,8 @@ export function toGetJobDto(
   if (job.location) dto.location = job.location;
   if (job.application_link) dto.applicationLink = job.application_link;
   if (job.applicants != undefined) dto.applicants = job.applicants;
+  if (job.open !== undefined) dto.isOpen = job.open;
+  if (job.posted_at) dto.postedAt = job.posted_at;
 
   return dto as GetJobDto;
 }

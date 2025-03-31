@@ -54,6 +54,9 @@ export class Job {
 
   @Prop()
   application_link: string;
+
+  @Prop()
+  open: boolean;
   
   @Prop({
     type: String,
