@@ -14,6 +14,14 @@ import {
   CompanyConnectionDocument,
 } from './infrastructure/database/schemas/company-connection.schema';
 import {
+  Job,
+  JobDocument,
+} from '../jobs/infrastructure/database/schemas/job.schema';
+import {
+  Application,
+  ApplicationDocument,
+} from '../jobs/infrastructure/database/schemas/application.schema';
+import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
@@ -42,6 +50,9 @@ export class CompaniesService {
     private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    @InjectModel(Job.name) private readonly jobModel: Model<JobDocument>,
+    @InjectModel(Application.name)
+    private readonly applicationModel: Model<ApplicationDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
   ) {}
@@ -71,7 +82,8 @@ export class CompaniesService {
       verified: false,
       ...companyData,
     });
-    return toGetCompanyDto(await newCompany.save());
+    const createdCompany = await newCompany.save();
+    return toGetCompanyDto(createdCompany);
   }
 
   async updateCompany(
@@ -120,6 +132,16 @@ export class CompaniesService {
       .lean();
     await this.companyConnectionModel.deleteMany({
       company_id: new Types.ObjectId(companyId),
+    });
+    const deletedJobs = await this.jobModel.find({
+      company_id: new Types.ObjectId(companyId),
+    });
+    const deletedIds = deletedJobs.map((deletedJob) => deletedJob._id);
+    await this.jobModel.deleteMany({
+      company_id: new Types.ObjectId(companyId),
+    });
+    await this.applicationModel.deleteMany({
+      job_id: { $in: deletedIds },
     });
     return;
   }

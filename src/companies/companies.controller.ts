@@ -31,6 +31,8 @@ import { UpdateCompanyDto } from './dtos/update-company.dto';
 export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
 
+  private loggedIn: string = '';
+
   /*
     creates a new company with required fields: name, company size, company type, industry
   */
@@ -139,7 +141,8 @@ export class CompaniesController {
       }
       name = name?.trim();
       industry = industry?.trim();
-      const userId = request.user['sub'];
+      // const userId = request.user['sub'];
+      const userId = this.loggedIn;
       const companiesDto = await this.companiesService.filterCompanies(
         userId,
         name,
@@ -172,7 +175,8 @@ export class CompaniesController {
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
       }
-      const userId = request.user['sub'];
+      // const userId = request.user['sub'];
+      const userId = this.loggedIn;
       const companyDto = await this.companiesService.getCompanyDetails(
         companyId,
         userId,
@@ -223,6 +227,8 @@ export class CompaniesController {
   //     if (!request.user) {
   //       throw new UnauthorizedException('User not authenticated');
   //     }
+  //     // const userId = request.user['sub'];
+  //     const userId = this.loggedIn;
   //     await this.companiesService.getSuggestedCompanies(this.loggedIn);
   //   } catch (error) {
   //     if (error instanceof HttpException) {
@@ -250,7 +256,8 @@ export class CompaniesController {
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
       }
-      const userId = request.user['sub'];
+      // const userId = request.user['sub'];
+      const userId = this.loggedIn;
       await this.companiesService.followCompany(userId, companyId);
     } catch (error) {
       if (error instanceof HttpException) {
@@ -276,7 +283,8 @@ export class CompaniesController {
       if (!Types.ObjectId.isValid(companyId)) {
         throw new BadRequestException('Invalid company ID format.');
       }
-      const userId = request.user['sub'];
+      // const userId = request.user['sub'];
+      const userId = this.loggedIn;
       await this.companiesService.unfollowCompany(userId, companyId);
     } catch (error) {
       if (error instanceof HttpException) {
@@ -326,7 +334,8 @@ export class CompaniesController {
   //     if (!Types.ObjectId.isValid(companyId)) {
   //       throw new BadRequestException('Invalid company ID format.');
   //     }
-  //     const userId = request.user['sub'];
+  //     // const userId = request.user['sub'];
+  //     const userId = this.loggedIn;
   //     return await this.companiesService.getCommonFollowers(userId, companyId);
   //   } catch (error) {
   //     if (error instanceof HttpException) {
