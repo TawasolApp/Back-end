@@ -25,6 +25,7 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { EducationDto } from './dto/education.dto';
 import { ApiBody } from '@nestjs/swagger';
 import { CertificationDto } from './dto/certification.dto';
+import { WorkExperienceDto } from './dto/work-experience.dto';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
@@ -364,4 +365,59 @@ export class ProfilesController {
       this.handleException(error, `Failed to delete certification.`);
     }
   }
+
+  @Post('work-experience')
+@UsePipes(new ValidationPipe())
+async addWorkExperience(@Req() req, @Body() workExperience: WorkExperienceDto) {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return await this.profilesService.addWorkExperience(workExperience, req.user.sub);
+  } catch (error) {
+    this.handleException(error, 'Failed to add work experience.');
+  }
+}
+
+@Patch('work-experience/:work_experience_id')
+@UsePipes(new ValidationPipe())
+@ApiBody({ type: WorkExperienceDto, description: 'Fields to update', isArray: false })
+async editWorkExperience(
+  @Req() req,
+  @Body() updateWorkExperienceDto: Partial<WorkExperienceDto>,
+  @Param('work_experience_id') workExperienceId: Types.ObjectId,
+) {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return await this.profilesService.editWorkExperience(
+      updateWorkExperienceDto,
+      req.user.sub,
+      workExperienceId,
+    );
+  } catch (error) {
+    this.handleException(error, `Failed to edit work experience.`);
+  }
+}
+
+@Delete('work-experience/:work_experience_id')
+@UsePipes(new ValidationPipe())
+async deleteWorkExperience(
+  @Req() req,
+  @Param('work_experience_id') workExperienceId: string,
+) {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return await this.profilesService.deleteWorkExperience(
+      new Types.ObjectId(workExperienceId),
+      req.user.sub,
+    );
+  } catch (error) {
+    this.handleException(error, `Failed to delete work experience.`);
+  }
+}
+
 }

@@ -15,6 +15,7 @@ import {
   toCreateEducationSchema,
   toCreateProfileSchema,
   toCreateSkillSchema,
+  toCreateWorkExperienceSchema,
   toGetProfileDto,
   toUpdateCertificationSchema,
   toUpdateEducationSchema,
@@ -22,6 +23,7 @@ import {
 } from './dto/profile.mapper';
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
+import { WorkExperienceDto } from './dto/work-experience.dto';
 
 @Injectable()
 export class ProfilesService {
@@ -353,15 +355,14 @@ export class ProfilesService {
     }
   
     const updateData = toUpdateCertificationSchema(certification); // Assuming you have a similar transformation function
-    console.log('editCertification service data name: ' + updateData.name);
-  
+    
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id), 'certification._id': new Types.ObjectId(certificationId) }, // Find profile and specific certification entry
       {
         $set: {
-          'certification.$.name': updateData.name,
-          'certification.$.company': updateData.company,
-          'certification.$.issue_date': updateData.issue_date,
+          'certification.$.name': certification.name,
+          'certification.$.company': certification.company,
+          'certification.$.issue_date': certification.issueDate,
          
         },
       },
@@ -390,5 +391,98 @@ export class ProfilesService {
     }
     return toGetProfileDto(updatedProfile);
   }
+
+  async addWorkExperience(workExperience: WorkExperienceDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+  
+    const newWorkExperience = toCreateWorkExperienceSchema(workExperience);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id) },
+      {
+        $addToSet: {
+          work_experience: newWorkExperience,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+  
+    if (!updatedProfile) {
+      throw new NotFoundException('Updated Profile not found');
+    }
+  
+    return toGetProfileDto(updatedProfile);
+  }
+  
+  async editWorkExperience(
+    workExperience: Partial<WorkExperienceDto>,
+    id: Types.ObjectId,
+    workExperienceId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+  
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+  
+    if (!(profile.work_experience?.some(we => we._id.toString() === workExperienceId.toString()))) {
+      throw new NotFoundException(`Work experience entry with ID ${workExperienceId} not found in profile`);
+    }
+  
+    console.log('editWorkExperience service title: ' + workExperience.title);
+    // const updateData = toUpdateWorkExperienceSchema(workExperience);
+  
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'work_experience._id': new Types.ObjectId(workExperienceId) },
+      {
+        $set: {
+          'work_experience.$.title': workExperience.title,
+          'work_experience.$.company': workExperience.company,
+          'work_experience.$.start_date': workExperience.startDate,
+          'work_experience.$.end_date': workExperience.endDate,
+          //'work_experience.$.employment_type': workExperience.employmentType,
+          'work_experience.$.location': workExperience.location,
+          //'work_experience.$.location_type': workExperience.locationType,
+          'work_experience.$.description': workExperience.description,
+        },
+      },
+      { new: true, runValidators: true }
+    );
+    console.log('editWorkExperience service updated profile:  update profile' );
+  
+    if (!updatedProfile) {
+      throw new NotFoundException('Work experience not found in profile');
+    }
+  
+    return toGetProfileDto(updatedProfile);
+  }
+  
+  async deleteWorkExperience(workExperienceId: Types.ObjectId, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+  
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'work_experience._id': workExperienceId },
+      { $pull: { work_experience: { _id: workExperienceId } } },
+      { new: true },
+    );
+  
+    if (!updatedProfile) {
+      throw new NotFoundException('Work experience not found in profile');
+    }
+  
+    return toGetProfileDto(updatedProfile);
+  }
+  
 
 }
