@@ -12,8 +12,10 @@ import {
   CompanyConnection,
   CompanyConnectionSchema,
 } from './infrastructure/database/schemas/company-connection.schema';
+import { CompanyManager, CompanyManagerSchema, } from './infrastructure/database/schemas/company-manager.schema';
 import { CompanySeeder } from './infrastructure/database/seeders/company.seeder';
 import { CompanyConnectionSeeder } from './infrastructure/database/seeders/company-connection.seeder';
+import { CompanyManagerSeeder } from './infrastructure/database/seeders/company-manager.seeder';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
@@ -25,6 +27,7 @@ import { JobsModule } from '../jobs/jobs.module';
     MongooseModule.forFeature([
       { name: Company.name, schema: CompanySchema },
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
+      { name: CompanyManager.name, schema: CompanyManagerSchema },
     ]),
     AuthModule,
     UsersModule,
@@ -38,10 +41,11 @@ import { JobsModule } from '../jobs/jobs.module';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder],
+  exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder, CompanyManagerSeeder],
   providers: [
     CompanySeeder,
     CompanyConnectionSeeder,
+    CompanyManagerSeeder,
     CompaniesService,
     {
       provide: APP_PIPE,

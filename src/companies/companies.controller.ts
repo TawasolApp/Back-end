@@ -23,7 +23,7 @@ import { JobsService } from '../jobs/jobs.service';
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { PostJobDto } from '../jobs/dtos/post-job.dto';
-import { validateId } from '../common/utils/id.validator';
+import { validateId } from '../common/utils/id-validator';
 
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe())

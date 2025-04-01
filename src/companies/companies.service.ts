@@ -1,5 +1,6 @@
 import {
   ConflictException,
+  HttpException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -43,6 +44,7 @@ import { toGetFollowerDto } from './mappers/follower.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { GetJobDto } from '../jobs/dtos/get-job.dto';
 import { toGetJobDto } from '../jobs/mappers/job.mapper';
+import { handleError } from '../common/utils/exception-handler';
 
 @Injectable()
 export class CompaniesService {
@@ -104,7 +106,7 @@ export class CompaniesService {
       const createdCompany = await newCompany.save();
       return toGetCompanyDto(createdCompany);
     } catch (error) {
-      throw new InternalServerErrorException('Failed to create company.');
+      handleError(error, 'Failed to create company.');
     }
   }
 
@@ -157,9 +159,7 @@ export class CompaniesService {
       );
       return toGetCompanyDto(updatedCompany!);
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to update company details.',
-      );
+      handleError(error, 'Failed to update company details.');
     }
   }
 
@@ -200,7 +200,7 @@ export class CompaniesService {
       });
       return;
     } catch (error) {
-      throw new InternalServerErrorException('Failed to delete company.');
+      handleError(error, 'Failed to delete company.');
     }
   }
 
@@ -236,9 +236,7 @@ export class CompaniesService {
       companyDto.isFollowing = !!isFollowing;
       return companyDto;
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve company details.',
-      );
+      handleError(error, 'Failed to retrieve company details.');
     }
   }
 
@@ -290,9 +288,7 @@ export class CompaniesService {
         return companyDto;
       });
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve list of companies.',
-      );
+      handleError(error, 'Failed to retrieve list of companies.');
     }
   }
 
@@ -334,9 +330,7 @@ export class CompaniesService {
       );
       return result;
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve company followers.',
-      );
+      handleError(error, 'Failed to retrieve list of followers.');
     }
   }
 
@@ -357,9 +351,7 @@ export class CompaniesService {
         .lean();
       return companies.map(toGetCompanyDto);
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve list of followed companies.',
-      );
+      handleError(error, 'Failed to retrieve list of followed companies.');
     }
   }
 
@@ -405,7 +397,7 @@ export class CompaniesService {
         { new: true },
       );
     } catch (error) {
-      throw new InternalServerErrorException('Failed to follow company.');
+      handleError(error, 'Failed to follow company.');
     }
   }
 
@@ -443,7 +435,7 @@ export class CompaniesService {
         { new: true },
       );
     } catch (error) {
-      throw new InternalServerErrorException('Failed to unfollow company.');
+      handleError(error, 'Failed to unfollow company.');
     }
   }
 
@@ -479,9 +471,7 @@ export class CompaniesService {
         .lean();
       return suggestedCompanies.map(toGetCompanyDto);
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve list of related companies.',
-      );
+      handleError(error, 'Failed to retrieve list of related companies.');
     }
   }
 
@@ -544,9 +534,7 @@ export class CompaniesService {
         .lean();
       return profiles.map(toGetFollowerDto);
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve list of common followers.',
-      );
+      handleError(error, 'Failed to retrieve list of common followers.');
     }
   }
 
@@ -576,9 +564,10 @@ export class CompaniesService {
         .lean();
       return jobs.map(toGetJobDto);
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve company jobs.',
-      );
+      if (error instanceof HttpException) {
+        throw error;
+      }
+      handleError(error, 'Failed to retrieve company jobs.');
     }
   }
 }

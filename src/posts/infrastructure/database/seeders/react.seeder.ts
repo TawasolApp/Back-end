@@ -3,10 +3,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { React, ReactDocument } from '../schemas/react.schema';
 import {
-  User,
-  UserDocument,
-} from '../../../../users/infrastructure/database/schemas/user.schema';
-import {
   Company,
   CompanyDocument,
 } from '../../../../companies/infrastructure/database/schemas/company.schema';
@@ -25,7 +21,6 @@ import {
 export class ReactSeeder {
   constructor(
     @InjectModel(React.name) private reactModel: Model<ReactDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
@@ -90,7 +85,7 @@ export class ReactSeeder {
   }
 
   async seedCommentReacts(count: number): Promise<void> {
-    const users = await this.userModel.find().select('_id').lean();
+    const users = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
     const comments = await this.commentModel.find().select('_id').lean();
 

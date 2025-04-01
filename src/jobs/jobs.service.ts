@@ -1,6 +1,5 @@
 import {
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -22,7 +21,8 @@ import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toGetFollowerDto } from '../companies/mappers/follower.mapper';
-import { GetFollowerDto } from 'src/companies/dtos/get-follower.dto';
+import { GetFollowerDto } from '../companies/dtos/get-follower.dto';
+import { handleError } from '../common/utils/exception-handler';
 
 @Injectable()
 export class JobsService {
@@ -68,7 +68,7 @@ export class JobsService {
       const createdJob = await newJob.save();
       return toGetJobDto(createdJob);
     } catch (error) {
-      throw new InternalServerErrorException('Failed to add job listing.');
+      handleError(error, 'Failed to add job listing.');
     }
   }
 
@@ -82,7 +82,7 @@ export class JobsService {
       }
       return toGetJobDto(job);
     } catch (error) {
-      throw new InternalServerErrorException('Failed to retrieve job details.');
+      handleError(error, 'Failed to retrieve job details.');
     }
   }
 
@@ -123,9 +123,7 @@ export class JobsService {
       );
       return result;
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Failed to retrieve job applicants.',
-      );
+      handleError(error, 'Failed to retrieve job applicants.');
     }
   }
 }
