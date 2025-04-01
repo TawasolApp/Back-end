@@ -1,5 +1,5 @@
 import { Types } from 'mongoose';
-import { Certification, Education, Profile } from '../infrastructure/database/profile.schema';
+import { Certification, Education, Profile } from '../infrastructure/database/schemas/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
 import { GetProfileDto } from './get-profile.dto';
 import { UpdateProfileDto } from './update-profile.dto';
