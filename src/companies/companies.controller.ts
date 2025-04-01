@@ -351,4 +351,40 @@ export class CompaniesController {
       newEmployerId,
     );
   }
+
+  @Get('/:companyId/managers')
+  @HttpCode(HttpStatus.OK)
+  async getCompanyManagers(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(companyId, 'company');
+    const userId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    await this.companiesService.getCompanyManagers(companyId, userId);
+  }
+
+  @Get('/:companyId/employers')
+  @HttpCode(HttpStatus.OK)
+  async getCompanyEmployers(
+    @Param('companyId') companyId: string,
+    @Req() request: Request,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(companyId, 'company');
+    const userId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    await this.companiesService.getCompanyEmployers(companyId, userId);
+  }
 }

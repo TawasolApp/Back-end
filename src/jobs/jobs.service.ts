@@ -165,12 +165,12 @@ export class JobsService {
         .select('user_id')
         .lean();
       const applicantIds = applicants.map((applicant) => applicant.user_id);
-      const profileFilter: any = { _id: { $in: applicantIds } };
+      const filter: any = { _id: { $in: applicantIds } };
       if (name) {
-        profileFilter.name = { $regex: name, $options: 'i' };
+        filter.name = { $regex: name, $options: 'i' };
       }
       const profiles = await this.profileModel
-        .find(profileFilter)
+        .find(filter)
         .select('_id name profile_picture headline')
         .lean();
       return profiles.map(toGetFollowerDto);

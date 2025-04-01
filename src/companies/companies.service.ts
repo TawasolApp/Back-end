@@ -394,12 +394,12 @@ export class CompaniesService {
         .select('user_id')
         .lean();
       const followerIds = followers.map((follower) => follower.user_id);
-      const profileFilter: any = { _id: { $in: followerIds } };
+      const filter: any = { _id: { $in: followerIds } };
       if (name) {
-        profileFilter.name = { $regex: name, $options: 'i' };
+        filter.name = { $regex: name, $options: 'i' };
       }
       const profiles = await this.profileModel
-        .find(profileFilter)
+        .find(filter)
         .select('_id name profile_picture headline')
         .lean();
       return profiles.map(toGetFollowerDto);
@@ -814,6 +814,102 @@ export class CompaniesService {
       }
     } catch (error) {
       handleError(error, 'Failed to provide company employer access to user.');
+    }
+  }
+
+  /**
+   * retrieves the list of managers for a given company.
+   *
+   * @param companyId - ID of the company.
+   * @param userId - ID of logged in user
+   * @returns array of GetFollowerDto - list of managers with profile information.
+   * @throws NotFoundException - if the company does not exist.
+   * @throws ForbiddenException - if logged in user does not have management access.
+   *
+   * function flow:
+   * 1. verify the company's existence.
+   * 2. validate logged in user's management access.
+   * 3. fetch managers from the database.
+   * 4. retrieve profile details for each manager.
+   * 5. map profile data to follower DTO and return.
+   */
+  async getCompanyManagers(
+    companyId: string,
+    userId: string,
+  ): Promise<GetFollowerDto[]> {
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      if (!(await this.checkAccess(userId, companyId))) {
+        throw new ForbiddenException(
+          'Logged in user does not have management access to this company.',
+        );
+      }
+      const managers = await this.companyManagerModel
+        .find({ company_id: new Types.ObjectId(companyId) })
+        .sort({ created_at: -1 })
+        .select('user_id')
+        .lean();
+      const managerIds = managers.map((manager) => manager.manager_id);
+      const profiles = await this.profileModel
+        .find({ _id: { $in: managerIds } })
+        .select('_id name profile_picture headline')
+        .lean();
+      return profiles.map(toGetFollowerDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of managers.');
+    }
+  }
+
+  /**
+   * retrieves the list of employers for a given company.
+   *
+   * @param companyId - ID of the company.
+   * @param userId - ID of logged in user
+   * @returns array of GetFollowerDto - list of employers with profile information.
+   * @throws NotFoundException - if the company does not exist.
+   * @throws ForbiddenException - if logged in user does not have management access.
+   *
+   * function flow:
+   * 1. verify the company's existence.
+   * 2. validate logged in user's management access.
+   * 3. fetch employers from the database.
+   * 4. retrieve profile details for each employer.
+   * 5. map profile data to follower DTO and return.
+   */
+  async getCompanyEmployers(
+    companyId: string,
+    userId: string,
+  ): Promise<GetFollowerDto[]> {
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      if (!(await this.checkAccess(userId, companyId))) {
+        throw new ForbiddenException(
+          'Logged in user does not have management access to this company.',
+        );
+      }
+      const employers = await this.companyEmployerModel
+        .find({ company_id: new Types.ObjectId(companyId) })
+        .sort({ created_at: -1 })
+        .select('user_id')
+        .lean();
+      const employerIds = employers.map((employer) => employer.employer_id);
+      const profiles = await this.profileModel
+        .find({ _id: { $in: employerIds } })
+        .select('_id name profile_picture headline')
+        .lean();
+      return profiles.map(toGetFollowerDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of employers.');
     }
   }
 }
