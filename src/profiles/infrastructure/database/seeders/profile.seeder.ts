@@ -23,7 +23,9 @@ export class ProfileSeeder {
   ) {}
 
   async seedProfiles(): Promise<void> {
-    const users = await this.userModel.find({ role: 'customer' }).lean();
+    const users = await this.userModel
+      .find({ role: { $in: ['customer', 'employer', 'manager'] } })
+      .lean();
 
     if (users.length === 0) {
       console.log('No customer users found. Seeding aborted.');

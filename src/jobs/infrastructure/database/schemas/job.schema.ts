@@ -52,6 +52,12 @@ export class Job {
   @Prop({ required: true })
   location: string;
 
+  @Prop()
+  application_link: string;
+
+  @Prop()
+  open: boolean;
+  
   @Prop({
     type: String,
     default: () => new Date().toISOString(),

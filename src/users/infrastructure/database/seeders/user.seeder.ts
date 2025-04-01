@@ -21,7 +21,7 @@ export class UserSeeder {
         last_name: faker.person.lastName(),
         email: faker.internet.email().toLowerCase(),
         password: hashedPassword,
-        role: faker.helpers.arrayElement(['customer', 'employer', 'admin']),
+        role: faker.helpers.arrayElement(['customer', 'employer', 'manager', 'admin']),
         isVerified: true,
       });
     }

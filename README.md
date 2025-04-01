@@ -136,18 +136,18 @@ Each commit message should follow this format:
 ```
 /src
  ├── modules/
- │   ├── auth/
- │   │   ├── controllers/
- │   │   ├── services/
- │   │   ├── repositories/
+ │   ├── users/
  │   │   ├── dtos/
- │   │   ├── entities/
  |   |   ├── infrastructure/
  |   |   |   ├── database/
- |   |   |   |   ├── user.schema.ts
- |   |   |   |   ├── user.seeder.ts
+ |   |   |   |   ├── schemas/
+ |   |   |   |   |   ├── user.schema.ts
+ |   |   |   |   ├── seeders/   
+ |   |   |   |   |   ├── user.seeder.ts
  │   │   ├── auth.module.ts
- │   ├── users/
+ │   │   ├── auth.controller.ts
+ │   │   ├── auth.service.ts
+ │   ├── auth/
  │   ├── posts/
  │   ├── messages/
  │   ├── jobs/
