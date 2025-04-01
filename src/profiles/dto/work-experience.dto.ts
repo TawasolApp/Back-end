@@ -1,6 +1,12 @@
 import { Prop } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsOptional, IsEnum, IsDate } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsEnum,
+  IsDate,
+} from 'class-validator';
 
 export enum EmploymentType {
   FULL_TIME = 'full_time',
@@ -20,7 +26,6 @@ export enum LocationType {
 
 export class WorkExperienceDto {
   @ApiProperty({ example: 'Software Engineer', description: 'The job title.' })
- 
   @IsNotEmpty()
   @IsString()
   title: string;
@@ -37,23 +42,25 @@ export class WorkExperienceDto {
   employmentType: EmploymentType;
 
   @ApiProperty({ example: 'Google', description: 'The name of the company.' })
-  
   @IsNotEmpty()
   @IsString()
   company: string;
 
   @ApiProperty({ example: '2020-09-01', description: 'The start date.' })
-  
   @IsNotEmpty()
   startDate: Date;
 
-  @ApiProperty({ example: '2024-06-30', description: 'The end date (optional).' })
-
+  @ApiProperty({
+    example: '2024-06-30',
+    description: 'The end date (optional).',
+  })
   @IsOptional()
   endDate?: Date;
 
-  @ApiProperty({ example: 'San Francisco, CA', description: 'The work location.' })
-
+  @ApiProperty({
+    example: 'San Francisco, CA',
+    description: 'The work location.',
+  })
   @IsOptional()
   @IsString()
   location: string;
@@ -69,8 +76,10 @@ export class WorkExperienceDto {
   @IsOptional()
   locationType: LocationType;
 
-  @ApiProperty({ example: 'Worked on various projects...', description: 'Job description (optional).' })
-
+  @ApiProperty({
+    example: 'Worked on various projects...',
+    description: 'Job description (optional).',
+  })
   @IsOptional()
   @IsString()
   description: string;

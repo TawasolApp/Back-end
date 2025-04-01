@@ -2,12 +2,12 @@ import { Types } from 'mongoose';
 import { Certification, Education, Profile } from '../infrastructure/database/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
 import { GetProfileDto } from './get-profile.dto';
-
 import { UpdateProfileDto } from './update-profile.dto';
 import { EducationDto } from './education.dto';
 import { SkillDto } from './skill.dto';
 import { CertificationDto } from './certification.dto';
 import { WorkExperienceDto } from './work-experience.dto';
+import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
 
 /**
  * Maps CreateProfileDto to the Profile schema.
@@ -54,15 +54,15 @@ export function toCreateProfileSchema(
       createProfileDto.workExperience?.map((work) => ({
         title: work.title,
         company: work.company,
-        employment_type: work.employmentType,
+        employment_type: work.employmentType as EmploymentType,
         start_date: work.startDate ? new Date(work.startDate) : new Date(),
         end_date: work.endDate ? new Date(work.endDate) : new Date(),
         location: work.location ?? '', // ✅ Ensure `location` is always a string
-        location_type: work.locationType ?? '', // ✅ Ensure `location_type` is always a string
+        location_type: work.locationType as LocationType, // ✅ Ensure `location_type` is always a string
         description: work.description ?? '',
       })) ?? [],
 
-    visibility: createProfileDto.visibility,
+    visibility: createProfileDto.visibility as Visibility,
   };
 }
 
@@ -137,15 +137,15 @@ export function toUpdateProfileSchema(
         _id: work?._id ?? null,
         title: work?.title ?? null,
         company: work?.company ?? null,
-        employmentType: work?.employment_type ?? null,
+        employmentType: work?.employment_type as EmploymentType,
         startDate: work?.start_date?.toISOString() ?? null,
         endDate: work?.end_date?.toISOString() ?? undefined,
         location: work?.location ?? null,
-        locationType: work?.location_type ?? null,
+        locationType: work?.location_type as LocationType,
         description: work?.description ?? null,
       })) ?? [],
 
-    visibility: profile.visibility ?? 'public', // Defaulting to 'public'
+    visibility: profile.visibility as Visibility, // Defaulting to 'public'
     connectionCount: profile.connection_count ?? 0, // Defaulting to 0
   };
 }
@@ -232,10 +232,11 @@ export function toCreateWorkExperienceSchema(workExperienceDto: Partial<WorkExpe
     _id: new Types.ObjectId(),
     title: workExperienceDto.title,
     company: workExperienceDto.company,
-    employment_type: workExperienceDto.employmentType,
+    employment_type: workExperienceDto.employmentType as EmploymentType,
     start_date: workExperienceDto.startDate,
     end_date: workExperienceDto.endDate,
     location: workExperienceDto.location,
-    location_type: workExperienceDto.locationType,
+    location_type: workExperienceDto.locationType as LocationType,
     description: workExperienceDto.description,
-  };}
+  };
+}

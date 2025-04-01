@@ -4,6 +4,8 @@ import { Type } from 'class-transformer';
 import { SkillDto } from './skill.dto';
 import { CertificationDto } from './certification.dto';
 import { EducationDto } from './education.dto';
+import { WorkExperienceDto } from './work-experience.dto';
+import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
 
 
 // class Education {
@@ -60,65 +62,65 @@ import { EducationDto } from './education.dto';
 //   issueDate?: string;
 // }
 
-class WorkExperience {
-  @ApiProperty({ description: 'Job title', example: 'Software Engineer' })
-  @IsNotEmpty()
-  @IsString()
-  title: string;
+// class WorkExperience {
+//   @ApiProperty({ description: 'Job title', example: 'Software Engineer' })
+//   @IsNotEmpty()
+//   @IsString()
+//   title: string;
 
-  @ApiProperty({
-    description: 'Employment type',
-    example: 'full_time',
-    enum: ['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'],
-  })
-  @IsNotEmpty()
-  @IsEnum(['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'])
-  employmentType: string;
+//   @ApiProperty({
+//     description: 'Employment type',
+//     example: 'full_time',
+//     enum: ['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'],
+//   })
+//   @IsNotEmpty()
+//   @IsEnum(['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'])
+//   employmentType: string;
 
-  @ApiProperty({ description: 'Company name', example: 'Google' })
-  @IsNotEmpty()
-  @IsString()
-  company: string;
+//   @ApiProperty({ description: 'Company name', example: 'Google' })
+//   @IsNotEmpty()
+//   @IsString()
+//   company: string;
 
-  @ApiProperty({ description: 'Start date', example: '2020-01-01' })
-  @IsNotEmpty()
-  @IsString()
-  startDate: string;
+//   @ApiProperty({ description: 'Start date', example: '2020-01-01' })
+//   @IsNotEmpty()
+//   @IsString()
+//   startDate: string;
 
-  @ApiPropertyOptional({ description: 'End date', example: '2022-12-31' })
-  @IsOptional()
-  @IsString()
-  endDate?: string;
+//   @ApiPropertyOptional({ description: 'End date', example: '2022-12-31' })
+//   @IsOptional()
+//   @IsString()
+//   endDate?: string;
 
-  @ApiPropertyOptional({ description: 'Location', example: 'Mountain View, CA' })
-  @IsOptional()
-  @IsString()
-  location?: string;
+//   @ApiPropertyOptional({ description: 'Location', example: 'Mountain View, CA' })
+//   @IsOptional()
+//   @IsString()
+//   location?: string;
 
-  @ApiPropertyOptional({
-    description: 'Location type',
-    enum: ['on_site', 'hybrid', 'remote'],
-    example: 'remote',
-  })
-  @IsOptional()
-  @IsEnum(['on_site', 'hybrid', 'remote'])
-  locationType?: string;
+//   @ApiPropertyOptional({
+//     description: 'Location type',
+//     enum: ['on_site', 'hybrid', 'remote'],
+//     example: 'remote',
+//   })
+//   @IsOptional()
+//   @IsEnum(['on_site', 'hybrid', 'remote'])
+//   locationType?: string;
 
-  @ApiPropertyOptional({ description: 'Job role description', example: 'Worked on AI projects' })
-  @IsOptional()
-  @IsString()
-  description?: string;
-}
+//   @ApiPropertyOptional({ description: 'Job role description', example: 'Worked on AI projects' })
+//   @IsOptional()
+//   @IsString()
+//   description?: string;
+// }
 
 class PlanDetails {
   @ApiProperty({
     description: 'Subscription plan type',
     example: 'monthly',
-    enum: ['monthly', 'yearly'],
+    enum: PlanType,
   })
   @IsNotEmpty()
-  @IsEnum(['monthly', 'yearly'])
-  planType: string;
+  @IsEnum(PlanType)
+  planType: PlanType;
 
   @ApiProperty({ description: 'Start date of the plan', example: '2023-01-01' })
   @IsNotEmpty()
@@ -215,21 +217,21 @@ export class CreateProfileDto {
   @Type(() => CertificationDto)
   certification?: CertificationDto[];
 
-  @ApiPropertyOptional({ description: 'Work experience', type: [WorkExperience] })
+  @ApiPropertyOptional({ description: 'Work experience', type: [WorkExperienceDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => WorkExperience)
-  workExperience?: WorkExperience[];
+  @Type(() => WorkExperienceDto)
+  workExperience?: WorkExperienceDto[];
 
   @ApiPropertyOptional({
     description: 'Profile visibility',
     example: 'public',
-    enum: ['public', 'private', 'connections_only'],
+    enum: Visibility,
   })
   @IsOptional()
-  @IsEnum(['public', 'private', 'connections_only'])
-  visibility?: string;
+  @IsEnum(Visibility)
+  visibility?: Visibility;
 
 
 }
