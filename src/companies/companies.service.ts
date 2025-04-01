@@ -1,6 +1,7 @@
 import {
   ConflictException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -77,30 +78,34 @@ export class CompaniesService {
   async createCompany(
     createCompanyDto: Partial<CreateCompanyDto>,
   ): Promise<GetCompanyDto> {
-    const companyData = toCreateCompanySchema(createCompanyDto);
-    const existingFields = await this.companyModel
-      .findOne({
-        $or: [
-          { name: companyData.name },
-          { website: companyData.website },
-          { email: companyData.email },
-          { contact_number: companyData.contact_number },
-        ],
-      })
-      .lean();
-    if (existingFields) {
-      throw new ConflictException(
-        'Company name, website, email and contact number must be unique.',
-      );
+    try {
+      const companyData = toCreateCompanySchema(createCompanyDto);
+      const existingFields = await this.companyModel
+        .findOne({
+          $or: [
+            { name: companyData.name },
+            { website: companyData.website },
+            { email: companyData.email },
+            { contact_number: companyData.contact_number },
+          ],
+        })
+        .lean();
+      if (existingFields) {
+        throw new ConflictException(
+          'Company name, website, email and contact number must be unique.',
+        );
+      }
+      const newCompany = new this.companyModel({
+        _id: new Types.ObjectId(),
+        followers: 0,
+        verified: false,
+        ...companyData,
+      });
+      const createdCompany = await newCompany.save();
+      return toGetCompanyDto(createdCompany);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to create company.');
     }
-    const newCompany = new this.companyModel({
-      _id: new Types.ObjectId(),
-      followers: 0,
-      verified: false,
-      ...companyData,
-    });
-    const createdCompany = await newCompany.save();
-    return toGetCompanyDto(createdCompany);
   }
 
   /**
@@ -122,34 +127,40 @@ export class CompaniesService {
     companyId: string,
     updateCompanyDto: Partial<UpdateCompanyDto>,
   ): Promise<GetCompanyDto> {
-    const updateData = toUpdateCompanySchema(updateCompanyDto);
-    const existingCompany = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!existingCompany) {
-      throw new NotFoundException('Company not found.');
-    }
-    const existingFields = await this.companyModel
-      .findOne({
-        $or: [
-          { name: updateData.name },
-          { website: updateData.website },
-          { email: updateData.email },
-          { contact_number: updateData.contact_number },
-        ],
-      })
-      .lean();
-    if (existingFields) {
-      throw new ConflictException(
-        'Company name, website, email and contact number must be unique.',
+    try {
+      const updateData = toUpdateCompanySchema(updateCompanyDto);
+      const existingCompany = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!existingCompany) {
+        throw new NotFoundException('Company not found.');
+      }
+      const existingFields = await this.companyModel
+        .findOne({
+          $or: [
+            { name: updateData.name },
+            { website: updateData.website },
+            { email: updateData.email },
+            { contact_number: updateData.contact_number },
+          ],
+        })
+        .lean();
+      if (existingFields) {
+        throw new ConflictException(
+          'Company name, website, email and contact number must be unique.',
+        );
+      }
+      const updatedCompany = await this.companyModel.findByIdAndUpdate(
+        new Types.ObjectId(companyId),
+        { $set: updateData },
+        { new: true },
+      );
+      return toGetCompanyDto(updatedCompany!);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to update company details.',
       );
     }
-    const updatedCompany = await this.companyModel.findByIdAndUpdate(
-      new Types.ObjectId(companyId),
-      { $set: updateData },
-      { new: true },
-    );
-    return toGetCompanyDto(updatedCompany!);
   }
 
   /**
@@ -164,29 +175,33 @@ export class CompaniesService {
    * 3. remove related jobs and applications.
    */
   async deleteCompany(companyId: string) {
-    const existingCompany = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!existingCompany) {
-      throw new NotFoundException('Company not found.');
+    try {
+      const existingCompany = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!existingCompany) {
+        throw new NotFoundException('Company not found.');
+      }
+      await this.companyModel
+        .findByIdAndDelete(new Types.ObjectId(companyId))
+        .lean();
+      await this.companyConnectionModel.deleteMany({
+        company_id: new Types.ObjectId(companyId),
+      });
+      const deletedJobs = await this.jobModel.find({
+        company_id: new Types.ObjectId(companyId),
+      });
+      const deletedIds = deletedJobs.map((deletedJob) => deletedJob._id);
+      await this.jobModel.deleteMany({
+        company_id: new Types.ObjectId(companyId),
+      });
+      await this.applicationModel.deleteMany({
+        job_id: { $in: deletedIds },
+      });
+      return;
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to delete company.');
     }
-    await this.companyModel
-      .findByIdAndDelete(new Types.ObjectId(companyId))
-      .lean();
-    await this.companyConnectionModel.deleteMany({
-      company_id: new Types.ObjectId(companyId),
-    });
-    const deletedJobs = await this.jobModel.find({
-      company_id: new Types.ObjectId(companyId),
-    });
-    const deletedIds = deletedJobs.map((deletedJob) => deletedJob._id);
-    await this.jobModel.deleteMany({
-      company_id: new Types.ObjectId(companyId),
-    });
-    await this.applicationModel.deleteMany({
-      job_id: { $in: deletedIds },
-    });
-    return;
   }
 
   /**
@@ -206,19 +221,25 @@ export class CompaniesService {
     companyId: string,
     userId: string,
   ): Promise<GetCompanyDto> {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found.');
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const isFollowing = await this.companyConnectionModel.findOne({
+        user_id: new Types.ObjectId(userId),
+        company_id: new Types.ObjectId(companyId),
+      });
+      const companyDto = toGetCompanyDto(company);
+      companyDto.isFollowing = !!isFollowing;
+      return companyDto;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve company details.',
+      );
     }
-    const isFollowing = await this.companyConnectionModel.findOne({
-      user_id: new Types.ObjectId(userId),
-      company_id: new Types.ObjectId(companyId),
-    });
-    const companyDto = toGetCompanyDto(company);
-    companyDto.isFollowing = !!isFollowing;
-    return companyDto;
   }
 
   /**
@@ -240,33 +261,39 @@ export class CompaniesService {
     name?: string,
     industry?: string,
   ): Promise<GetCompanyDto[]> {
-    const filter: any = {};
-    if (name) {
-      filter.name = { $regex: name, $options: 'i' };
+    try {
+      const filter: any = {};
+      if (name) {
+        filter.name = { $regex: name, $options: 'i' };
+      }
+      if (industry) {
+        filter.industry = { $regex: industry, $options: 'i' };
+      }
+      const companies = await this.companyModel
+        .find(filter)
+        .select('_id name logo industry followers')
+        .sort({ followers: -1 })
+        .lean();
+      const companyIds = companies.map((company) => company._id);
+      const connections = await this.companyConnectionModel
+        .find({
+          user_id: new Types.ObjectId(userId),
+          company_id: { $in: companyIds },
+        })
+        .lean();
+      const followedCompanyIds = new Set(
+        connections.map((connection) => connection.company_id.toString()),
+      );
+      return companies.map((company) => {
+        const companyDto = toGetCompanyDto(company);
+        companyDto.isFollowing = followedCompanyIds.has(company._id.toString());
+        return companyDto;
+      });
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of companies.',
+      );
     }
-    if (industry) {
-      filter.industry = { $regex: industry, $options: 'i' };
-    }
-    const companies = await this.companyModel
-      .find(filter)
-      .select('_id name logo industry followers')
-      .sort({ followers: -1 })
-      .lean();
-    const companyIds = companies.map((company) => company._id);
-    const connections = await this.companyConnectionModel
-      .find({
-        user_id: new Types.ObjectId(userId),
-        company_id: { $in: companyIds },
-      })
-      .lean();
-    const followedCompanyIds = new Set(
-      connections.map((connection) => connection.company_id.toString()),
-    );
-    return companies.map((company) => {
-      const companyDto = toGetCompanyDto(company);
-      companyDto.isFollowing = followedCompanyIds.has(company._id.toString());
-      return companyDto;
-    });
   }
 
   /**
@@ -283,45 +310,57 @@ export class CompaniesService {
    * 4. map profile data to follower DTO and return.
    */
   async getCompanyFollowers(companyId: string): Promise<GetFollowerDto[]> {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found.');
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const followers = await this.companyConnectionModel
+        .find({ company_id: new Types.ObjectId(companyId) })
+        .sort({ created_at: -1 })
+        .select('user_id')
+        .lean();
+      const result = await Promise.all(
+        followers.map(async (follower) => {
+          const userId = follower.user_id;
+          const profile = await this.profileModel
+            .findById(userId)
+            .select('_id name profile_picture headline')
+            .lean();
+          return toGetFollowerDto(profile!);
+        }),
+      );
+      return result;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve company followers.',
+      );
     }
-    const followers = await this.companyConnectionModel
-      .find({ company_id: new Types.ObjectId(companyId) })
-      .sort({ created_at: -1 })
-      .select('user_id')
-      .lean();
-    const result = await Promise.all(
-      followers.map(async (follower) => {
-        const userId = follower.user_id;
-        const profile = await this.profileModel
-          .findById(userId)
-          .select('_id name profile_picture headline')
-          .lean();
-        return toGetFollowerDto(profile!);
-      }),
-    );
-    return result;
   }
 
   async getFollowedCompanies(userId: string): Promise<GetCompanyDto[]> {
-    const connections = await this.companyConnectionModel
-      .find({ user_id: new Types.ObjectId(userId) })
-      .sort({ created_at: -1 })
-      .select('company_id')
-      .lean();
-    const followedCompanyIds = connections.map(
-      (connection) => connection.company_id,
-    );
-    const companies = await this.companyModel
-      .find({ _id: { $in: followedCompanyIds } })
-      .select('_id name logo industry followers')
-      .sort({ created_at: -1 })
-      .lean();
-    return companies.map(toGetCompanyDto);
+    try {
+      const connections = await this.companyConnectionModel
+        .find({ user_id: new Types.ObjectId(userId) })
+        .sort({ created_at: -1 })
+        .select('company_id')
+        .lean();
+      const followedCompanyIds = connections.map(
+        (connection) => connection.company_id,
+      );
+      const companies = await this.companyModel
+        .find({ _id: { $in: followedCompanyIds } })
+        .select('_id name logo industry followers')
+        .sort({ created_at: -1 })
+        .lean();
+      return companies.map(toGetCompanyDto);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of followed companies.',
+      );
+    }
   }
 
   /**
@@ -338,32 +377,36 @@ export class CompaniesService {
    * 3. create a new follow record and increment follower count.
    */
   async followCompany(userId: string, companyId: string) {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found.');
-    }
-    const existingFollow = await this.companyConnectionModel
-      .findOne({
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const existingFollow = await this.companyConnectionModel
+        .findOne({
+          user_id: new Types.ObjectId(userId),
+          company_id: new Types.ObjectId(companyId),
+        })
+        .lean();
+      if (existingFollow) {
+        throw new ConflictException('User already follows this company.');
+      }
+      const newFollow = new this.companyConnectionModel({
+        _id: new Types.ObjectId(),
         user_id: new Types.ObjectId(userId),
         company_id: new Types.ObjectId(companyId),
-      })
-      .lean();
-    if (existingFollow) {
-      throw new ConflictException('User already follows this company.');
+      });
+      await newFollow.save();
+      await this.companyModel.findByIdAndUpdate(
+        new Types.ObjectId(companyId),
+        { $inc: { followers: 1 } },
+        { new: true },
+      );
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to follow company.');
     }
-    const newFollow = new this.companyConnectionModel({
-      _id: new Types.ObjectId(),
-      user_id: new Types.ObjectId(userId),
-      company_id: new Types.ObjectId(companyId),
-    });
-    await newFollow.save();
-    await this.companyModel.findByIdAndUpdate(
-      new Types.ObjectId(companyId),
-      { $inc: { followers: 1 } },
-      { new: true },
-    );
   }
 
   /**
@@ -378,26 +421,30 @@ export class CompaniesService {
    * 2. decrement the follower count of the company.
    */
   async unfollowCompany(userId: string, companyId: string) {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found.');
-    }
-    const deletedFollow = await this.companyConnectionModel.findOneAndDelete({
-      user_id: new Types.ObjectId(userId),
-      company_id: new Types.ObjectId(companyId),
-    });
-    if (!deletedFollow) {
-      throw new NotFoundException(
-        'Follow record not found. User is not following this company.',
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const deletedFollow = await this.companyConnectionModel.findOneAndDelete({
+        user_id: new Types.ObjectId(userId),
+        company_id: new Types.ObjectId(companyId),
+      });
+      if (!deletedFollow) {
+        throw new NotFoundException(
+          'Follow record not found. User is not following this company.',
+        );
+      }
+      await this.companyModel.findByIdAndUpdate(
+        new Types.ObjectId(companyId),
+        { $inc: { followers: -1 } },
+        { new: true },
       );
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to unfollow company.');
     }
-    await this.companyModel.findByIdAndUpdate(
-      new Types.ObjectId(companyId),
-      { $inc: { followers: -1 } },
-      { new: true },
-    );
   }
 
   /**
@@ -413,23 +460,29 @@ export class CompaniesService {
    * 3. return the suggested companies sorted by follower count.
    */
   async getSuggestedCompanies(companyId: string): Promise<GetCompanyDto[]> {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .select('industry company_size')
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found');
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .select('industry company_size')
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found');
+      }
+      const suggestedCompanies = await this.companyModel
+        .find({
+          _id: { $ne: new Types.ObjectId(companyId) },
+          industry: company.industry,
+          company_size: company.company_size,
+        })
+        .select('_id name logo industry followers')
+        .sort({ followers: -1 })
+        .lean();
+      return suggestedCompanies.map(toGetCompanyDto);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of related companies.',
+      );
     }
-    const suggestedCompanies = await this.companyModel
-      .find({
-        _id: { $ne: new Types.ObjectId(companyId) },
-        industry: company.industry,
-        company_size: company.company_size,
-      })
-      .select('_id name logo industry followers')
-      .sort({ followers: -1 })
-      .lean();
-    return suggestedCompanies.map(toGetCompanyDto);
   }
 
   /**
@@ -449,46 +502,52 @@ export class CompaniesService {
     userId: string,
     companyId: string,
   ): Promise<GetFollowerDto[]> {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found');
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found');
+      }
+      const connections = await this.userConnectionModel
+        .find({
+          $or: [
+            {
+              sending_party: new Types.ObjectId(userId),
+              status: ConnectionStatus.Connected,
+            },
+            {
+              receiving_party: new Types.ObjectId(userId),
+              status: ConnectionStatus.Connected,
+            },
+          ],
+        })
+        .select('sending_party receiving_party')
+        .lean();
+      const connectionIds = connections.map((connection) =>
+        connection.sending_party.equals(new Types.ObjectId(userId))
+          ? connection.receiving_party
+          : connection.sending_party,
+      );
+      const followers = await this.companyConnectionModel
+        .find({
+          user_id: { $in: connectionIds },
+          company_id: new Types.ObjectId(companyId),
+        })
+        .sort({ created_at: -1 })
+        .select('user_id')
+        .lean();
+      const followerIds = followers.map((follower) => follower.user_id);
+      const profiles = await this.profileModel
+        .find({ _id: { $in: followerIds } })
+        .select('_id name profile_picture headline')
+        .lean();
+      return profiles.map(toGetFollowerDto);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve list of common followers.',
+      );
     }
-    const connections = await this.userConnectionModel
-      .find({
-        $or: [
-          {
-            sending_party: new Types.ObjectId(userId),
-            status: ConnectionStatus.Connected,
-          },
-          {
-            receiving_party: new Types.ObjectId(userId),
-            status: ConnectionStatus.Connected,
-          },
-        ],
-      })
-      .select('sending_party receiving_party')
-      .lean();
-    const connectionIds = connections.map((connection) =>
-      connection.sending_party.equals(new Types.ObjectId(userId))
-        ? connection.receiving_party
-        : connection.sending_party,
-    );
-    const followers = await this.companyConnectionModel
-      .find({
-        user_id: { $in: connectionIds },
-        company_id: new Types.ObjectId(companyId),
-      })
-      .sort({ created_at: -1 })
-      .select('user_id')
-      .lean();
-    const followerIds = followers.map((follower) => follower.user_id);
-    const profiles = await this.profileModel
-      .find({ _id: { $in: followerIds } })
-      .select('_id name profile_picture headline')
-      .lean();
-    return profiles.map(toGetFollowerDto);
   }
 
   /**
@@ -504,16 +563,22 @@ export class CompaniesService {
    * 4. map job data to job DTO and return.
    */
   async getCompanyJobs(companyId: string): Promise<GetJobDto[]> {
-    const company = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!company) {
-      throw new NotFoundException('Company not found.');
+    try {
+      const company = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+      const jobs = await this.jobModel
+        .find({ company_id: new Types.ObjectId(companyId) })
+        .sort({ posted_at: -1 })
+        .lean();
+      return jobs.map(toGetJobDto);
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve company jobs.',
+      );
     }
-    const jobs = await this.jobModel
-      .find({ company_id: new Types.ObjectId(companyId) })
-      .sort({ posted_at: -1 })
-      .lean();
-    return jobs.map(toGetJobDto);
   }
 }

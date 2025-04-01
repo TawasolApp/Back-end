@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Job, JobDocument } from './infrastructure/database/schemas/job.schema';
@@ -32,7 +36,7 @@ export class JobsService {
     private readonly profileModel: Model<ProfileDocument>,
   ) {}
 
-    /**
+  /**
    * creates a new job in the database.
    *
    * @param postJobDto - partial object containing job details.
@@ -46,33 +50,43 @@ export class JobsService {
    * 4. return the newly created job as a DTO.
    */
   async postJob(companyId: string, postJobDto: PostJobDto): Promise<GetJobDto> {
-    const existingCompany = await this.companyModel
-      .findById(new Types.ObjectId(companyId))
-      .lean();
-    if (!existingCompany) {
-      throw new NotFoundException('Company not found.');
+    try {
+      const existingCompany = await this.companyModel
+        .findById(new Types.ObjectId(companyId))
+        .lean();
+      if (!existingCompany) {
+        throw new NotFoundException('Company not found.');
+      }
+      const jobData = toPostJobSchema(postJobDto);
+      const newJob = new this.jobModel({
+        _id: new Types.ObjectId(),
+        company_id: new Types.ObjectId(companyId),
+        applicants: 0,
+        open: true,
+        ...jobData,
+      });
+      const createdJob = await newJob.save();
+      return toGetJobDto(createdJob);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to add job listing.');
     }
-    const jobData = toPostJobSchema(postJobDto);
-    const newJob = new this.jobModel({
-      _id: new Types.ObjectId(),
-      company_id: new Types.ObjectId(companyId),
-      applicants: 0,
-      open: true,
-      ...jobData,
-    });
-    const createdJob = await newJob.save();
-    return toGetJobDto(createdJob);
   }
 
   async getJob(jobId: string): Promise<GetJobDto> {
-    const job = await this.jobModel.findById(new Types.ObjectId(jobId)).lean();
-    if (!job) {
-      throw new NotFoundException('Job not found.');
+    try {
+      const job = await this.jobModel
+        .findById(new Types.ObjectId(jobId))
+        .lean();
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+      return toGetJobDto(job);
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to retrieve job details.');
     }
-    return toGetJobDto(job);
   }
 
-    /**
+  /**
    * retrieves the list of applicants for a given job.
    *
    * @param jobId - ID of the job.
@@ -86,24 +100,32 @@ export class JobsService {
    * 4. map profile data to DTO and return.
    */
   async getJobApplicants(jobId: string): Promise<GetFollowerDto[]> {
-    const job = await this.jobModel.findById(new Types.ObjectId(jobId)).lean();
-    if (!job) {
-      throw new NotFoundException('Job not found.');
+    try {
+      const job = await this.jobModel
+        .findById(new Types.ObjectId(jobId))
+        .lean();
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+      const applicants = await this.applicationModel
+        .find({ job_id: new Types.ObjectId(jobId) })
+        .select('user_id')
+        .lean();
+      const result = await Promise.all(
+        applicants.map(async (applicant) => {
+          const userId = applicant.user_id;
+          const profile = await this.profileModel
+            .findById(userId)
+            .select('_id name profile_picture headline')
+            .lean();
+          return toGetFollowerDto(profile!);
+        }),
+      );
+      return result;
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to retrieve job applicants.',
+      );
     }
-    const applicants = await this.applicationModel
-      .find({ job_id: new Types.ObjectId(jobId) })
-      .select('user_id')
-      .lean();
-    const result = await Promise.all(
-      applicants.map(async (applicant) => {
-        const userId = applicant.user_id;
-        const profile = await this.profileModel
-          .findById(userId)
-          .select('_id name profile_picture headline')
-          .lean();
-        return toGetFollowerDto(profile!);
-      }),
-    );
-    return result;
   }
 }
