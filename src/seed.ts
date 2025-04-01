@@ -13,6 +13,7 @@ import { ShareSeeder } from './posts/infrastructure/database/seeders/share.seede
 import { JobSeeder } from './jobs/infrastructure/database/seeders/job.seeder';
 import { ApplicationSeeder } from './jobs/infrastructure/database/seeders/application.seeder';
 import { CompanyManagerSeeder } from './companies/infrastructure/database/seeders/company-manager.seeder';
+import { CompanyEmployerSeeder } from './jobs/infrastructure/database/seeders/company-employer.seeder';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -29,14 +30,15 @@ async function bootstrap() {
   const shareSeeder = app.get(ShareSeeder);
   const jobSeeder = app.get(JobSeeder);
   const applicationSeeder = app.get(ApplicationSeeder);
+  const companyEmployerSeeder = app.get(CompanyEmployerSeeder);
 
   await userSeeder.clearUsers();
-  await userSeeder.seedUsers(30);
+  await userSeeder.seedUsers(10);
   await profileSeeder.clearProfiles();
   await profileSeeder.seedProfiles();
 
   await userConnectionSeeder.clearUserConnections();
-  await userConnectionSeeder.seedUserConnections(10);
+  await userConnectionSeeder.seedUserConnections(20);
   await profileSeeder.updateConnectionCounts();
 
   await companySeeder.clearCompanies();
@@ -51,6 +53,8 @@ async function bootstrap() {
   await applicationSeeder.clearApplications();
   await applicationSeeder.seedApplications(30);
   await jobSeeder.updateApplicantCounts();
+  await companyEmployerSeeder.clearCompanyEmployers()
+  await companyEmployerSeeder.seedCompanyEmployers(10);
 
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();

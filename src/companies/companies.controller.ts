@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Delete,
+  ForbiddenException,
   Get,
   HttpCode,
   HttpStatus,
@@ -34,9 +35,6 @@ export class CompaniesController {
     private readonly jobsService: JobsService,
   ) {}
 
-  private loggedInUser: string = '67ead2a413bb1a3bc8d01460';
-  private loggedInCompany: string = '';
-
   @Post()
   @HttpCode(HttpStatus.CREATED)
   async createCompany(
@@ -46,8 +44,11 @@ export class CompaniesController {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
-    const newCompanyDto =
-      await this.companiesService.createCompany(createCompanyDto);
+    const userId = request.user['sub'];
+    const newCompanyDto = await this.companiesService.createCompany(
+      userId,
+      createCompanyDto,
+    );
     return newCompanyDto;
   }
 
@@ -62,10 +63,16 @@ export class CompaniesController {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
+    const userId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
     if (!updateCompanyDto || !Object.keys(updateCompanyDto).length) {
       throw new BadRequestException('No update data provided.');
     }
     const updatedCompanyDto = await this.companiesService.updateCompany(
+      userId,
       companyId,
       updateCompanyDto,
     );
@@ -82,7 +89,12 @@ export class CompaniesController {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
-    await this.companiesService.deleteCompany(companyId);
+    const userId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    await this.companiesService.deleteCompany(userId, companyId);
   }
 
   @Get()
@@ -123,8 +135,8 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const companyDto = await this.companiesService.getCompanyDetails(
-      companyId,
       userId,
+      companyId,
     );
     return companyDto;
   }
@@ -132,15 +144,18 @@ export class CompaniesController {
   @Get('/:companyId/followers')
   @HttpCode(HttpStatus.OK)
   async getCompanyFollowers(
-    @Param('companyId') companyId: string,
     @Req() request: Request,
+    @Param('companyId') companyId: string,
+    @Query('name') name?: string,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
-    const followersDto =
-      await this.companiesService.getCompanyFollowers(companyId);
+    const followersDto = await this.companiesService.getCompanyFollowers(
+      companyId,
+      name,
+    );
     return followersDto;
   }
 
@@ -226,7 +241,16 @@ export class CompaniesController {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
-    const newJobDto = await this.jobsService.postJob(companyId, postJobDto);
+    const userId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager' && role !== 'employer') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    const newJobDto = await this.jobsService.postJob(
+      userId,
+      companyId,
+      postJobDto,
+    );
     return newJobDto;
   }
 
@@ -256,7 +280,6 @@ export class CompaniesController {
     return jobsDto;
   }
 
-  // TODO: add applicant filter by name
   @Get('jobs/:jobId/applicants')
   @HttpCode(HttpStatus.OK)
   async getJobApplicants(
@@ -267,7 +290,63 @@ export class CompaniesController {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(jobId, 'job');
-    const applicantsDto = await this.jobsService.getJobApplicants(jobId);
+    const userId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager' && role !== 'employer') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    const applicantsDto = await this.jobsService.getJobApplicants(
+      userId,
+      jobId,
+    );
     return applicantsDto;
+  }
+
+  @Post('/:companyId/managers/:userId')
+  @HttpCode(HttpStatus.CREATED)
+  async addCompanyManager(
+    @Param('companyId') companyId: string,
+    @Param('userId') userId: string,
+    @Req() request: Request,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(companyId, 'company');
+    validateId(userId, 'user');
+    const requestUserId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    await this.companiesService.addCompanyManager(
+      requestUserId,
+      companyId,
+      userId,
+    );
+  }
+
+  @Post('/:companyId/employers/:userId')
+  @HttpCode(HttpStatus.CREATED)
+  async addCompanyEmployer(
+    @Param('companyId') companyId: string,
+    @Param('userId') userId: string,
+    @Req() request: Request,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(companyId, 'company');
+    validateId(userId, 'user');
+    const requestUserId = request.user['sub'];
+    const role = request.user['role'];
+    if (role !== 'manager') {
+      throw new ForbiddenException('User cannot access this endpoint.');
+    }
+    await this.companiesService.addCompanyEmployer(
+      requestUserId,
+      companyId,
+      userId,
+    );
   }
 }

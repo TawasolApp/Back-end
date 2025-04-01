@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -10,9 +11,17 @@ import {
   ApplicationDocument,
 } from './infrastructure/database/schemas/application.schema';
 import {
+  CompanyEmployer,
+  CompanyEmployerDocument,
+} from './infrastructure/database/schemas/company-employer.schema';
+import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 import {
   Profile,
   ProfileDocument,
@@ -32,9 +41,33 @@ export class JobsService {
     private readonly applicationModel: Model<ApplicationDocument>,
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
+    @InjectModel(CompanyEmployer.name)
+    private readonly companyEmployerModel: Model<CompanyEmployerDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
   ) {}
+
+  async checkAccess(userId: string, companyId: string) {
+    const allowedManager = await this.companyManagerModel
+      .findOne({
+        manager_id: new Types.ObjectId(userId),
+        company_id: new Types.ObjectId(companyId),
+      })
+      .lean();
+    const allowedEmployer = await this.companyEmployerModel
+      .findOne({
+        employer_id_id: new Types.ObjectId(userId),
+        company_id: new Types.ObjectId(companyId),
+      })
+      .lean();
+    if (allowedManager || allowedEmployer) {
+      return true;
+    } else {
+      return false;
+    }
+  }
 
   /**
    * creates a new job in the database.
@@ -49,13 +82,22 @@ export class JobsService {
    * 3. create a new job document and save to database.
    * 4. return the newly created job as a DTO.
    */
-  async postJob(companyId: string, postJobDto: PostJobDto): Promise<GetJobDto> {
+  async postJob(
+    requestUserId: string,
+    companyId: string,
+    postJobDto: PostJobDto,
+  ): Promise<GetJobDto> {
     try {
       const existingCompany = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
       if (!existingCompany) {
         throw new NotFoundException('Company not found.');
+      }
+      if (!this.checkAccess(requestUserId, companyId)) {
+        throw new ForbiddenException(
+          'Logged in user does not have management access or employer access to this company.',
+        );
       }
       const jobData = toPostJobSchema(postJobDto);
       const newJob = new this.jobModel({
@@ -99,13 +141,21 @@ export class JobsService {
    * 3. retrieve profile details for each applicants.
    * 4. map profile data to DTO and return.
    */
-  async getJobApplicants(jobId: string): Promise<GetFollowerDto[]> {
+  async getJobApplicants(
+    userId: string,
+    jobId: string,
+  ): Promise<GetFollowerDto[]> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
         .lean();
       if (!job) {
         throw new NotFoundException('Job not found.');
+      }
+      if (!(await this.checkAccess(userId, job.company_id.toString()))) {
+        throw new ForbiddenException(
+          'Logged in user does not have management access or employer access to this job posting.',
+        );
       }
       const applicants = await this.applicationModel
         .find({ job_id: new Types.ObjectId(jobId) })
