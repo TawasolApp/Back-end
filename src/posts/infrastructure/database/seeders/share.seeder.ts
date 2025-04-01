@@ -3,9 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Share, ShareDocument } from '../schemas/share.schema';
 import {
-  User,
-  UserDocument,
-} from '../../../../users/infrastructure/database/schemas/user.schema';
+  Profile,
+  ProfileDocument,
+} from '../../../../profiles/infrastructure/database/schemas/profile.schema';
 import {
   Post,
   PostDocument,
@@ -16,13 +16,13 @@ import { faker } from '@faker-js/faker';
 export class ShareSeeder {
   constructor(
     @InjectModel(Share.name) private shareModel: Model<ShareDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
 
   async seedShares(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
+    const users = await this.profileModel
+      .find()
       .select('_id')
       .lean();
     const posts = await this.postModel.find().select('_id').lean();

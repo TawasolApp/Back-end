@@ -8,26 +8,21 @@ import {
 } from '../schemas/company-connection.schema';
 import { Company, CompanyDocument } from '../schemas/company.schema';
 import {
-  User,
-  UserDocument,
-} from '../../../../users/infrastructure/database/schemas/user.schema';
-
+  Profile,
+  ProfileDocument,
+} from '../../../../profiles/infrastructure/database/schemas/profile.schema';
 
 @Injectable()
 export class CompanyConnectionSeeder {
   constructor(
     @InjectModel(CompanyConnection.name)
     private companyConnectionModel: Model<CompanyConnectionDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
   ) {}
 
   async seedCompanyConnections(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
-
+    const users = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
 
     if (users.length === 0 || companies.length === 0) {

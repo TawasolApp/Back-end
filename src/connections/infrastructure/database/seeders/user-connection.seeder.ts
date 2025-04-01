@@ -7,9 +7,9 @@ import {
   UserConnectionDocument,
 } from '../schemas/user-connection.schema';
 import {
-  User,
-  UserDocument,
-} from '../../../../users/infrastructure/database/schemas/user.schema';
+  Profile,
+  ProfileDocument,
+} from '../../../../profiles/infrastructure/database/schemas/profile.schema';
 import { ConnectionStatus } from '../../../enums/connection-status.enum';
 
 @Injectable()
@@ -17,14 +17,11 @@ export class UserConnectionSeeder {
   constructor(
     @InjectModel(UserConnection.name)
     private userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
   ) {}
 
   async seedUserConnections(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
-      .select('_id')
-      .lean();
+    const users = await this.profileModel.find().select('_id').lean();
 
     if (users.length < 2) {
       console.log('Not enough users to create connections. Seeding aborted.');
@@ -64,12 +61,7 @@ export class UserConnectionSeeder {
       userConnections.push({
         sending_party: sendingUser._id,
         receiving_party: receivingUser._id,
-        status: faker.helpers.arrayElement([
-          ConnectionStatus.Pending,
-          ConnectionStatus.Connected,
-          ConnectionStatus.Ignored,
-          ConnectionStatus.Following,
-        ]),
+        status: faker.helpers.arrayElement(Object.values(ConnectionStatus)),
       });
     }
 
