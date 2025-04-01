@@ -107,10 +107,11 @@ export class CompaniesService {
    * 3. if a duplicate exists, throw a ConflictException.
    * 4. if no duplicates are found, create a new company document.
    * 5. save the new company to the database.
-   * 6. return the newly created company as a DTO.
+   * 6. gives company creator management access.
+   * 7. return the newly created company as a DTO.
    */
   async createCompany(
-    requestUserId: string,
+    userId: string,
     createCompanyDto: Partial<CreateCompanyDto>,
   ): Promise<GetCompanyDto> {
     try {
@@ -139,12 +140,12 @@ export class CompaniesService {
       const createdCompany = await newCompany.save();
       const newManager = new this.companyManagerModel({
         _id: new Types.ObjectId(),
-        manager_id: new Types.ObjectId(requestUserId),
+        manager_id: new Types.ObjectId(userId),
         company_id: createdCompany._id,
       });
       await newManager.save();
       await this.userModel.findByIdAndUpdate(
-        new Types.ObjectId(requestUserId),
+        new Types.ObjectId(userId),
         { $set: { role: 'manager' } },
         { upsert: false },
       );
@@ -165,12 +166,13 @@ export class CompaniesService {
    *
    * function flow:
    * 1. validate the existence of the company.
-   * 2. check for existing companies with duplicate fields (name, website, email, contact number).
-   * 3. update the company if no conflicts are found.
-   * 4. return the updated company as a DTO.
+   * 2. validate logged in user's management access.
+   * 3. check for existing companies with duplicate fields (name, website, email, contact number).
+   * 4. update the company if no conflicts are found.
+   * 5. return the updated company as a DTO.
    */
   async updateCompany(
-    requestUserId: string,
+    userId: string,
     companyId: string,
     updateCompanyDto: Partial<UpdateCompanyDto>,
   ): Promise<GetCompanyDto> {
@@ -182,7 +184,7 @@ export class CompaniesService {
       if (!existingCompany) {
         throw new NotFoundException('Company not found.');
       }
-      if (!(await this.checkAccess(requestUserId, companyId))) {
+      if (!(await this.checkAccess(userId, companyId))) {
         throw new ForbiddenException(
           'Logged in user does not have management access to this company.',
         );
@@ -221,21 +223,22 @@ export class CompaniesService {
    *
    * function flow:
    * 1. check if the company exists.
+   * 2. validates logged in user's management access
    * 2. delete the company and associated connections.
    * 3. remove related jobs and applications.
    */
-  async deleteCompany(requestUserId: string, companyId: string) {
+  async deleteCompany(userId: string, companyId: string) {
     try {
-      if (!(await this.checkAccess(requestUserId, companyId))) {
-        throw new ForbiddenException(
-          'Logged in user does not have management access to this company.',
-        );
-      }
       const existingCompany = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
       if (!existingCompany) {
         throw new NotFoundException('Company not found.');
+      }
+      if (!(await this.checkAccess(userId, companyId))) {
+        throw new ForbiddenException(
+          'Logged in user does not have management access to this company.',
+        );
       }
       await this.companyModel
         .findByIdAndDelete(new Types.ObjectId(companyId))
@@ -259,7 +262,6 @@ export class CompaniesService {
       await this.companyEmployerModel.deleteMany({
         company_id: new Types.ObjectId(companyId),
       });
-      return;
     } catch (error) {
       handleError(error, 'Failed to delete company.');
     }
@@ -279,7 +281,7 @@ export class CompaniesService {
    * 3. return the company details with follow status.
    */
   async getCompanyDetails(
-    requestUserId: string,
+    userId: string,
     companyId: string,
   ): Promise<GetCompanyDto> {
     try {
@@ -290,12 +292,12 @@ export class CompaniesService {
         throw new NotFoundException('Company not found.');
       }
       const isFollowing = await this.companyConnectionModel.findOne({
-        user_id: new Types.ObjectId(requestUserId),
+        user_id: new Types.ObjectId(userId),
         company_id: new Types.ObjectId(companyId),
       });
       const companyDto = toGetCompanyDto(company);
       companyDto.isFollowing = !!isFollowing;
-      companyDto.isManager = await this.checkAccess(requestUserId, companyId);
+      companyDto.isManager = await this.checkAccess(userId, companyId);
       return companyDto;
     } catch (error) {
       handleError(error, 'Failed to retrieve company details.');
@@ -317,7 +319,7 @@ export class CompaniesService {
    * 4. return filtered companies with follow status.
    */
   async filterCompanies(
-    requestUserId: string,
+    userId: string,
     name?: string,
     industry?: string,
   ): Promise<GetCompanyDto[]> {
@@ -337,7 +339,7 @@ export class CompaniesService {
       const companyIds = companies.map((company) => company._id);
       const connections = await this.companyConnectionModel
         .find({
-          user_id: new Types.ObjectId(requestUserId),
+          user_id: new Types.ObjectId(userId),
           company_id: { $in: companyIds },
         })
         .lean();
@@ -351,7 +353,7 @@ export class CompaniesService {
             company._id.toString(),
           );
           companyDto.isManager = await this.checkAccess(
-            requestUserId,
+            userId,
             company._id.toString(),
           );
           return companyDto;
@@ -363,7 +365,7 @@ export class CompaniesService {
   }
 
   /**
-   * retrieves the list of followers for a given company.
+   * retrieves the list of followers for a given company, can apply optional filter by name.
    *
    * @param companyId - ID of the company.
    * @returns array of GetFollowerDto - list of followers with profile information.
@@ -400,7 +402,6 @@ export class CompaniesService {
         .find(profileFilter)
         .select('_id name profile_picture headline')
         .lean();
-
       return profiles.map(toGetFollowerDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followers.');
@@ -648,8 +649,8 @@ export class CompaniesService {
    * grants management access of a company to a user.
    *
    * @param companyId - ID of the company to which management access is being granted.
-   * @param userId - ID of the user to be granted management access.
-   * @param managerId - ID of the currently logged-in manager making the request.
+   * @param newManagerId - ID of the user to be granted management access.
+   * @param userId - ID of the currently logged-in manager making the request.
    * @throws NotFoundException - if the company or user does not exist.
    * @throws ForbiddenException - if the logged-in manager does not have management access to the company.
    * @throws ConflictException - if the user already has management access to the company.
@@ -664,9 +665,9 @@ export class CompaniesService {
    * 6. save the new manager information to the database.
    */
   async addCompanyManager(
-    managerId: string,
-    companyId: string,
     userId: string,
+    companyId: string,
+    newManagerId: string,
   ) {
     try {
       const company = await this.companyModel
@@ -676,14 +677,14 @@ export class CompaniesService {
         throw new NotFoundException('Company not found.');
       }
       const user = await this.userModel
-        .findById(new Types.ObjectId(userId))
+        .findById(new Types.ObjectId(newManagerId))
         .lean();
       if (!user) {
         throw new NotFoundException('User not found.');
       }
       const allowedManager = await this.companyManagerModel
         .findOne({
-          manager_id: new Types.ObjectId(managerId),
+          manager_id: new Types.ObjectId(userId),
           company_id: new Types.ObjectId(companyId),
         })
         .lean();
@@ -694,7 +695,7 @@ export class CompaniesService {
       }
       const existingManager = await this.companyManagerModel
         .findOne({
-          manager_id: new Types.ObjectId(userId),
+          manager_id: new Types.ObjectId(newManagerId),
           company_id: new Types.ObjectId(companyId),
         })
         .lean();
@@ -705,19 +706,19 @@ export class CompaniesService {
       }
       const newManager = new this.companyManagerModel({
         _id: new Types.ObjectId(),
-        manager_id: new Types.ObjectId(userId),
+        manager_id: new Types.ObjectId(newManagerId),
         company_id: new Types.ObjectId(companyId),
       });
       await newManager.save();
       if (user.role !== 'manager') {
         await this.userModel.findByIdAndUpdate(
-          new Types.ObjectId(userId),
+          new Types.ObjectId(newManagerId),
           { $set: { role: 'manager' } },
           { upsert: false },
         );
       }
       await this.companyEmployerModel.findOneAndDelete({
-        employer_id: new Types.ObjectId(userId),
+        employer_id: new Types.ObjectId(newManagerId),
         company_id: new Types.ObjectId(companyId),
       });
     } catch (error) {
@@ -728,10 +729,29 @@ export class CompaniesService {
     }
   }
 
+  /**
+   * grants employer access of a company to a user.
+   *
+   * @param companyId - ID of the company to which management access is being granted.
+   * @param newEmployerId - ID of the user to be granted management access.
+   * @param userId - ID of the currently logged-in manager making the request.
+   * @throws NotFoundException - if the company or user does not exist.
+   * @throws ForbiddenException - if the logged-in manager does not have management access to the company.
+   * @throws ConflictException - if the user already has management or employer access to the company.
+   *
+   * function flow:
+   * 1. validate company and user existence by ID.
+   * 2. check if the logged-in manager has management access to the specified company.
+   * 3. check if the user already has management or employer access to the company.
+   * 5. if the user does not have management or employer access:
+   *    a. create a new company employer record and saves it.
+   *    b. update the user's role to 'employer' if not already.
+   * 6. save the new employer information to the database.
+   */
   async addCompanyEmployer(
-    managerId: string,
-    companyId: string,
     userId: string,
+    companyId: string,
+    newEmployerId: string,
   ) {
     try {
       const company = await this.companyModel
@@ -741,14 +761,14 @@ export class CompaniesService {
         throw new NotFoundException('Company not found.');
       }
       const user = await this.userModel
-        .findById(new Types.ObjectId(userId))
+        .findById(new Types.ObjectId(newEmployerId))
         .lean();
       if (!user) {
         throw new NotFoundException('User not found.');
       }
       const allowedManager = await this.companyManagerModel
         .findOne({
-          manager_id: new Types.ObjectId(managerId),
+          manager_id: new Types.ObjectId(userId),
           company_id: new Types.ObjectId(companyId),
         })
         .lean();
@@ -759,13 +779,13 @@ export class CompaniesService {
       }
       const existingManager = await this.companyManagerModel
         .findOne({
-          manager_id: new Types.ObjectId(userId),
+          manager_id: new Types.ObjectId(newEmployerId),
           company_id: new Types.ObjectId(companyId),
         })
         .lean();
       const existingEmployer = await this.companyEmployerModel
         .findOne({
-          employer_id: new Types.ObjectId(userId),
+          employer_id: new Types.ObjectId(newEmployerId),
           company_id: new Types.ObjectId(companyId),
         })
         .lean();
@@ -781,13 +801,13 @@ export class CompaniesService {
       }
       const newEmployer = new this.companyEmployerModel({
         _id: new Types.ObjectId(),
-        employer_id: new Types.ObjectId(userId),
+        employer_id: new Types.ObjectId(newEmployerId),
         company_id: new Types.ObjectId(companyId),
       });
       await newEmployer.save();
       if (user.role !== 'employer') {
         await this.userModel.findByIdAndUpdate(
-          new Types.ObjectId(userId),
+          new Types.ObjectId(newEmployerId),
           { $set: { role: 'employer' } },
           { upsert: false },
         );

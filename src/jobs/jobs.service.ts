@@ -32,6 +32,7 @@ import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toGetFollowerDto } from '../companies/mappers/follower.mapper';
 import { GetFollowerDto } from '../companies/dtos/get-follower.dto';
 import { handleError } from '../common/utils/exception-handler';
+import { profile } from 'console';
 
 @Injectable()
 export class JobsService {
@@ -83,7 +84,7 @@ export class JobsService {
    * 4. return the newly created job as a DTO.
    */
   async postJob(
-    requestUserId: string,
+    userId: string,
     companyId: string,
     postJobDto: PostJobDto,
   ): Promise<GetJobDto> {
@@ -94,9 +95,9 @@ export class JobsService {
       if (!existingCompany) {
         throw new NotFoundException('Company not found.');
       }
-      if (!this.checkAccess(requestUserId, companyId)) {
+      if (!this.checkAccess(userId, companyId)) {
         throw new ForbiddenException(
-          'Logged in user does not have management access or employer access to this company.',
+          'Logged in user does not have management or employer access to this company.',
         );
       }
       const jobData = toPostJobSchema(postJobDto);
@@ -129,7 +130,7 @@ export class JobsService {
   }
 
   /**
-   * retrieves the list of applicants for a given job.
+   * retrieves the list of applicants for a given job, can apply optional filter by name.
    *
    * @param jobId - ID of the job.
    * @returns array of GetFollowerDto - list of applicants with profile information.
@@ -144,6 +145,7 @@ export class JobsService {
   async getJobApplicants(
     userId: string,
     jobId: string,
+    name?: string,
   ): Promise<GetFollowerDto[]> {
     try {
       const job = await this.jobModel
@@ -159,19 +161,19 @@ export class JobsService {
       }
       const applicants = await this.applicationModel
         .find({ job_id: new Types.ObjectId(jobId) })
+        .sort({ applied_at: -1 })
         .select('user_id')
         .lean();
-      const result = await Promise.all(
-        applicants.map(async (applicant) => {
-          const userId = applicant.user_id;
-          const profile = await this.profileModel
-            .findById(userId)
-            .select('_id name profile_picture headline')
-            .lean();
-          return toGetFollowerDto(profile!);
-        }),
-      );
-      return result;
+      const applicantIds = applicants.map((applicant) => applicant.user_id);
+      const profileFilter: any = { _id: { $in: applicantIds } };
+      if (name) {
+        profileFilter.name = { $regex: name, $options: 'i' };
+      }
+      const profiles = await this.profileModel
+        .find(profileFilter)
+        .select('_id name profile_picture headline')
+        .lean();
+      return profiles.map(toGetFollowerDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
     }
