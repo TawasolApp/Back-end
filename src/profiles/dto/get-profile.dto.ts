@@ -5,8 +5,7 @@ import { SkillDto } from './skill.dto';
 import { Types } from 'mongoose';
 import { Skill } from '../infrastructure/database/profile.schema';
 import { CertificationDto } from './certification.dto';
-
-
+import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
 
 class Education {
     _id: Types.ObjectId;
@@ -74,12 +73,12 @@ class WorkExperience {
 
   @ApiProperty({
     description: 'Employment type',
-    example: 'full_time',
-    enum: ['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'],
+    example: EmploymentType.FULL_TIME,
+    enum: EmploymentType,
   })
   @IsNotEmpty()
-  @IsEnum(['full_time', 'part_time', 'self_employed', 'freelance', 'contract', 'internship', 'apprenticeship'])
-  employmentType: string;
+  @IsEnum(EmploymentType)
+  employmentType: EmploymentType;
 
   @ApiProperty({ description: 'Company name', example: 'Google' })
   @IsNotEmpty()
@@ -103,12 +102,12 @@ class WorkExperience {
 
   @ApiPropertyOptional({
     description: 'Location type',
-    enum: ['on_site', 'hybrid', 'remote'],
-    example: 'remote',
+    enum: LocationType,
+    example: LocationType.REMOTE,
   })
   @IsOptional()
-  @IsEnum(['on_site', 'hybrid', 'remote'])
-  locationType?: string;
+  @IsEnum(LocationType)
+  locationType?: LocationType;
 
   @ApiPropertyOptional({ description: 'Job role description', example: 'Worked on AI projects' })
   @IsOptional()
@@ -119,12 +118,12 @@ class WorkExperience {
 class PlanDetails {
   @ApiProperty({
     description: 'Subscription plan type',
-    example: 'monthly',
-    enum: ['monthly', 'yearly'],
+    example: PlanType.MONTHLY,
+    enum: PlanType,
   })
   @IsNotEmpty()
-  @IsEnum(['monthly', 'yearly'])
-  planType: string;
+  @IsEnum(PlanType)
+  planType: PlanType;
 
   @ApiProperty({ description: 'Start date of the plan', example: '2023-01-01' })
   @IsNotEmpty()
@@ -231,12 +230,12 @@ export class GetProfileDto {
 
   @ApiPropertyOptional({
     description: 'Profile visibility',
-    example: 'public',
-    enum: ['public', 'private', 'connections_only'],
+    example: Visibility.PUBLIC,
+    enum: Visibility,
   })
   @IsOptional()
-  @IsEnum(['public', 'private', 'connections_only'])
-  visibility?: string;
+  @IsEnum(Visibility)
+  visibility?: Visibility;
 
   @ApiPropertyOptional({ description: 'Connection count', example: 50 })
   @IsOptional()
