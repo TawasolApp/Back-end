@@ -98,6 +98,7 @@ export async function getCommentInfo(
     authorProfilePicture ?? '',
     authorBio,
     userReactionType,
+    comment.replies.map((reply) => reply.toString()),
   );
 }
 

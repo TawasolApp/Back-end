@@ -61,6 +61,7 @@ async function bootstrap() {
   await postSeeder.seedPosts(10);
   await commentSeeder.clearComments();
   await commentSeeder.seedComments(15);
+  await commentSeeder.seedReplies(30);
   await reactSeeder.clearReacts();
   await reactSeeder.seedReacts(30);
   await reactSeeder.seedCommentReacts(30);
@@ -71,7 +72,7 @@ async function bootstrap() {
   await postSeeder.updatePostCounts();
   await commentSeeder.updateCommentReactCounts();
   await postSeeder.updateCommentCounts();
-
+  await commentSeeder.updateCommentReplies();
   await app.close();
 }
 
