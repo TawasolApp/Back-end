@@ -3,7 +3,7 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { SkillDto } from './skill.dto';
 import { Types } from 'mongoose';
-import { Skill } from '../infrastructure/database/profile.schema';
+import { Skill } from '../infrastructure/database/schemas/profile.schema';
 import { CertificationDto } from './certification.dto';
 import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
 
