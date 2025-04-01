@@ -72,7 +72,7 @@ export class CommentSeeder {
   }
 
   async seedReplies(count: number): Promise<void> {
-    const users = await this.userModel
+    const users = await this.profileModel
       .find({ role: 'customer' })
       .select('_id')
       .lean();
@@ -159,5 +159,4 @@ export class CommentSeeder {
     await this.commentModel.deleteMany({});
     console.log('Comments collection cleared.');
   }
-  
 }
