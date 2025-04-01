@@ -1,9 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
-  HttpException,
   Injectable,
-  InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
@@ -11,13 +9,13 @@ import { Model, Types } from 'mongoose';
 import {
   UserConnection,
   UserConnectionDocument,
-} from './infrastructure/database/user-connection.schema';
+} from './infrastructure/database/schemas/user-connection.schema';
 import {
   Profile,
   ProfileDocument,
-} from '../profiles/infrastructure/database/profile.schema';
-import { ConnectionStatus } from './infrastructure/connection-status.enum';
-import { toGetUserDto } from './dtos/user.mapper';
+} from '../profiles/infrastructure/database/schemas/profile.schema';
+import { ConnectionStatus } from './enums/connection-status.enum';
+import { toGetUserDto } from './mappers/user.mapper';
 import { CreateRequestDto } from './dtos/create-request.dto';
 import { UpdateRequestDto } from './dtos/update-request.dto';
 

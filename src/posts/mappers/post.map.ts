@@ -1,8 +1,8 @@
-import { ProfileDocument } from 'src/profiles/infrastructure/database/profile.schema';
+import { ProfileDocument } from 'src/profiles/infrastructure/database/schemas/profile.schema';
 import { GetCommentDto } from '../dto/get-comment.dto';
 import { GetPostDto } from '../dto/get-post.dto';
 import { ReactionDto } from '../dto/get-reactions.dto';
-import { CompanyDocument } from 'src/companies/infrastructure/database/company.schema';
+import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
 export function mapPostToDto(
   post: any,
   authorProfile: ProfileDocument | CompanyDocument,

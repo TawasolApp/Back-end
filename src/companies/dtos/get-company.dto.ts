@@ -9,13 +9,13 @@ import {
   Min,
   IsEnum,
   Max,
-  isNotEmpty,
 } from 'class-validator';
-import { CompanyType } from '../infrastructure/company-type.enum';
-import { CompanySize } from '../infrastructure/company-size.enum';
+import { CompanyType } from '../enums/company-type.enum';
+import { CompanySize } from '../enums/company-size.enum';
 
 export class GetCompanyDto {
   @IsString()
+  @IsNotEmpty()
   companyId: string;
 
   @IsString()
@@ -24,7 +24,7 @@ export class GetCompanyDto {
 
   @IsBoolean()
   @IsNotEmpty()
-  isFollowing: boolean
+  isFollowing: boolean;
 
   @IsBoolean()
   @IsOptional()

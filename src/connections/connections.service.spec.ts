@@ -1,18 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getModelToken } from '@nestjs/mongoose';
-import { ConnectionsService } from './connections.service';
-import { UserConnection } from './infrastructure/database/user-connection.schema';
-import { Profile } from '../profiles/infrastructure/database/profile.schema';
-import { mockProfiles, mockConnections } from './mock.data';
-import { CreateRequestDto } from './dtos/create-request.dto';
 import {
   BadRequestException,
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
 import { Types } from 'mongoose';
-import { ConnectionStatus } from './infrastructure/connection-status.enum';
+import { mockProfiles, mockConnections } from './mock.data';
+import { ConnectionsService } from './connections.service';
+import { UserConnection } from './infrastructure/database/schemas/user-connection.schema';
+import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
+import { CreateRequestDto } from './dtos/create-request.dto';
 import { UpdateRequestDto } from './dtos/update-request.dto';
+import { ConnectionStatus } from './enums/connection-status.enum';
 
 describe('ConnectionsService', () => {
   let service: ConnectionsService;

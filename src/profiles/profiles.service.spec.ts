@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
-import { Profile } from './infrastructure/database/profile.schema';
+import { Profile } from './infrastructure/database/schemas/profile.schema';
 import {  Model, Types } from 'mongoose';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';

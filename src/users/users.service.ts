@@ -8,7 +8,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import { User, UserDocument } from './infrastructure/database/user.schema';
+import { User, UserDocument } from './infrastructure/database/schemas/user.schema';
 import { UpdateEmailRequestDto } from './dtos/update-email-request.dto';
 import { UpdatePasswordDto } from './dtos/update-password.dto';
 import * as bcrypt from 'bcrypt';
