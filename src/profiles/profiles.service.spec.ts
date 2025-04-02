@@ -6,7 +6,7 @@ import {  Model, Types } from 'mongoose';
 import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
-import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from './infrastructure/database/enums/profile-enums';
+import {  Visibility, EmploymentType, LocationType, PlanType } from './infrastructure/database/enums/profile-enums';
 
 
 import { CreateProfileDto } from './dto/create-profile.dto';
@@ -35,7 +35,7 @@ const mockProfile = {
   work_experience: [],
   plan_details: 
     {
-      plan_type: 'premium',
+      plan_type: PlanType.MONTHLY,
       start_date: new Date(),
       expiry_date: new Date(),
       auto_renewal: false,

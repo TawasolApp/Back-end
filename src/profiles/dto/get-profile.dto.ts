@@ -5,7 +5,7 @@ import { SkillDto } from './skill.dto';
 import { Types } from 'mongoose';
 import { Skill } from '../infrastructure/database/schemas/profile.schema';
 import { CertificationDto } from './certification.dto';
-import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
+import { Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
 
 class Education {
     _id: Types.ObjectId;

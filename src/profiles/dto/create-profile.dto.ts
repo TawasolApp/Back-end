@@ -5,7 +5,7 @@ import { SkillDto } from './skill.dto';
 import { CertificationDto } from './certification.dto';
 import { EducationDto } from './education.dto';
 import { WorkExperienceDto } from './work-experience.dto';
-import { Gender, ProfileStatus, Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
+import {  Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
 
 
 // class Education {
