@@ -18,6 +18,10 @@ export class GetCompanyDto {
   @IsNotEmpty()
   companyId: string;
 
+  @IsBoolean()
+  @IsNotEmpty()
+  isManager: boolean;
+
   @IsString()
   @IsNotEmpty()
   name: string;
