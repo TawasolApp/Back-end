@@ -29,8 +29,8 @@ import {
 import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
-import { toGetFollowerDto } from '../companies/mappers/follower.mapper';
-import { GetFollowerDto } from '../companies/dtos/get-follower.dto';
+import { toGetUserDto } from '../common/mappers/follower.mapper';
+import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { profile } from 'console';
 
@@ -133,7 +133,7 @@ export class JobsService {
    * retrieves the list of applicants for a given job, can apply optional filter by name.
    *
    * @param jobId - ID of the job.
-   * @returns array of GetFollowerDto - list of applicants with profile information.
+   * @returns array of GetUserDto - list of applicants with profile information.
    * @throws NotFoundException - if the job does not exist.
    *
    * function flow:
@@ -146,7 +146,7 @@ export class JobsService {
     userId: string,
     jobId: string,
     name?: string,
-  ): Promise<GetFollowerDto[]> {
+  ): Promise<GetUserDto[]> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
@@ -173,7 +173,7 @@ export class JobsService {
         .find(filter)
         .select('_id name profile_picture headline')
         .lean();
-      return profiles.map(toGetFollowerDto);
+      return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
     }

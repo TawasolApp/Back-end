@@ -46,13 +46,13 @@ import {
 import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { GetCompanyDto } from './dtos/get-company.dto';
-import { GetFollowerDto } from './dtos/get-follower.dto';
+import { GetUserDto } from '../common/dtos/get-user.dto';
 import {
   toCreateCompanySchema,
   toUpdateCompanySchema,
   toGetCompanyDto,
 } from './mappers/company.mapper';
-import { toGetFollowerDto } from './mappers/follower.mapper';
+import { toGetUserDto } from '../common/mappers/follower.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { GetJobDto } from '../jobs/dtos/get-job.dto';
 import { toGetJobDto } from '../jobs/mappers/job.mapper';
@@ -368,19 +368,19 @@ export class CompaniesService {
    * retrieves the list of followers for a given company, can apply optional filter by name.
    *
    * @param companyId - ID of the company.
-   * @returns array of GetFollowerDto - list of followers with profile information.
+   * @returns array of GetUserDto - list of followers with profile information.
    * @throws NotFoundException - if the company does not exist.
    *
    * function flow:
    * 1. verify the company's existence.
    * 2. fetch followers from the database.
    * 3. retrieve profile details for each follower.
-   * 4. map profile data to follower DTO and return.
+   * 4. map profile data to user DTO and return.
    */
   async getCompanyFollowers(
     companyId: string,
     name?: string,
-  ): Promise<GetFollowerDto[]> {
+  ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -402,7 +402,7 @@ export class CompaniesService {
         .find(filter)
         .select('_id name profile_picture headline')
         .lean();
-      return profiles.map(toGetFollowerDto);
+      return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followers.');
     }
@@ -554,7 +554,7 @@ export class CompaniesService {
    *
    * @param userId - ID of the user.
    * @param companyId - ID of the company.
-   * @returns array of GetFollowerDto - list of common followers.
+   * @returns array of GetUserDto - list of common followers.
    * @throws NotFoundException - if the company does not exist.
    *
    * function flow:
@@ -565,7 +565,7 @@ export class CompaniesService {
   async getCommonFollowers(
     userId: string,
     companyId: string,
-  ): Promise<GetFollowerDto[]> {
+  ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -606,7 +606,7 @@ export class CompaniesService {
         .find({ _id: { $in: followerIds } })
         .select('_id name profile_picture headline')
         .lean();
-      return profiles.map(toGetFollowerDto);
+      return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of common followers.');
     }
@@ -822,7 +822,7 @@ export class CompaniesService {
    *
    * @param companyId - ID of the company.
    * @param userId - ID of logged in user
-   * @returns array of GetFollowerDto - list of managers with profile information.
+   * @returns array of GetUserDto - list of managers with profile information.
    * @throws NotFoundException - if the company does not exist.
    * @throws ForbiddenException - if logged in user does not have management access.
    *
@@ -831,12 +831,12 @@ export class CompaniesService {
    * 2. validate logged in user's management access.
    * 3. fetch managers from the database.
    * 4. retrieve profile details for each manager.
-   * 5. map profile data to follower DTO and return.
+   * 5. map profile data to user DTO and return.
    */
   async getCompanyManagers(
     companyId: string,
     userId: string,
-  ): Promise<GetFollowerDto[]> {
+  ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -859,7 +859,7 @@ export class CompaniesService {
         .find({ _id: { $in: managerIds } })
         .select('_id name profile_picture headline')
         .lean();
-      return profiles.map(toGetFollowerDto);
+      return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of managers.');
     }
@@ -870,7 +870,7 @@ export class CompaniesService {
    *
    * @param companyId - ID of the company.
    * @param userId - ID of logged in user
-   * @returns array of GetFollowerDto - list of employers with profile information.
+   * @returns array of GetUserDto - list of employers with profile information.
    * @throws NotFoundException - if the company does not exist.
    * @throws ForbiddenException - if logged in user does not have management access.
    *
@@ -879,12 +879,12 @@ export class CompaniesService {
    * 2. validate logged in user's management access.
    * 3. fetch employers from the database.
    * 4. retrieve profile details for each employer.
-   * 5. map profile data to follower DTO and return.
+   * 5. map profile data to user DTO and return.
    */
   async getCompanyEmployers(
     companyId: string,
     userId: string,
-  ): Promise<GetFollowerDto[]> {
+  ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -907,7 +907,7 @@ export class CompaniesService {
         .find({ _id: { $in: employerIds } })
         .select('_id name profile_picture headline')
         .lean();
-      return profiles.map(toGetFollowerDto);
+      return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of employers.');
     }
