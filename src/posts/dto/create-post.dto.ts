@@ -4,6 +4,7 @@ import {
   IsArray,
   IsEnum,
   IsNotEmpty,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreatePostDto {
@@ -21,4 +22,12 @@ export class CreatePostDto {
   @IsString()
   @IsEnum(['Public', 'Connections', 'Private'])
   readonly visibility?: string;
+
+  @IsOptional()
+  @IsString()
+  readonly parentPostId?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  readonly isSilentRepost?: boolean;
 }

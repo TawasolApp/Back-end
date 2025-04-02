@@ -39,6 +39,7 @@ export function mapPostToDto(
       | null,
     timestamp: post.posted_at,
     isSaved: !!isSaved,
+    isSilentRepost: post.is_silent_repost,
   };
 }
 
