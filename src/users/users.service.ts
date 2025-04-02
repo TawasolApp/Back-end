@@ -29,7 +29,6 @@ import { CompanyConnection } from '../companies/infrastructure/database/schemas/
 import { Application } from '../jobs/infrastructure/database/schemas/application.schema';
 import { CompanyEmployer } from '../jobs/infrastructure/database/schemas/company-employer.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
-import { Repost } from '../posts/infrastructure/database/schemas/repost.schema';
 import { Job } from '../jobs/infrastructure/database/schemas/job.schema';
 
 @Injectable()
@@ -52,8 +51,6 @@ export class UsersService {
     private companyManagerModel: Model<CompanyManager>,
     @InjectModel(Application.name)
     private applicationModel: Model<Application>,
-    @InjectModel(Repost.name)
-    private repostModel: Model<Repost>,
     @InjectModel(Job.name) private jobModel: Model<Job>,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
@@ -170,15 +167,6 @@ export class UsersService {
       await this.commentModel.deleteMany({ author_id: userId });
 
       await this.shareModel.deleteMany({ user: userId });
-
-      const userReposts = await this.repostModel.find({ autho_id: userId });
-      for (const repost of userReposts) {
-        await this.postModel.updateOne(
-          { _id: repost.post_id },
-          { $inc: { share_count: -1 } },
-        );
-      }
-      await this.repostModel.deleteMany({ autho_id: userId });
 
       await this.userConnectionModel.deleteMany({
         $or: [{ sending_party: userId }, { receiving_party: userId }],

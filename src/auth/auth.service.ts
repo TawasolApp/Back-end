@@ -231,7 +231,6 @@ export class AuthService {
     };
   }
 
-
   /**
    * Resets the user's password using a token.
    * @param dto - Token and new password data
@@ -289,7 +288,11 @@ export class AuthService {
       }
 
       const token = this.jwtService.sign({ sub: user._id });
-      return { access_token: token, message: 'Login successful' };
+      return {
+        access_token: token,
+        userId: user._id,
+        message: 'Login successful',
+      }; // Return userId
     } catch (err) {
       if (err.message === 'Invalid Google token') {
         throw new BadRequestException('Invalid Google token');
@@ -297,7 +300,4 @@ export class AuthService {
       throw new InternalServerErrorException('Google login failed');
     }
   }
-
-
-
 }
