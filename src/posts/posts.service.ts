@@ -176,6 +176,9 @@ export class PostsService {
           .exec();
         if (!parentPost) {
           throw new NotFoundException('Parent post not found');
+        } else {
+          parentPost.share_count++;
+          await parentPost.save();
         }
       }
 
@@ -376,6 +379,16 @@ export class PostsService {
       }
       if (post.author_id.toString() !== userId) {
         throw new ForbiddenException('User not authorized to delete this post');
+      }
+
+      if (post.parent_post_id) {
+        const parentPost = await this.postModel
+          .findById(post.parent_post_id)
+          .exec();
+        if (parentPost) {
+          parentPost.share_count--;
+          await parentPost.save();
+        }
       }
 
       const result = await this.postModel.deleteOne({ _id: postId }).exec();

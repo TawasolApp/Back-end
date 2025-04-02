@@ -105,6 +105,8 @@ export class PostSeeder {
         : faker.helpers.arrayElement(companies);
 
       const parentPost = faker.helpers.arrayElement(publicPosts);
+      parentPost.share_count++;
+      parentPost.save();
 
       const tags =
         faker.datatype.boolean() && users.length > 0
