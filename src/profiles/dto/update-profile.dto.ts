@@ -1,6 +1,7 @@
 
-import {  IsOptional, IsString } from 'class-validator';
+import {  IsEnum, IsOptional, IsString } from 'class-validator';
 import {  ApiPropertyOptional } from '@nestjs/swagger';
+import { Visibility } from '../infrastructure/database/enums/profile-enums';
 export class UpdateProfileDto {
     @ApiPropertyOptional({ description: 'name', example: 'johndoe' })
     @IsOptional()
@@ -45,7 +46,8 @@ export class UpdateProfileDto {
     @ApiPropertyOptional({ description: 'Visibility', example: 'public' })
     @IsOptional()
     @IsString()
-    visibility?: string;
+    @IsEnum(Visibility)
+    visibility?: Visibility;
     
     
 }

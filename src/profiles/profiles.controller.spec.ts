@@ -7,6 +7,8 @@ import { SkillDto } from './dto/skill.dto';
 import { Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { BadRequestException, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
+import { EducationDto } from './dto/education.dto';
+import { CertificationDto } from './dto/certification.dto';
 
 describe('ProfilesController', () => {
   let controller: ProfilesController;
@@ -148,6 +150,262 @@ describe('ProfilesController', () => {
       const userId = new Types.ObjectId();
       const dto: CreateProfileDto = { name: 'Test Name', skills: [{ skillName: 'NestJS' }] };
       await expect(controller.createProfile({ user: { sub: userId } }, dto)).rejects.toThrow(InternalServerErrorException);
+    });
+  });
+});
+
+describe('ProfilesController - Education Methods', () => {
+  let controller: ProfilesController;
+  let service: ProfilesService;
+
+  const mockProfilesService = {
+    addEducation: jest.fn(),
+    editEducation: jest.fn(),
+    deleteEducation: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ProfilesController],
+      providers: [
+        JwtService,
+        { provide: ProfilesService, useValue: mockProfilesService },
+      ],
+    }).compile();
+
+    controller = module.get<ProfilesController>(ProfilesController);
+    service = module.get<ProfilesService>(ProfilesService);
+  });
+
+  const mockEducationDto: EducationDto = {
+    school: 'Test University',
+    degree: 'BSc',
+    field: 'Computer Science',
+    startDate: new Date('2020-09-01'),
+    endDate: new Date('2024-06-01'),
+    grade: 'A',
+    description: 'Bachelor in CS',
+  };
+
+  const mockUpdatedEducationDto: Partial<EducationDto> = {
+    school: 'Updated University',
+    degree: 'MSc',
+  };
+
+  const mockEducationId = new Types.ObjectId().toString();
+  const mockUserId = new Types.ObjectId().toString();
+
+  describe('addEducation', () => {
+    it('should add education successfully', async () => {
+      mockProfilesService.addEducation.mockResolvedValue(mockEducationDto);
+      const req = { user: { sub: mockUserId } };
+
+      const result = await controller.addEducation(req, mockEducationDto);
+
+      expect(result).toEqual(mockEducationDto);
+      expect(service.addEducation).toHaveBeenCalledWith(mockEducationDto, mockUserId);
+    });
+
+    it('should throw UnauthorizedException if user is not authenticated', async () => {
+      const req = { user: null };
+
+      await expect(controller.addEducation(req, mockEducationDto)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should handle errors using handleException', async () => {
+      const error = new Error('Database failure');
+      mockProfilesService.addEducation.mockRejectedValue(error);
+      controller.handleException = jest.fn();
+
+      const req = { user: { sub: mockUserId } };
+
+      await controller.addEducation(req, mockEducationDto);
+
+      expect(controller.handleException).toHaveBeenCalledWith(error, 'Failed to add education.');
+    });
+  });
+
+  describe('editEducation', () => {
+    it('should edit education successfully', async () => {
+      mockProfilesService.editEducation.mockResolvedValue(mockUpdatedEducationDto);
+      const req = { user: { sub: mockUserId } };
+
+      const result = await controller.editEducation(req, mockUpdatedEducationDto, mockEducationId as any);
+
+      expect(result).toEqual(mockUpdatedEducationDto);
+      expect(service.editEducation).toHaveBeenCalledWith(mockUpdatedEducationDto, mockUserId, mockEducationId);
+    });
+
+    it('should throw UnauthorizedException if user is not authenticated', async () => {
+      const req = { user: null };
+
+      await expect(
+        controller.editEducation(req, mockUpdatedEducationDto, mockEducationId as any),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should handle errors using handleException', async () => {
+      const error = new Error('Database failure');
+      mockProfilesService.editEducation.mockRejectedValue(error);
+      controller.handleException = jest.fn();
+
+      const req = { user: { sub: mockUserId } };
+
+      await controller.editEducation(req, mockUpdatedEducationDto, mockEducationId as any);
+
+      expect(controller.handleException).toHaveBeenCalledWith(error, 'Failed to edit education.');
+    });
+  });
+
+  describe('deleteEducation', () => {
+    it('should delete education successfully', async () => {
+      mockProfilesService.deleteEducation.mockResolvedValue({ success: true });
+      const req = { user: { sub: mockUserId } };
+
+      const result = await controller.deleteEducation(req, mockEducationId);
+
+      expect(result).toEqual({ success: true });
+      expect(service.deleteEducation).toHaveBeenCalledWith(new Types.ObjectId(mockEducationId), mockUserId);
+    });
+
+    it('should throw UnauthorizedException if user is not authenticated', async () => {
+      const req = { user: null };
+
+      await expect(controller.deleteEducation(req, mockEducationId)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should handle errors using handleException', async () => {
+      const error = new Error('Database failure');
+      mockProfilesService.deleteEducation.mockRejectedValue(error);
+      controller.handleException = jest.fn();
+
+      const req = { user: { sub: mockUserId } };
+
+      await controller.deleteEducation(req, mockEducationId);
+
+      expect(controller.handleException).toHaveBeenCalledWith(error, 'Failed to delete education.');
+    });
+  });
+});
+
+describe('ProfilesController - Certification Methods', () => {
+  let controller: ProfilesController;
+  let service: ProfilesService;
+
+  const mockProfilesService = {
+    addCertification: jest.fn(),
+    editCertification: jest.fn(),
+    deleteCertification: jest.fn(),
+  };
+
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      controllers: [ProfilesController],
+      providers: [
+        JwtService,
+        { provide: ProfilesService, useValue: mockProfilesService },
+      ],
+    }).compile();
+
+    controller = module.get<ProfilesController>(ProfilesController);
+    service = module.get<ProfilesService>(ProfilesService);
+  });
+
+  const mockCertificationDto: CertificationDto = {
+    name: 'AWS Certified Developer',
+    company: 'Amazon',
+    issueDate: new Date('2023-01-01'),
+  };
+
+  const mockCertificationId = new Types.ObjectId().toString();
+  const mockUserId = new Types.ObjectId().toString();
+
+  describe('addCertification', () => {
+    it('should add certification successfully', async () => {
+      mockProfilesService.addCertification.mockResolvedValue(mockCertificationDto);
+
+      const req = { user: { sub: mockUserId } };
+      const result = await controller.addCertification(req, mockCertificationDto);
+
+      expect(result).toEqual(mockCertificationDto);
+      expect(service.addCertification).toHaveBeenCalledWith(mockCertificationDto, mockUserId);
+    });
+
+    it('should throw UnauthorizedException if user is not authenticated', async () => {
+      const req = { user: null };
+      await expect(controller.addCertification(req, mockCertificationDto)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should handle errors using handleException', async () => {
+      const error = new Error('Database failure');
+      mockProfilesService.addCertification.mockRejectedValue(error);
+      controller.handleException = jest.fn();
+
+      const req = { user: { sub: mockUserId } };
+      await controller.addCertification(req, mockCertificationDto);
+
+      expect(controller.handleException).toHaveBeenCalledWith(error, 'Failed to add certification.');
+    });
+  });
+
+  describe('editCertification', () => {
+    it('should edit certification successfully', async () => {
+      const updateDto: Partial<CertificationDto> = { name: 'Updated Certification' };
+      mockProfilesService.editCertification.mockResolvedValue(updateDto);
+
+      const req = { user: { sub: mockUserId } };
+      const result = await controller.editCertification(req, updateDto, mockCertificationId as any);
+
+      expect(result).toEqual(updateDto);
+      expect(service.editCertification).toHaveBeenCalledWith(updateDto, mockUserId, mockCertificationId);
+    });
+
+    it('should throw UnauthorizedException if user is not authenticated', async () => {
+      const req = { user: null };
+      await expect(controller.editCertification(req, {}, mockCertificationId as any)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should handle errors using handleException', async () => {
+      const error = new Error('Database failure');
+      mockProfilesService.editCertification.mockRejectedValue(error);
+      controller.handleException = jest.fn();
+
+      const req = { user: { sub: mockUserId } };
+      await controller.editCertification(req, {}, mockCertificationId as any);
+
+      expect(controller.handleException).toHaveBeenCalledWith(error, 'Failed to edit certification.');
+    });
+  });
+
+  describe('deleteCertification', () => {
+    it('should delete certification successfully', async () => {
+      mockProfilesService.deleteCertification.mockResolvedValue({ success: true });
+
+      const req = { user: { sub: mockUserId } };
+      const result = await controller.deleteCertification(req, mockCertificationId);
+
+      expect(result).toEqual({ success: true });
+      expect(service.deleteCertification).toHaveBeenCalledWith(new Types.ObjectId(mockCertificationId), mockUserId);
+    });
+
+    it('should throw UnauthorizedException if user is not authenticated', async () => {
+      const req = { user: null };
+      await expect(controller.deleteCertification(req, mockCertificationId)).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should handle errors using handleException', async () => {
+      const error = new Error('Database failure');
+      mockProfilesService.deleteCertification.mockRejectedValue(error);
+      controller.handleException = jest.fn();
+
+      const req = { user: { sub: mockUserId } };
+      await controller.deleteCertification(req, mockCertificationId);
+
+      expect(controller.handleException).toHaveBeenCalledWith(error, 'Failed to delete certification.');
     });
   });
 });

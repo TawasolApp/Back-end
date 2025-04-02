@@ -1,5 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import {
+  Visibility,
+  EmploymentType,
+  LocationType,
+  PlanType,
+} from '../enums/profile-enums';
 
 export type ProfileDocument = Profile & Document;
 
@@ -14,7 +20,7 @@ export class Skill {
 
 @Schema({ _id: false })
 export class Education {
-  @Prop({ type: Types.ObjectId,  default: () => new Types.ObjectId()})
+  @Prop({ type: Types.ObjectId, default: () => new Types.ObjectId() })
   _id: Types.ObjectId;
 
   @Prop({ required: true })
@@ -41,7 +47,7 @@ export class Education {
 
 @Schema({ _id: false })
 export class Certification {
-  @Prop({ type: Types.ObjectId,  default: () => new Types.ObjectId()})
+  @Prop({ type: Types.ObjectId, default: () => new Types.ObjectId() })
   _id: Types.ObjectId;
 
   @Prop({ required: true })
@@ -56,26 +62,16 @@ export class Certification {
 
 @Schema({ _id: false })
 export class WorkExperience {
-
-   
-  @Prop({ type: Types.ObjectId, default: () => new Types.ObjectId()})
+  @Prop({ type: Types.ObjectId, default: () => new Types.ObjectId() })
   _id: Types.ObjectId;
 
   @Prop({ required: true })
   title: string;
 
   @Prop({
-    enum: [
-      'full_time',
-      'part_time',
-      'self_employed',
-      'freelance',
-      'contract',
-      'internship',
-      'apprenticeship',
-    ],
+    enum: [EmploymentType],
   })
-  employment_type: string;
+  employment_type: EmploymentType;
 
   @Prop({ required: true })
   company: string;
@@ -98,8 +94,8 @@ export class WorkExperience {
 
 @Schema({ _id: false })
 export class PlanDetails {
-  @Prop({ enum: ['monthly', 'yearly'], default: 'monthly' })
-  plan_type: string;
+  @Prop({ enum: PlanType, default: 'monthly' })
+  plan_type: PlanType;
 
   @Prop({ required: true })
   start_date: Date;
@@ -127,7 +123,7 @@ export class PlanStatistics {
 export class Profile {
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
   _id: Types.ObjectId;
-  
+
   @Prop({ required: true })
   name: string;
 
@@ -164,8 +160,8 @@ export class Profile {
   @Prop({ type: [WorkExperience], default: undefined })
   work_experience?: WorkExperience[];
 
-  @Prop({ enum: ['public', 'private', 'connections_only'], default: 'public' })
-  visibility: string;
+  @Prop({ enum: Visibility, default: 'public' })
+  visibility: Visibility;
 
   @Prop()
   connection_count: number;
@@ -173,7 +169,11 @@ export class Profile {
   @Prop({ type: PlanDetails })
   plan_details: PlanDetails;
 
-  @Prop({ type: PlanStatistics, required: true, default: { message_count: 0, application_count: 0 } })
+  @Prop({
+    type: PlanStatistics,
+    required: true,
+    default: { message_count: 0, application_count: 0 },
+  })
   plan_statistics: PlanStatistics;
 }
 

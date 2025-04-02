@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
@@ -61,7 +61,7 @@ import {
     ]),
     AuthModule,
     CompaniesModule,
-    ProfilesModule,
+    forwardRef(() => ProfilesModule),
     UsersModule,
 
     JwtModule.register({
@@ -81,7 +81,7 @@ import {
       useClass: ValidationPipe,
     },
   ],
-  exports: [PostSeeder, CommentSeeder, ReactSeeder, SaveSeeder, ShareSeeder],
+  exports: [PostSeeder, CommentSeeder, ReactSeeder, SaveSeeder, ShareSeeder,PostsService],
   controllers: [PostsController],
 })
 export class PostsModule {}
