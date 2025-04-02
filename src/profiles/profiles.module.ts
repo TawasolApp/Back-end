@@ -12,9 +12,9 @@ import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConnectionsModule } from '../connections/connections.module';
 import { User, UserSchema } from '../users/infrastructure/database/schemas/user.schema';
-import { CompaniesModule } from 'src/companies/companies.module';
-import { PostsService } from 'src/posts/posts.service';
-import { PostsModule } from 'src/posts/posts.module';
+import { CompaniesModule } from '../companies/companies.module';
+import { PostsService } from '../posts/posts.service';
+import { PostsModule } from '../posts/posts.module';
 
 @Module({
   imports: [
