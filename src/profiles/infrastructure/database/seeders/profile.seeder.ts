@@ -42,7 +42,7 @@ export class ProfileSeeder {
       bio: faker.lorem.sentence(),
       location: faker.location.city(),
       industry: faker.commerce.department(),
-      skill: [
+      skills: [
         {
           skill_name: faker.person.jobType(),
           endorsements: [faker.helpers.arrayElement(users)._id],
