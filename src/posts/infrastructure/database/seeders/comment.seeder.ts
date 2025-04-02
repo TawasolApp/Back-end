@@ -73,7 +73,7 @@ export class CommentSeeder {
 
   async seedReplies(count: number): Promise<void> {
     const users = await this.profileModel
-      .find({ role: 'customer' })
+      .find()
       .select('_id')
       .lean();
     const companies = await this.companyModel.find().select('_id').lean();
