@@ -82,8 +82,7 @@ export class PostSeeder {
   async seedReposts(count: number): Promise<void> {
     const publicPosts = await this.postModel
       .find({ visibility: 'Public' })
-      .select('_id')
-      .lean();
+      .exec();
 
     const users = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
@@ -105,8 +104,8 @@ export class PostSeeder {
         : faker.helpers.arrayElement(companies);
 
       const parentPost = faker.helpers.arrayElement(publicPosts);
-      parentPost.share_count++;
-      parentPost.save();
+      parentPost.share_count = (parentPost.share_count || 0) + 1;
+      await parentPost.save();
 
       const tags =
         faker.datatype.boolean() && users.length > 0
