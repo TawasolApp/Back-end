@@ -229,4 +229,13 @@ export class PostsController {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     await this.postsService.deleteComment(commentId, req.user['sub']);
   }
+  @Get(':postId/reposts')
+  @HttpCode(HttpStatus.OK)
+  async getReposts(
+    @Param('postId') postId: string,
+    @Req() req: Request,
+  ): Promise<GetPostDto[]> {
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getRepostsOfPost(postId, req.user['sub']);
+  }
 }

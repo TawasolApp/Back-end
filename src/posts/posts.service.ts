@@ -166,6 +166,18 @@ export class PostsService {
           throw new NotFoundException('Author not found');
         }
       }
+      let parentPost: PostDocument | null = null;
+      if (createPostDto.parentPostId) {
+        if (!isValidObjectId(createPostDto.parentPostId)) {
+          throw new BadRequestException('Invalid parent post ID format');
+        }
+        parentPost = await this.postModel
+          .findById({ _id: createPostDto.parentPostId })
+          .exec();
+        if (!parentPost) {
+          throw new NotFoundException('Parent post not found');
+        }
+      }
 
       const createdPost = new this.postModel({
         _id: new Types.ObjectId(),
@@ -175,11 +187,19 @@ export class PostsService {
         visibility: createPostDto.visibility,
         author_id: new Types.ObjectId(author_id),
         author_type: authorType,
+        parent_post_id: new Types.ObjectId(createPostDto.parentPostId),
       });
 
       await createdPost.save();
-      const author = authorType === 'User' ? authorProfile : authorCompany;
-      return mapPostToDto(createdPost, author, null, false);
+      return getPostInfo(
+        createdPost,
+        author_id,
+        this.postModel,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+        this.saveModel,
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
       // console.log(error);
@@ -262,6 +282,7 @@ export class PostsService {
           getPostInfo(
             post,
             userId,
+            this.postModel,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -292,6 +313,7 @@ export class PostsService {
       return getPostInfo(
         post,
         userId,
+        this.postModel,
         this.profileModel,
         this.companyModel,
         this.reactModel,
@@ -327,6 +349,7 @@ export class PostsService {
           getPostInfo(
             post,
             userId,
+            this.postModel,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -636,6 +659,7 @@ export class PostsService {
           return getPostInfo(
             post,
             userId,
+            this.postModel,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -916,6 +940,7 @@ export class PostsService {
         getPostInfo(
           post,
           userId,
+          this.postModel,
           this.profileModel,
           this.companyModel,
           this.reactModel,
@@ -923,5 +948,98 @@ export class PostsService {
         ),
       ),
     );
+  }
+
+  // Retrieve all reposts of a given post (with visibility filtering).
+  // Description:
+  // 1. Validate the post ID and user ID formats.
+  // 2. Get list of user’s connections and following.
+  // 3. Include reposts that are:
+  //    - Public
+  //    - From connections/followed
+  //    - Authored by the user themselves
+  // 4. Return enriched repost DTOs.
+  async getRepostsOfPost(
+    postId: string,
+    userId: string,
+  ): Promise<GetPostDto[]> {
+    try {
+      if (!Types.ObjectId.isValid(postId)) {
+        throw new BadRequestException('Invalid post ID format');
+      }
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
+
+      const objectId = new Types.ObjectId(userId);
+
+      // Step 1: Get connected users
+      const connected = await this.userConnectionModel
+        .find({
+          $or: [{ sending_party: objectId }, { receiving_party: objectId }],
+          status: ConnectionStatus.Connected,
+        })
+        .select('sending_party receiving_party')
+        .lean();
+
+      const connectedUserIds = connected.map((conn) =>
+        conn.sending_party.equals(objectId)
+          ? conn.receiving_party
+          : conn.sending_party,
+      );
+
+      // Step 2: Get following users
+      const following = await this.userConnectionModel
+        .find({
+          sending_party: objectId,
+          status: ConnectionStatus.Following,
+        })
+        .select('receiving_party')
+        .lean();
+
+      const followingUserIds = following.map((conn) => conn.receiving_party);
+
+      // Step 3: Merge author IDs (connected + following + self)
+      const visibleAuthorIds = [
+        ...new Set([
+          ...connectedUserIds.map((id) => id.toString()),
+          ...followingUserIds.map((id) => id.toString()),
+          userId,
+        ]),
+      ].map((id) => new Types.ObjectId(id));
+
+      // Step 4: Fetch visible reposts of this post
+      const reposts = await this.postModel
+        .find({
+          parent_post_id: new Types.ObjectId(postId),
+          $or: [
+            { visibility: 'Public' },
+            { author_id: { $in: visibleAuthorIds } },
+          ],
+        })
+        .sort({ posted_at: -1 })
+        .exec();
+
+      if (!reposts || reposts.length === 0) {
+        return [];
+      }
+
+      return Promise.all(
+        reposts.map((post) =>
+          getPostInfo(
+            post,
+            userId,
+            this.postModel,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+          ),
+        ),
+      );
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to fetch reposts');
+    }
   }
 }
