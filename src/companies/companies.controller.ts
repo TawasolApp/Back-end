@@ -144,21 +144,7 @@ export class CompaniesController {
     return followersDto;
   }
 
-  @Get('/:userId/followed')
-  @HttpCode(HttpStatus.OK)
-  async getFollowedCompanies(
-    @Param('userId') userId: string,
-    @Req() request: Request,
-  ) {
-    if (!request.user) {
-      throw new UnauthorizedException('User not authenticated.');
-    }
-    validateId(userId, 'user');
-    const requestUserId = request.user['sub'];
-    const companiesDto =
-      await this.companiesService.getFollowedCompanies(userId);
-    return companiesDto;
-  }
+  
 
   @Post('/:companyId/follow')
   @HttpCode(HttpStatus.CREATED)

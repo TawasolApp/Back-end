@@ -22,7 +22,7 @@ import { JobsService } from './jobs.service';
     AuthModule,
     forwardRef(() => CompaniesModule),
     UsersModule,
-    ProfilesModule,
+    forwardRef(() =>ProfilesModule),
   ],
   exports: [MongooseModule, JobSeeder, ApplicationSeeder, JobsService],
   providers: [JobSeeder, ApplicationSeeder, JobsService],

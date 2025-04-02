@@ -334,26 +334,6 @@ export class CompaniesService {
     }
   }
 
-  async getFollowedCompanies(userId: string): Promise<GetCompanyDto[]> {
-    try {
-      const connections = await this.companyConnectionModel
-        .find({ user_id: new Types.ObjectId(userId) })
-        .sort({ created_at: -1 })
-        .select('company_id')
-        .lean();
-      const followedCompanyIds = connections.map(
-        (connection) => connection.company_id,
-      );
-      const companies = await this.companyModel
-        .find({ _id: { $in: followedCompanyIds } })
-        .select('_id name logo industry followers')
-        .sort({ created_at: -1 })
-        .lean();
-      return companies.map(toGetCompanyDto);
-    } catch (error) {
-      handleError(error, 'Failed to retrieve list of followed companies.');
-    }
-  }
 
   /**
    * follows a company for the logged in user.
