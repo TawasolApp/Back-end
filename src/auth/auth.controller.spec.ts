@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { BadRequestException } from '@nestjs/common';
+import { Types } from 'mongoose';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -78,6 +79,7 @@ describe('AuthController', () => {
       const mockResult = {
         token: 'access-token',
         refreshToken: 'refresh-token',
+        userId: new Types.ObjectId(), // Mock ObjectId
       };
       jest.spyOn(authService, 'login').mockResolvedValue(mockResult);
 

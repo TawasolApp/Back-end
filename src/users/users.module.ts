@@ -4,12 +4,57 @@ import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
 import { JwtModule } from '@nestjs/jwt';
 import { MailerModule } from '../common/services/mailer.module';
-import { User, UserSchema } from './infrastructure/database/schemas/user.schema';
+import {
+  User,
+  UserSchema,
+} from './infrastructure/database/schemas/user.schema';
 import { UserSeeder } from './infrastructure/database/seeders/user.seeder';
+import {
+  Profile,
+  ProfileSchema,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  Post,
+  PostSchema,
+} from '../posts/infrastructure/database/schemas/post.schema';
+import {
+  Save,
+  SaveSchema,
+} from '../posts/infrastructure/database/schemas/save.schema';
+import {
+  React,
+  ReactSchema,
+} from '../posts/infrastructure/database/schemas/react.schema';
+import {
+  Comment,
+  CommentSchema,
+} from '../posts/infrastructure/database/schemas/comment.schema';
+import {
+  Share,
+  ShareSchema,
+} from '../posts/infrastructure/database/schemas/share.schema';
+import {
+  UserConnection,
+  UserConnectionSchema,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
+import {
+  CompanyConnection,
+  CompanyConnectionSchema,
+} from '../companies/infrastructure/database/schemas/company-connection.schema';
 
 @Module({
   imports: [
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema },
+      { name: Profile.name, schema: ProfileSchema },
+      { name: Post.name, schema: PostSchema },
+      { name: Save.name, schema: SaveSchema },
+      { name: React.name, schema: ReactSchema },
+      { name: Comment.name, schema: CommentSchema },
+      { name: Share.name, schema: ShareSchema },
+      { name: UserConnection.name, schema: UserConnectionSchema },
+      { name: CompanyConnection.name, schema: CompanyConnectionSchema },
+    ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default_secret',
       signOptions: { expiresIn: '1h' },

@@ -7,6 +7,7 @@ import {
   Body,
   Req,
   UnauthorizedException,
+  Delete,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,7 +21,10 @@ export class UsersController {
 
   @Patch('request-email-update')
   @UseGuards(JwtAuthGuard)
-  async requestEmailUpdate(@Req() req: Request, @Body() dto: UpdateEmailRequestDto) {
+  async requestEmailUpdate(
+    @Req() req: Request,
+    @Body() dto: UpdateEmailRequestDto,
+  ) {
     if (!req.user || !req.user['sub']) {
       throw new UnauthorizedException('User not authenticated');
     }
@@ -44,5 +48,15 @@ export class UsersController {
 
     console.log('🔹 Extracted User ID from Token:', req.user['sub']);
     return this.usersService.updatePassword(req.user['sub'], updatePasswordDto);
+  }
+
+
+ @Delete('delete-account')
+  @UseGuards(JwtAuthGuard)
+  async deleteAccount(@Req() req: Request) {
+    if (!req.user || !req.user['sub']) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    return this.usersService.deleteAccount(req.user['sub']);
   }
 }
