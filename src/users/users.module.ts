@@ -57,10 +57,6 @@ import {
   Job,
   JobSchema,
 } from '../jobs/infrastructure/database/schemas/job.schema';
-import {
-  Repost,
-  RepostSchema,
-} from '../posts/infrastructure/database/schemas/repost.schema';
 
 @Module({
   imports: [
@@ -78,7 +74,6 @@ import {
       { name: CompanyManager.name, schema: CompanyManagerSchema },
       { name: Application.name, schema: ApplicationSchema },
       { name: Job.name, schema: JobSchema },
-      { name: Repost.name, schema: RepostSchema }, 
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default_secret',
