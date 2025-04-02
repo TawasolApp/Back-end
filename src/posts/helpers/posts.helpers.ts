@@ -98,12 +98,14 @@ export async function getCommentInfo(
     authorProfilePicture ?? '',
     authorBio,
     userReactionType,
+    comment.replies.map((reply) => reply.toString()),
   );
 }
 
 export async function getPostInfo(
   post: PostDocument,
   userId: string,
+  postModel,
   profileModel,
   companyModel,
   reactModel,
@@ -139,6 +141,25 @@ export async function getPostInfo(
   } else {
     throw new Error('Invalid author type');
   }
+  let parentPost: PostDocument | null = null;
+  let parentPostDto: GetPostDto | undefined = undefined;
+  if (post.parent_post_id) {
+    parentPost = await postModel.findOne({ _id: post.parent_post_id }).exec();
+
+    if (!parentPost) {
+      throw new NotFoundException('Parent post not found');
+    } else {
+      parentPostDto = await getPostInfo(
+        parentPost,
+        userId,
+        postModel,
+        profileModel,
+        companyModel,
+        reactModel,
+        saveModel,
+      );
+    }
+  }
 
   const userReaction = userId
     ? await reactModel
@@ -164,7 +185,14 @@ export async function getPostInfo(
     user_id: new Types.ObjectId(userId),
   });
 
-  return mapPostToDto(post, authorProfile, userReactionType, !!isSaved);
+  const returnedDTo = mapPostToDto(
+    post,
+    authorProfile,
+    userReactionType,
+    !!isSaved,
+  );
+
+  return { ...returnedDTo, parentPost: parentPostDto };
 }
 
 export async function getReactionInfo(

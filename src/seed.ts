@@ -46,21 +46,23 @@ async function bootstrap() {
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(20);
   await companySeeder.updateFollowerCounts();
-  await companyManagerSeeder.clearCompanyManagers()
+  await companyManagerSeeder.clearCompanyManagers();
   await companyManagerSeeder.seedCompanyManagers(15);
   await jobSeeder.clearJobs();
   await jobSeeder.seedJobs(20);
   await applicationSeeder.clearApplications();
   await applicationSeeder.seedApplications(30);
   await jobSeeder.updateApplicantCounts();
-  await companyEmployerSeeder.clearCompanyEmployers()
+  await companyEmployerSeeder.clearCompanyEmployers();
   await companyEmployerSeeder.seedCompanyEmployers(10);
 
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();
   await postSeeder.seedPosts(10);
+  await postSeeder.seedReposts(10);
   await commentSeeder.clearComments();
   await commentSeeder.seedComments(15);
+  await commentSeeder.seedReplies(30);
   await reactSeeder.clearReacts();
   await reactSeeder.seedReacts(30);
   await reactSeeder.seedCommentReacts(30);
@@ -71,7 +73,7 @@ async function bootstrap() {
   await postSeeder.updatePostCounts();
   await commentSeeder.updateCommentReactCounts();
   await postSeeder.updateCommentCounts();
-
+  await commentSeeder.updateCommentReplies();
   await app.close();
 }
 

@@ -4,6 +4,7 @@ import {
   ArrayNotEmpty,
   IsOptional,
   IsNotEmpty,
+  IsBoolean,
 } from 'class-validator';
 
 export class CreateCommentDto {
@@ -15,4 +16,8 @@ export class CreateCommentDto {
   @ArrayNotEmpty()
   @IsOptional()
   tagged?: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  isReply?: boolean = false; // Default value is false
 }

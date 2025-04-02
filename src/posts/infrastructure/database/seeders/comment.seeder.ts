@@ -53,29 +53,7 @@ export class CommentSeeder {
               .map((user) => user._id)
           : [];
 
-      const replies = Array.from(
-        { length: faker.number.int({ min: 0, max: 3 }) },
-        () => {
-          const isReplyUser = faker.datatype.boolean();
-          const replyAuthor = isReplyUser
-            ? faker.helpers.arrayElement(users)
-            : faker.helpers.arrayElement(companies);
-          const replyTags =
-            faker.datatype.boolean() && users.length > 0
-              ? faker.helpers
-                  .arrayElements(users, faker.number.int({ min: 0, max: 2 }))
-                  .map((user) => user._id)
-              : [];
-
-          return {
-            author_type: isReplyUser ? 'User' : 'Company',
-            author_id: replyAuthor._id,
-            content: faker.lorem.sentence(),
-            reacts: [],
-            tags: replyTags,
-          };
-        },
-      );
+      const replies = []; //TODO
 
       comments.push({
         author_type: authorType,
@@ -93,6 +71,54 @@ export class CommentSeeder {
     console.log(`${count} comments seeded successfully!`);
   }
 
+  async seedReplies(count: number): Promise<void> {
+    const users = await this.profileModel
+      .find({ role: 'customer' })
+      .select('_id')
+      .lean();
+    const companies = await this.companyModel.find().select('_id').lean();
+    const comments = await this.commentModel.find().select('_id').lean();
+
+    if (users.length === 0 || companies.length === 0 || comments.length === 0) {
+      console.log(
+        'Not enough users, companies, or comments to seed replies. Seeding aborted.',
+      );
+      return;
+    }
+
+    const replies: Partial<CommentDocument>[] = [];
+
+    for (let i = 0; i < count; i++) {
+      const isUser = faker.datatype.boolean();
+      const author = isUser
+        ? faker.helpers.arrayElement(users)
+        : faker.helpers.arrayElement(companies);
+      const authorType = isUser ? 'User' : 'Company';
+      const parentComment = faker.helpers.arrayElement(comments);
+
+      const tags =
+        faker.datatype.boolean() && users.length > 0
+          ? faker.helpers
+              .arrayElements(users, faker.number.int({ min: 0, max: 3 }))
+              .map((user) => user._id)
+          : [];
+
+      replies.push({
+        author_type: authorType,
+        author_id: author._id,
+        post_id: parentComment._id, // Linking to a parent comment instead of a post
+        replies: [],
+        tags,
+        react_count: 0,
+        content: faker.lorem.sentence(),
+        commented_at: faker.date.recent(),
+      });
+    }
+
+    await this.commentModel.insertMany(replies);
+    console.log(`${count} replies seeded successfully!`);
+  }
+
   async updateCommentReactCounts(): Promise<void> {
     const comments = await this.commentModel.find().exec();
     for (const comment of comments) {
@@ -103,6 +129,30 @@ export class CommentSeeder {
       await comment.save();
     }
     console.log('Comment react counts updated.');
+  }
+
+  async updateCommentReplies(): Promise<void> {
+    const comments = await this.commentModel.find().select('_id').lean();
+    if (comments.length === 0) {
+      console.log('No comments found to update replies.');
+      return;
+    }
+
+    for (const comment of comments) {
+      const replies = await this.commentModel
+        .find({ post_id: comment._id }) // Find comments where post_id matches the current comment's ID
+        .select('_id')
+        .lean();
+
+      if (replies.length > 0) {
+        await this.commentModel.updateOne(
+          { _id: comment._id },
+          { $set: { replies: replies.map((reply) => reply._id) } },
+        );
+      }
+    }
+
+    console.log('Replies array of comments updated successfully!');
   }
 
   async clearComments(): Promise<void> {

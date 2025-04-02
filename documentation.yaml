@@ -4,8 +4,6 @@ info:
   version: 1.0.0
   description: API documentation for Module 4 (News Feed & Posts).
 servers:
-  - url: https://api.example.com/v1
-    description: Production Server
   - url: http://localhost:3000
     description: Local Development Server
 security:
@@ -40,6 +38,8 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/GetPostDto'
+        '401':
+          description: Unauthorized access
         '500':
           description: Failed to fetch posts
 
@@ -56,8 +56,17 @@ paths:
       responses:
         '201':
           description: Post created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPostDto'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized access
         '500':
           description: Failed to create post.
+
   /posts/user/{userId}:
     get:
       summary: Get user's posts
@@ -80,8 +89,69 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/GetPostDto'
+        '401':
+          description: Unauthorized access
+        '404':
+          description: User not found
         '500':
           description: Failed to fetch posts
+
+  /posts/search:
+    get:
+      summary: Search posts by keywords
+      description: Returns posts containing any of the search words. Supports filtering by network and timeframe.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query string (e.g., "AI jobs Egypt")
+          schema:
+            type: string
+        - name: network
+          in: query
+          required: false
+          description: If true, limits search to user’s connections and followed accounts
+          schema:
+            type: boolean
+        - name: timeframe
+          in: query
+          required: false
+          description: Filter posts by time.
+          schema:
+            type: string
+            enum: [24h, week, all]
+            default: all
+        - name: page
+          in: query
+          required: false
+          description: Page number for pagination
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          required: false
+          description: Number of results per page
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: List of matching posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetPostDto'
+        '400':
+          description: Invalid input or missing query
+        '401':
+          description: Unauthorized access
+        '500':
+          description: Failed to perform search
 
   /posts/{postId}:
     get:
@@ -101,6 +171,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/GetPostDto'
+        '401':
+          description: Unauthorized access
         '404':
           description: Post not found
         '500':
@@ -124,6 +196,10 @@ paths:
       responses:
         '200':
           description: Post updated successfully
+        '401':
+          description: Unauthorized access
+        '403':
+          description: Forbidden
         '404':
           description: Post not found
         '500':
@@ -141,10 +217,15 @@ paths:
       responses:
         '204':
           description: Post deleted successfully
+        '401':
+          description: Unauthorized access
+        '403':
+          description: Forbidden
         '404':
           description: Post not found
         '500':
           description: Failed to delete post
+
   /posts/react/{postId}:
     post:
       summary: Update reactions for a post
@@ -169,6 +250,7 @@ paths:
           description: Post or user not found
         '500':
           description: Failed to update reactions
+
   /posts/reactions/{postId}:
     get:
       summary: Get reactions for a post
@@ -180,20 +262,6 @@ paths:
           required: true
           schema:
             type: string
-        - name: page
-          in: query
-          description: Page number for pagination
-          required: false
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          description: Number of reactions per page
-          required: false
-          schema:
-            type: integer
-            default: 10
       responses:
         '200':
           description: List of reactions
@@ -207,6 +275,7 @@ paths:
           description: Reactions not found
         '500':
           description: Failed to fetch reactions
+
   /posts/save/{postId}:
     post:
       summary: Save a post
@@ -244,6 +313,7 @@ paths:
           description: save not found
         '500':
           description: Failed to delete save
+
   /posts/saved:
     get:
       summary: Get saved posts for a user
@@ -265,7 +335,7 @@ paths:
 
   /posts/comment/{postId}:
     post:
-      summary: Add a comment to a post
+      summary: Add a comment to a post or add a reply to a comment.
       security:
         - BearerAuth: []
       parameters:
@@ -287,6 +357,7 @@ paths:
           description: Post or user not found
         '500':
           description: Failed to add comment
+
   /posts/{postId}/reply/{commentId}:
     post:
       summary: Reply to a comment
@@ -312,26 +383,7 @@ paths:
       responses:
         '201':
           description: Reply added successfully
-  /posts/{postId}/repost:
-    post:
-      summary: Repost a post
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: postId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Repost'
-      responses:
-        '201':
-          description: Repost added successfully
+
   /posts/{postId}/reposts:
     get:
       summary: Get reposts for a post
@@ -351,7 +403,8 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Repost'
+                  $ref: '#/components/schemas/GetPostDto'
+
   /posts/comments/{postId}:
     get:
       summary: Get comments for a post
@@ -390,17 +443,13 @@ paths:
           description: Comments not found
         '500':
           description: Failed to fetch comments
+
   /posts/comments/{commentId}:
     patch:
       summary: Edit a comment
       security:
         - BearerAuth: []
       parameters:
-        - in: path
-          name: postId
-          required: true
-          schema:
-            type: string
         - in: path
           name: commentId
           required: true
@@ -415,6 +464,10 @@ paths:
       responses:
         '200':
           description: Comment updated successfully
+        '401':
+          description: Unauthorized access
+        '403':
+          description: Forbidden
         '404':
           description: Comment not found
         '500':
@@ -425,11 +478,6 @@ paths:
         - BearerAuth: []
       parameters:
         - in: path
-          name: postId
-          required: true
-          schema:
-            type: string
-        - in: path
           name: commentId
           required: true
           schema:
@@ -437,10 +485,15 @@ paths:
       responses:
         '204':
           description: Comment deleted successfully
+        '401':
+          description: Unauthorized access
+        '403':
+          description: Forbidden
         '404':
           description: Comment not found
         '500':
           description: Failed to delete comment
+
 components:
   securitySchemes:
     BearerAuth:
@@ -466,6 +519,10 @@ components:
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
+        parentPostId:
+          type: string
+        isSilentRepost:
+          type: boolean
     GetPostDto:
       type: object
       properties:
@@ -517,20 +574,20 @@ components:
         reactType:
           type: string
           enum:
-            [
-              'Like',
-              'Love',
-              'Funny',
-              'Celebrate',
-              'Insightful',
-              'Support',
-              'null',
-            ]
+            - Like
+            - Love
+            - Funny
+            - Celebrate
+            - Insightful
+            - Support
         timestamp:
           type: string
           format: date-time
         isSaved:
           type: boolean
+        parentPost:
+          $ref: '#/components/schemas/GetPostDto'
+
     EditPostDto:
       type: object
       properties:
@@ -600,6 +657,9 @@ components:
           type: array
           items:
             type: string
+        isReply:
+          type: boolean
+
     GetCommentDto:
       type: object
       properties:

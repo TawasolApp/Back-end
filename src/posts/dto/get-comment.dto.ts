@@ -58,9 +58,8 @@ export class GetCommentDto {
   content: string;
 
   @IsArray()
-  @ValidateNested({ each: true })
-  @Type(() => ReplyDto)
-  replies: ReplyDto[];
+  @IsString({ each: true })
+  replies: string[];
 
   @IsInt()
   reactCount: number;
