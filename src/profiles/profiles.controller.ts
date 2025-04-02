@@ -26,10 +26,14 @@ import { EducationDto } from './dto/education.dto';
 import { ApiBody } from '@nestjs/swagger';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
+import { PostsService } from 'src/posts/posts.service';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
-  constructor(private profilesService: ProfilesService) {}
+  
+  constructor(private profilesService: ProfilesService,
+    private readonly postsService: PostsService, // Assuming you have a PostsService for handling posts
+  ) {}
 
   /**
    * Handles exceptions and throws an InternalServerErrorException if not already an HTTP exception.
@@ -450,6 +454,18 @@ export class ProfilesController {
       return await this.profilesService.getFollowedCompanies(new Types.ObjectId(userId));
     } catch (error) {
       this.handleException(error, `Failed to get followed companies.`);
+    }
+  }
+
+  @Get('/posts/:userId')
+  async getPosts(@Param('userId') userId: string, @Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated.');
+      }
+      return await this.postsService.getUserPosts(userId, req.user['sub']);
+    } catch (error) {
+      this.handleException(error, `Failed to get posts.`);
     }
   }
 }
