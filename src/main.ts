@@ -9,6 +9,8 @@ async function bootstrap() {
   // Enable global validation pipes
   app.useGlobalPipes(new ValidationPipe());
 
+  app.setGlobalPrefix('api');
+  
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('User Profile API')
