@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
   Profile,
@@ -13,6 +13,8 @@ import { JwtModule } from '@nestjs/jwt';
 import { ConnectionsModule } from '../connections/connections.module';
 import { User, UserSchema } from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesModule } from 'src/companies/companies.module';
+import { PostsService } from 'src/posts/posts.service';
+import { PostsModule } from 'src/posts/posts.module';
 
 @Module({
   imports: [
@@ -23,13 +25,16 @@ import { CompaniesModule } from 'src/companies/companies.module';
     AuthModule,
     UsersModule,
     ConnectionsModule,
-    CompaniesModule,
+    PostsModule,
+    forwardRef(() => CompaniesModule),
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
         '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
       signOptions: { expiresIn: '1h' },
-    }),
+      
+    },
+  ),
   ],
   providers: [ProfileSeeder, ProfilesService],
   exports: [ProfileSeeder,MongooseModule],

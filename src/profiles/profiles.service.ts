@@ -24,11 +24,11 @@ import {
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
-import { CompanyConnection, CompanyConnectionDocument } from 'src/companies/infrastructure/database/schemas/company-connection.schema';
-import { Company, CompanyDocument } from 'src/companies/infrastructure/database/schemas/company.schema';
-import { toGetCompanyDto } from 'src/companies/mappers/company.mapper';
-import { handleError } from 'src/common/utils/exception-handler';
-import { GetCompanyDto } from 'src/companies/dtos/get-company.dto';
+import { CompanyConnection, CompanyConnectionDocument } from '../companies/infrastructure/database/schemas/company-connection.schema';
+import { Company, CompanyDocument } from '../companies/infrastructure/database/schemas/company.schema';
+import { toGetCompanyDto } from '../companies/mappers/company.mapper';
+import { handleError } from '../common/utils/exception-handler';
+import { GetCompanyDto } from '../companies/dtos/get-company.dto';
 
 @Injectable()
 export class ProfilesService {

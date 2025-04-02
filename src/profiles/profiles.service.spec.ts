@@ -3,7 +3,7 @@ import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/schemas/profile.schema';
 import {  Model, Types } from 'mongoose';
-import { NotFoundException, BadRequestException, ConflictException } from '@nestjs/common';
+import { NotFoundException, BadRequestException, ConflictException, forwardRef } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
 import {  Visibility, EmploymentType, LocationType, PlanType } from './infrastructure/database/enums/profile-enums';
@@ -16,6 +16,7 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
+import { CompanyModule } from '@faker-js/faker/.';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -59,6 +60,7 @@ describe('ProfilesService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [forwardRef(() => CompanyModule)],
       controllers: [ProfilesController],
       providers: [
         JwtService,
