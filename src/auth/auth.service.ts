@@ -7,7 +7,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
@@ -21,6 +21,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
+  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   /**
    * Registers a new user by validating CAPTCHA, checking email availability, hashing the password, and sending a verification email.
@@ -110,7 +112,11 @@ export class AuthService {
     const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
-    return { token: accessToken, refreshToken };
+    return {
+      token: accessToken,
+      refreshToken,
+      userId: user._id as Types.ObjectId,
+    };
   }
 
   /**
@@ -225,6 +231,7 @@ export class AuthService {
     };
   }
 
+
   /**
    * Resets the user's password using a token.
    * @param dto - Token and new password data
@@ -259,4 +266,38 @@ export class AuthService {
       throw new BadRequestException('Invalid or expired token');
     }
   }
+
+  async googleLogin(idToken: string) {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({ idToken });
+      const payload = ticket.getPayload();
+
+      if (!payload || !payload.email) {
+        throw new BadRequestException('Invalid Google token');
+      }
+
+      let user = await this.userModel.findOne({ email: payload.email });
+      if (!user) {
+        user = new this.userModel({
+          first_name: payload.given_name || '',
+          last_name: payload.family_name || '',
+          email: payload.email,
+          password: '',
+          isVerified: true,
+        });
+        await user.save();
+      }
+
+      const token = this.jwtService.sign({ sub: user._id });
+      return { access_token: token, message: 'Login successful' };
+    } catch (err) {
+      if (err.message === 'Invalid Google token') {
+        throw new BadRequestException('Invalid Google token');
+      }
+      throw new InternalServerErrorException('Google login failed');
+    }
+  }
+
+
+
 }
