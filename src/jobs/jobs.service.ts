@@ -29,7 +29,7 @@ import {
 import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
-import { toGetUserDto } from '../common/mappers/follower.mapper';
+import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { profile } from 'console';

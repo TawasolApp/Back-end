@@ -52,7 +52,7 @@ import {
   toUpdateCompanySchema,
   toGetCompanyDto,
 } from './mappers/company.mapper';
-import { toGetUserDto } from '../common/mappers/follower.mapper';
+import { toGetUserDto } from '../common/mappers/user.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { GetJobDto } from '../jobs/dtos/get-job.dto';
 import { toGetJobDto } from '../jobs/mappers/job.mapper';
