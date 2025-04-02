@@ -25,6 +25,7 @@ import { CreateCompanyDto } from './dtos/create-company.dto';
 import { UpdateCompanyDto } from './dtos/update-company.dto';
 import { PostJobDto } from '../jobs/dtos/post-job.dto';
 import { validateId } from '../common/utils/id-validator';
+import { AddAccessDto } from './dtos/add-access.dto';
 
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe())
@@ -304,16 +305,18 @@ export class CompaniesController {
     return applicantsDto;
   }
 
-  @Post('/:companyId/managers/:userId')
+  @Post('/:companyId/managers')
   @HttpCode(HttpStatus.CREATED)
   async addCompanyManager(
     @Param('companyId') companyId: string,
-    @Param('userId') newManagerId: string,
+    @Body() addAccessDto: AddAccessDto,
     @Req() request: Request,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
+    const { newUserId } = addAccessDto;
+    const newManagerId = newUserId;
     validateId(companyId, 'company');
     validateId(newManagerId, 'user');
     const userId = request.user['sub'];
@@ -328,16 +331,18 @@ export class CompaniesController {
     );
   }
 
-  @Post('/:companyId/employers/:userId')
+  @Post('/:companyId/employers')
   @HttpCode(HttpStatus.CREATED)
   async addCompanyEmployer(
     @Param('companyId') companyId: string,
-    @Param('userId') newEmployerId: string,
+    @Body() addAccessDto: AddAccessDto,
     @Req() request: Request,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
+    const { newUserId } = addAccessDto;
+    const newEmployerId = newUserId;
     validateId(companyId, 'company');
     validateId(newEmployerId, 'user');
     const userId = request.user['sub'];
