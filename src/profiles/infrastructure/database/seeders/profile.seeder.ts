@@ -12,6 +12,7 @@ import {
 } from '../../../../connections/infrastructure/database/schemas/user-connection.schema';
 import { faker } from '@faker-js/faker';
 import { ConnectionStatus } from '../../../../connections/enums/connection-status.enum';
+import { EmploymentType, LocationType, PlanType, Visibility } from '../enums/profile-enums';
 
 @Injectable()
 export class ProfileSeeder {
@@ -74,37 +75,21 @@ export class ProfileSeeder {
         {
           _id: new this.profileModel()._id, // Generate a unique ObjectId
           title: faker.person.jobTitle(),
-          employment_type: faker.helpers.arrayElement([
-            'full_time',
-            'part_time',
-            'self_employed',
-            'freelance',
-            'contract',
-            'internship',
-            'apprenticeship',
-          ]),
+          employment_type: faker.helpers.enumValue(EmploymentType),
           company: faker.company.name(),
           start_date: faker.date.past({ years: 5 }),
           end_date: faker.datatype.boolean()
             ? faker.date.past({ years: 2 })
             : undefined,
           location: faker.location.city(),
-          location_type: faker.helpers.arrayElement([
-            'on_site',
-            'hybrid',
-            'remote',
-          ]),
+          location_type: faker.helpers.enumValue(LocationType),
           description: faker.lorem.sentence(),
         },
       ],
-      visibility: faker.helpers.arrayElement([
-        'public',
-        'private',
-        'connections_only',
-      ]),
+      visibility: faker.helpers.enumValue(Visibility),
       connection_count: 0,
       plan_details: {
-        plan_type: faker.helpers.arrayElement(['monthly', 'yearly']),
+        plan_type: faker.helpers.enumValue(PlanType),
         start_date: faker.date.past({ years: 1 }),
         expiry_date: faker.date.future({ years: 1 }),
         auto_renewal: faker.datatype.boolean(),
