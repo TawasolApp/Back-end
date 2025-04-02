@@ -33,7 +33,7 @@ async function bootstrap() {
   const companyEmployerSeeder = app.get(CompanyEmployerSeeder);
 
   await userSeeder.clearUsers();
-  await userSeeder.seedUsers(10);
+  await userSeeder.seedUsers(20);
   await profileSeeder.clearProfiles();
   await profileSeeder.seedProfiles();
 
@@ -47,7 +47,7 @@ async function bootstrap() {
   await companyConnectionSeeder.seedCompanyConnections(20);
   await companySeeder.updateFollowerCounts();
   await companyManagerSeeder.clearCompanyManagers();
-  await companyManagerSeeder.seedCompanyManagers(15);
+  await companyManagerSeeder.seedCompanyManagers(10);
   await jobSeeder.clearJobs();
   await jobSeeder.seedJobs(20);
   await applicationSeeder.clearApplications();
@@ -62,7 +62,7 @@ async function bootstrap() {
   await postSeeder.seedReposts(10);
   await commentSeeder.clearComments();
   await commentSeeder.seedComments(15);
-  await commentSeeder.seedReplies(30);
+  await commentSeeder.seedReplies(20);
   await reactSeeder.clearReacts();
   await reactSeeder.seedReacts(30);
   await reactSeeder.seedCommentReacts(30);
