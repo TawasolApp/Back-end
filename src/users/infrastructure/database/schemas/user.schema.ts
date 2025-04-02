@@ -22,7 +22,10 @@ export class User {
   @Prop({ required: true })
   password: string;
 
-  @Prop({ enum: ['customer', 'employer', 'admin'], default: 'customer' })
+  @Prop({
+    enum: ['customer', 'employer', 'manager', 'admin'],
+    default: 'customer',
+  })
   role: string;
 
   @Prop({ default: false })

@@ -3,9 +3,9 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { Save, SaveDocument } from '../schemas/save.schema';
 import {
-  User,
-  UserDocument,
-} from '../../../../users/infrastructure/database/schemas/user.schema';
+  Profile,
+  ProfileDocument,
+} from '../../../../profiles/infrastructure/database/schemas/profile.schema';
 import {
   Post,
   PostDocument,
@@ -16,13 +16,13 @@ import { faker } from '@faker-js/faker';
 export class SaveSeeder {
   constructor(
     @InjectModel(Save.name) private saveModel: Model<SaveDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
     @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
 
   async seedSaves(count: number): Promise<void> {
-    const users = await this.userModel
-      .find({ role: 'customer' })
+    const users = await this.profileModel
+      .find()
       .select('_id')
       .lean();
     const posts = await this.postModel.find().select('_id').lean();

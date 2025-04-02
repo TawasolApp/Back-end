@@ -627,6 +627,19 @@ describe('CompaniesService', () => {
     );
   });
 
+  it('should throw NotFoundException if company does not exist', async () => {
+    const userId = mockProfiles[0]._id.toString();
+    const invalidCompanyId = new Types.ObjectId().toString();
+
+    companyModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(null),
+    });
+
+    await expect(
+      service.unfollowCompany(userId, invalidCompanyId),
+    ).rejects.toThrow(NotFoundException);
+  });
+
   it('should throw NotFoundException if company is not found', async () => {
     const invalidCompanyId = new Types.ObjectId().toString();
 
