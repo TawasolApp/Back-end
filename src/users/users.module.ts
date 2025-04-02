@@ -41,6 +41,26 @@ import {
   CompanyConnection,
   CompanyConnectionSchema,
 } from '../companies/infrastructure/database/schemas/company-connection.schema';
+import {
+  CompanyEmployer,
+  CompanyEmployerSchema,
+} from '../jobs/infrastructure/database/schemas/company-employer.schema';
+import {
+  CompanyManager,
+  CompanyManagerSchema,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  Application,
+  ApplicationSchema,
+} from '../jobs/infrastructure/database/schemas/application.schema';
+import {
+  Job,
+  JobSchema,
+} from '../jobs/infrastructure/database/schemas/job.schema';
+import {
+  Repost,
+  RepostSchema,
+} from '../posts/infrastructure/database/schemas/repost.schema';
 
 @Module({
   imports: [
@@ -54,6 +74,11 @@ import {
       { name: Share.name, schema: ShareSchema },
       { name: UserConnection.name, schema: UserConnectionSchema },
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
+      { name: CompanyEmployer.name, schema: CompanyEmployerSchema },
+      { name: CompanyManager.name, schema: CompanyManagerSchema },
+      { name: Application.name, schema: ApplicationSchema },
+      { name: Job.name, schema: JobSchema },
+      { name: Repost.name, schema: RepostSchema }, 
     ]),
     JwtModule.register({
       secret: process.env.JWT_SECRET || 'default_secret',

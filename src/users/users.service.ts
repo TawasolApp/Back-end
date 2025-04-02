@@ -26,6 +26,11 @@ import { Share } from '../posts/infrastructure/database/schemas/share.schema';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { CompanyConnection } from '../companies/infrastructure/database/schemas/company-connection.schema';
+import { Application } from '../jobs/infrastructure/database/schemas/application.schema';
+import { CompanyEmployer } from '../jobs/infrastructure/database/schemas/company-employer.schema';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { Repost } from '../posts/infrastructure/database/schemas/repost.schema';
+import { Job } from '../jobs/infrastructure/database/schemas/job.schema';
 
 @Injectable()
 export class UsersService {
@@ -41,6 +46,15 @@ export class UsersService {
     private userConnectionModel: Model<UserConnection>,
     @InjectModel(CompanyConnection.name)
     private companyConnectionModel: Model<CompanyConnection>,
+    @InjectModel(CompanyEmployer.name)
+    private companyEmployerModel: Model<CompanyEmployer>,
+    @InjectModel(CompanyManager.name)
+    private companyManagerModel: Model<CompanyManager>,
+    @InjectModel(Application.name)
+    private applicationModel: Model<Application>,
+    @InjectModel(Repost.name)
+    private repostModel: Model<Repost>,
+    @InjectModel(Job.name) private jobModel: Model<Job>,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
@@ -121,82 +135,78 @@ export class UsersService {
     }
   }
 
-  /**
-   * Deletes a user and all related data.
-   * @param userId - The ID of the user to delete
-   * @returns A success message
-   */
   async deleteAccount(userId: string) {
-    const session = await this.userModel.db.startSession();
-    session.startTransaction();
-
     try {
-      await this.profileModel.deleteOne({ _id: userId }).session(session);
+      const user = await this.userModel.findById(userId);
+      if (!user) throw new NotFoundException('User not found');
 
-      await this.postModel.deleteMany({ author_id: userId }).session(session);
+      await this.profileModel.deleteOne({ _id: userId });
+      await this.postModel.deleteMany({ author_id: userId });
+      await this.saveModel.deleteMany({ user_id: userId });
 
-      await this.saveModel.deleteMany({ user_id: userId }).session(session);
-
-      const userReacts = await this.reactModel
-        .find({ user_id: userId })
-        .session(session);
+      const userReacts = await this.reactModel.find({ user_id: userId });
       for (const react of userReacts) {
         if (react.post_type === 'Post') {
-          await this.postModel
-            .updateOne(
-              { _id: react.post_id },
-              { $inc: { [`react_count.${react.react_type}`]: -1 } },
-            )
-            .session(session);
+          await this.postModel.updateOne(
+            { _id: react.post_id },
+            { $inc: { [`react_count.${react.react_type}`]: -1 } },
+          );
         } else if (react.post_type === 'Comment') {
-          await this.commentModel
-            .updateOne({ _id: react.post_id }, { $inc: { react_count: -1 } })
-            .session(session);
+          await this.commentModel.updateOne(
+            { _id: react.post_id },
+            { $inc: { react_count: -1 } },
+          );
         }
       }
-      await this.reactModel.deleteMany({ user_id: userId }).session(session);
+      await this.reactModel.deleteMany({ user_id: userId });
 
-      const userComments = await this.commentModel
-        .find({ author_id: userId })
-        .session(session);
+      const userComments = await this.commentModel.find({ author_id: userId });
       for (const comment of userComments) {
-        await this.postModel
-          .updateOne({ _id: comment.post_id }, { $inc: { comment_count: -1 } })
-          .session(session);
+        await this.postModel.updateOne(
+          { _id: comment.post_id },
+          { $inc: { comment_count: -1 } },
+        );
       }
-      await this.commentModel
-        .deleteMany({ author_id: userId })
-        .session(session);
+      await this.commentModel.deleteMany({ author_id: userId });
 
-      const userShares = await this.shareModel
-        .find({ user: userId })
-        .session(session);
-      for (const share of userShares) {
-        await this.postModel
-          .updateOne({ _id: share.post }, { $inc: { share_count: -1 } })
-          .session(session);
+      await this.shareModel.deleteMany({ user: userId });
+
+      const userReposts = await this.repostModel.find({ autho_id: userId });
+      for (const repost of userReposts) {
+        await this.postModel.updateOne(
+          { _id: repost.post_id },
+          { $inc: { share_count: -1 } },
+        );
       }
-      await this.shareModel.deleteMany({ user: userId }).session(session);
+      await this.repostModel.deleteMany({ autho_id: userId });
 
-      await this.userConnectionModel
-        .deleteMany({
-          $or: [{ sending_party: userId }, { receiving_party: userId }],
-        })
-        .session(session);
+      await this.userConnectionModel.deleteMany({
+        $or: [{ sending_party: userId }, { receiving_party: userId }],
+      });
 
-      await this.companyConnectionModel
-        .deleteMany({ user_id: userId })
-        .session(session);
+      await this.companyConnectionModel.deleteMany({ user_id: userId });
+      await this.companyEmployerModel.deleteMany({ employer_id: userId });
+      await this.companyManagerModel.deleteMany({ manager_id: userId });
 
-      await this.userModel.deleteOne({ _id: userId }).session(session);
+      const userApplications = await this.applicationModel.find({
+        user_id: userId,
+      });
+      for (const application of userApplications) {
+        await this.jobModel.updateOne(
+          { _id: application.job_id },
+          { $inc: { applicants: -1 } },
+        );
+      }
+      await this.applicationModel.deleteMany({ user_id: userId });
 
-      await session.commitTransaction();
+      await this.userModel.deleteOne({ _id: userId });
+
       return { message: 'Account and all related data deleted successfully.' };
     } catch (error) {
-      await session.abortTransaction();
-      throw new InternalServerErrorException('Failed to delete account');
-    } finally {
-      session.endSession();
+      console.error('Error during account deletion:', error);
+      throw new InternalServerErrorException(
+        'Failed to delete account. Please try again later.',
+      );
     }
   }
 }
