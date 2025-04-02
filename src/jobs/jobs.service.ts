@@ -32,7 +32,6 @@ import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
-import { profile } from 'console';
 
 @Injectable()
 export class JobsService {
