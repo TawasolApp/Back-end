@@ -12,6 +12,7 @@ import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConnectionsModule } from '../connections/connections.module';
 import { User, UserSchema } from '../users/infrastructure/database/schemas/user.schema';
+import { CompaniesModule } from 'src/companies/companies.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { User, UserSchema } from '../users/infrastructure/database/schemas/user.
     AuthModule,
     UsersModule,
     ConnectionsModule,
+    CompaniesModule,
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||

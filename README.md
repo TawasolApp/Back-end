@@ -97,8 +97,9 @@ npm run test:cov
 Swagger is used for API documentation. Once the backend is running, visit:
 
 ```
-http://localhost:3000/api
+http://localhost:3000/api-docs
 ```
+
 
 ## Commit Format
 
