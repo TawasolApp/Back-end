@@ -10,7 +10,11 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
 
   app.setGlobalPrefix('api');
-  
+
+  app.enableCors({
+    origin: '*', // Allow any origin
+  });  
+
   // Swagger configuration
   const config = new DocumentBuilder()
     .setTitle('User Profile API')
