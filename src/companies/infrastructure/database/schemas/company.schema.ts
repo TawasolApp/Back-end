@@ -51,7 +51,7 @@ export class Company {
   @Prop()
   founded: number;
 
-  @Prop({ unique: true })
+  @Prop({ unique: true, sparse: true })
   website: string;
 
   @Prop()
@@ -60,10 +60,10 @@ export class Company {
   @Prop()
   location: string;
 
-  @Prop({ unique: true })
+  @Prop({ unique: true, sparse: true })
   email: string;
 
-  @Prop({ unique: true })
+  @Prop({ unique: true, sparse: true })
   contact_number: string;
 }
 

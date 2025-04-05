@@ -116,20 +116,43 @@ export class CompaniesService {
   ): Promise<GetCompanyDto> {
     try {
       const companyData = toCreateCompanySchema(createCompanyDto);
-      const existingFields = await this.companyModel
-        .findOne({
-          $or: [
-            { name: companyData.name },
-            { website: companyData.website },
-            { email: companyData.email },
-            { contact_number: companyData.contact_number },
-          ],
-        })
-        .lean();
-      if (existingFields) {
-        throw new ConflictException(
-          'Company name, website, email and contact number must be unique.',
-        );
+      // const existingFields = await this.companyModel
+      //   .findOne({
+      //     $or: [
+      //       { name: companyData.name },
+      //       { website: companyData.website },
+      //       { email: companyData.email },
+      //       { contact_number: companyData.contact_number },
+      //     ],
+      //   })
+      //   .lean();
+      // if (existingFields) {
+      //   throw new ConflictException(
+      //     'Company name, website, email and contact number must be unique.',
+      //   );
+      // }
+      const conflictFilters: { [key: string]: any }[] = [];
+      if (companyData.name) {
+        conflictFilters.push({ name: companyData.name });
+      }
+      if (companyData.website) {
+        conflictFilters.push({ website: companyData.website });
+      }
+      if (companyData.email) {
+        conflictFilters.push({ email: companyData.email });
+      }
+      if (companyData.contact_number) {
+        conflictFilters.push({ contact_number: companyData.contact_number });
+      }
+      if (conflictFilters.length > 0) {
+        const existingFields = await this.companyModel.findOne({
+          $or: conflictFilters,
+        });
+        if (existingFields) {
+          throw new ConflictException(
+            'Company name, website, email and contact number must be unique.',
+          );
+        }
       }
       const newCompany = new this.companyModel({
         _id: new Types.ObjectId(),
@@ -189,20 +212,31 @@ export class CompaniesService {
           'Logged in user does not have management access to this company.',
         );
       }
-      const existingFields = await this.companyModel
-        .findOne({
-          $or: [
-            { name: updateData.name },
-            { website: updateData.website },
-            { email: updateData.email },
-            { contact_number: updateData.contact_number },
+      const conflictFilters: { [key: string]: any }[] = [];
+      if (updateData.name) {
+        conflictFilters.push({ name: updateData.name });
+      }
+      if (updateData.website) {
+        conflictFilters.push({ website: updateData.website });
+      }
+      if (updateData.email) {
+        conflictFilters.push({ email: updateData.email });
+      }
+      if (updateData.contact_number) {
+        conflictFilters.push({ contact_number: updateData.contact_number });
+      }
+      if (conflictFilters.length > 0) {
+        const existingFields = await this.companyModel.findOne({
+          $and: [
+            { _id: { $ne: new Types.ObjectId(companyId) } },
+            { $or: conflictFilters },
           ],
-        })
-        .lean();
-      if (existingFields) {
-        throw new ConflictException(
-          'Company name, website, email and contact number must be unique.',
-        );
+        });
+        if (existingFields) {
+          throw new ConflictException(
+            'Company name, website, email and contact number must be unique.',
+          );
+        }
       }
       const updatedCompany = await this.companyModel.findByIdAndUpdate(
         new Types.ObjectId(companyId),
@@ -407,7 +441,6 @@ export class CompaniesService {
       handleError(error, 'Failed to retrieve list of followers.');
     }
   }
-
 
   /**
    * follows a company for the logged in user.
