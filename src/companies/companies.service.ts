@@ -57,6 +57,8 @@ import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { GetJobDto } from '../jobs/dtos/get-job.dto';
 import { toGetJobDto } from '../jobs/mappers/job.mapper';
 import { handleError } from '../common/utils/exception-handler';
+import { AddAccessDto } from './dtos/add-access.dto';
+import { validateId } from '../common/utils/id-validator';
 
 @Injectable()
 export class CompaniesService {
@@ -530,6 +532,7 @@ export class CompaniesService {
    * suggests companies similar to the given company.
    *
    * @param companyId - ID of the company to base suggestions on.
+   * @param userId - ID of currently logged in user.
    * @returns array of GetCompanyDto - suggested companies.
    * @throws NotFoundException - if the company does not exist.
    *
@@ -538,7 +541,10 @@ export class CompaniesService {
    * 2. find similar companies excluding the original one.
    * 3. return the suggested companies sorted by follower count.
    */
-  async getSuggestedCompanies(companyId: string): Promise<GetCompanyDto[]> {
+  async getSuggestedCompanies(
+    userId: string,
+    companyId: string,
+  ): Promise<GetCompanyDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -556,7 +562,30 @@ export class CompaniesService {
         .select('_id name logo industry followers')
         .sort({ followers: -1 })
         .lean();
-      return suggestedCompanies.map(toGetCompanyDto);
+
+      const companyIds = suggestedCompanies.map((company) => company._id);
+      const connections = await this.companyConnectionModel
+        .find({
+          user_id: new Types.ObjectId(userId),
+          company_id: { $in: companyIds },
+        })
+        .lean();
+      const followedCompanyIds = new Set(
+        connections.map((connection) => connection.company_id.toString()),
+      );
+      return await Promise.all(
+        suggestedCompanies.map(async (company) => {
+          const companyDto = toGetCompanyDto(company);
+          companyDto.isFollowing = followedCompanyIds.has(
+            company._id.toString(),
+          );
+          // companyDto.isManager = await this.checkAccess(
+          //   userId,
+          //   company._id.toString(),
+          // );
+          return companyDto;
+        }),
+      );
     } catch (error) {
       handleError(error, 'Failed to retrieve list of related companies.');
     }
@@ -662,7 +691,7 @@ export class CompaniesService {
    * grants management access of a company to a user.
    *
    * @param companyId - ID of the company to which management access is being granted.
-   * @param newManagerId - ID of the user to be granted management access.
+   * @param addAccessDto - DTO which contains ID of the new manager to be added.
    * @param userId - ID of the currently logged-in manager making the request.
    * @throws NotFoundException - if the company or user does not exist.
    * @throws ForbiddenException - if the logged-in manager does not have management access to the company.
@@ -680,9 +709,12 @@ export class CompaniesService {
   async addCompanyManager(
     userId: string,
     companyId: string,
-    newManagerId: string,
+    addAccessDto: AddAccessDto,
   ) {
     try {
+      const { newUserId } = addAccessDto;
+      const newManagerId = newUserId;
+      validateId(newManagerId, 'user');
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
@@ -746,7 +778,7 @@ export class CompaniesService {
    * grants employer access of a company to a user.
    *
    * @param companyId - ID of the company to which management access is being granted.
-   * @param newEmployerId - ID of the user to be granted management access.
+   * @param addAccessDto - DTO which contains ID of the new employer to be added.
    * @param userId - ID of the currently logged-in manager making the request.
    * @throws NotFoundException - if the company or user does not exist.
    * @throws ForbiddenException - if the logged-in manager does not have management access to the company.
@@ -764,9 +796,12 @@ export class CompaniesService {
   async addCompanyEmployer(
     userId: string,
     companyId: string,
-    newEmployerId: string,
+    addAccessDto: AddAccessDto,
   ) {
     try {
+      const { newUserId } = addAccessDto;
+      const newEmployerId = newUserId;
+      validateId(newEmployerId, 'user');
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
