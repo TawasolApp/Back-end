@@ -5,6 +5,7 @@ import {
   NotFoundException,
   UnauthorizedException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
@@ -103,10 +104,13 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid)
-      throw new UnauthorizedException('Invalid credentials');
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid password'); 
+    }
 
-    if (!user.isVerified) throw new BadRequestException('Email not verified');
+    if (!user.isVerified) {
+      throw new ForbiddenException('Email not verified'); 
+    }
 
     const payload = { sub: user._id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
@@ -276,6 +280,8 @@ export class AuthService {
       }
 
       let user = await this.userModel.findOne({ email: payload.email });
+      const isNewUser = !user;
+
       if (!user) {
         user = new this.userModel({
           first_name: payload.given_name || '',
@@ -291,8 +297,9 @@ export class AuthService {
       return {
         access_token: token,
         userId: user._id,
+        isNewUser,
         message: 'Login successful',
-      }; // Return userId
+      };
     } catch (err) {
       if (err.message === 'Invalid Google token') {
         throw new BadRequestException('Invalid Google token');
