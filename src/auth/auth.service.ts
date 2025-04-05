@@ -109,7 +109,7 @@ export class AuthService {
     if (!user.isVerified) throw new BadRequestException('Email not verified');
 
     const payload = { sub: user._id, email: user.email, role: user.role };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
     return {
