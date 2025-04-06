@@ -57,6 +57,8 @@ import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { GetJobDto } from '../jobs/dtos/get-job.dto';
 import { toGetJobDto } from '../jobs/mappers/job.mapper';
 import { handleError } from '../common/utils/exception-handler';
+import { AddAccessDto } from './dtos/add-access.dto';
+import { validateId } from '../common/utils/id-validator';
 
 @Injectable()
 export class CompaniesService {
@@ -116,20 +118,43 @@ export class CompaniesService {
   ): Promise<GetCompanyDto> {
     try {
       const companyData = toCreateCompanySchema(createCompanyDto);
-      const existingFields = await this.companyModel
-        .findOne({
-          $or: [
-            { name: companyData.name },
-            { website: companyData.website },
-            { email: companyData.email },
-            { contact_number: companyData.contact_number },
-          ],
-        })
-        .lean();
-      if (existingFields) {
-        throw new ConflictException(
-          'Company name, website, email and contact number must be unique.',
-        );
+      // const existingFields = await this.companyModel
+      //   .findOne({
+      //     $or: [
+      //       { name: companyData.name },
+      //       { website: companyData.website },
+      //       { email: companyData.email },
+      //       { contact_number: companyData.contact_number },
+      //     ],
+      //   })
+      //   .lean();
+      // if (existingFields) {
+      //   throw new ConflictException(
+      //     'Company name, website, email and contact number must be unique.',
+      //   );
+      // }
+      const conflictFilters: { [key: string]: any }[] = [];
+      if (companyData.name) {
+        conflictFilters.push({ name: companyData.name });
+      }
+      if (companyData.website) {
+        conflictFilters.push({ website: companyData.website });
+      }
+      if (companyData.email) {
+        conflictFilters.push({ email: companyData.email });
+      }
+      if (companyData.contact_number) {
+        conflictFilters.push({ contact_number: companyData.contact_number });
+      }
+      if (conflictFilters.length > 0) {
+        const existingFields = await this.companyModel.findOne({
+          $or: conflictFilters,
+        });
+        if (existingFields) {
+          throw new ConflictException(
+            'Company name, website, email and contact number must be unique.',
+          );
+        }
       }
       const newCompany = new this.companyModel({
         _id: new Types.ObjectId(),
@@ -189,20 +214,31 @@ export class CompaniesService {
           'Logged in user does not have management access to this company.',
         );
       }
-      const existingFields = await this.companyModel
-        .findOne({
-          $or: [
-            { name: updateData.name },
-            { website: updateData.website },
-            { email: updateData.email },
-            { contact_number: updateData.contact_number },
+      const conflictFilters: { [key: string]: any }[] = [];
+      if (updateData.name) {
+        conflictFilters.push({ name: updateData.name });
+      }
+      if (updateData.website) {
+        conflictFilters.push({ website: updateData.website });
+      }
+      if (updateData.email) {
+        conflictFilters.push({ email: updateData.email });
+      }
+      if (updateData.contact_number) {
+        conflictFilters.push({ contact_number: updateData.contact_number });
+      }
+      if (conflictFilters.length > 0) {
+        const existingFields = await this.companyModel.findOne({
+          $and: [
+            { _id: { $ne: new Types.ObjectId(companyId) } },
+            { $or: conflictFilters },
           ],
-        })
-        .lean();
-      if (existingFields) {
-        throw new ConflictException(
-          'Company name, website, email and contact number must be unique.',
-        );
+        });
+        if (existingFields) {
+          throw new ConflictException(
+            'Company name, website, email and contact number must be unique.',
+          );
+        }
       }
       const updatedCompany = await this.companyModel.findByIdAndUpdate(
         new Types.ObjectId(companyId),
@@ -400,14 +436,13 @@ export class CompaniesService {
       }
       const profiles = await this.profileModel
         .find(filter)
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followers.');
     }
   }
-
 
   /**
    * follows a company for the logged in user.
@@ -497,6 +532,7 @@ export class CompaniesService {
    * suggests companies similar to the given company.
    *
    * @param companyId - ID of the company to base suggestions on.
+   * @param userId - ID of currently logged in user.
    * @returns array of GetCompanyDto - suggested companies.
    * @throws NotFoundException - if the company does not exist.
    *
@@ -505,7 +541,10 @@ export class CompaniesService {
    * 2. find similar companies excluding the original one.
    * 3. return the suggested companies sorted by follower count.
    */
-  async getSuggestedCompanies(companyId: string): Promise<GetCompanyDto[]> {
+  async getSuggestedCompanies(
+    userId: string,
+    companyId: string,
+  ): Promise<GetCompanyDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -523,7 +562,30 @@ export class CompaniesService {
         .select('_id name logo industry followers')
         .sort({ followers: -1 })
         .lean();
-      return suggestedCompanies.map(toGetCompanyDto);
+
+      const companyIds = suggestedCompanies.map((company) => company._id);
+      const connections = await this.companyConnectionModel
+        .find({
+          user_id: new Types.ObjectId(userId),
+          company_id: { $in: companyIds },
+        })
+        .lean();
+      const followedCompanyIds = new Set(
+        connections.map((connection) => connection.company_id.toString()),
+      );
+      return await Promise.all(
+        suggestedCompanies.map(async (company) => {
+          const companyDto = toGetCompanyDto(company);
+          companyDto.isFollowing = followedCompanyIds.has(
+            company._id.toString(),
+          );
+          // companyDto.isManager = await this.checkAccess(
+          //   userId,
+          //   company._id.toString(),
+          // );
+          return companyDto;
+        }),
+      );
     } catch (error) {
       handleError(error, 'Failed to retrieve list of related companies.');
     }
@@ -584,7 +646,7 @@ export class CompaniesService {
       const followerIds = followers.map((follower) => follower.user_id);
       const profiles = await this.profileModel
         .find({ _id: { $in: followerIds } })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
@@ -629,7 +691,7 @@ export class CompaniesService {
    * grants management access of a company to a user.
    *
    * @param companyId - ID of the company to which management access is being granted.
-   * @param newManagerId - ID of the user to be granted management access.
+   * @param addAccessDto - DTO which contains ID of the new manager to be added.
    * @param userId - ID of the currently logged-in manager making the request.
    * @throws NotFoundException - if the company or user does not exist.
    * @throws ForbiddenException - if the logged-in manager does not have management access to the company.
@@ -647,9 +709,12 @@ export class CompaniesService {
   async addCompanyManager(
     userId: string,
     companyId: string,
-    newManagerId: string,
+    addAccessDto: AddAccessDto,
   ) {
     try {
+      const { newUserId } = addAccessDto;
+      const newManagerId = newUserId;
+      validateId(newManagerId, 'user');
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
@@ -713,7 +778,7 @@ export class CompaniesService {
    * grants employer access of a company to a user.
    *
    * @param companyId - ID of the company to which management access is being granted.
-   * @param newEmployerId - ID of the user to be granted management access.
+   * @param addAccessDto - DTO which contains ID of the new employer to be added.
    * @param userId - ID of the currently logged-in manager making the request.
    * @throws NotFoundException - if the company or user does not exist.
    * @throws ForbiddenException - if the logged-in manager does not have management access to the company.
@@ -731,9 +796,12 @@ export class CompaniesService {
   async addCompanyEmployer(
     userId: string,
     companyId: string,
-    newEmployerId: string,
+    addAccessDto: AddAccessDto,
   ) {
     try {
+      const { newUserId } = addAccessDto;
+      const newEmployerId = newUserId;
+      validateId(newEmployerId, 'user');
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
         .lean();
@@ -837,7 +905,7 @@ export class CompaniesService {
       const managerIds = managers.map((manager) => manager.manager_id);
       const profiles = await this.profileModel
         .find({ _id: { $in: managerIds } })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
@@ -885,7 +953,7 @@ export class CompaniesService {
       const employerIds = employers.map((employer) => employer.employer_id);
       const profiles = await this.profileModel
         .find({ _id: { $in: employerIds } })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {

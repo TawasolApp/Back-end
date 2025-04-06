@@ -51,7 +51,10 @@ export async function getCommentInfo(
         'profile_picture' in authorProfile
           ? authorProfile.profile_picture
           : undefined;
-      authorName = authorProfile.name;
+      authorName =
+        'first_name' in authorProfile && 'last_name' in authorProfile
+          ? `${authorProfile.first_name} ${authorProfile.last_name}`
+          : 'Unknown';
       authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
     }
   } else if (comment.author_type === 'Company') {
@@ -61,7 +64,7 @@ export async function getCommentInfo(
         authorProfilePicture =
           'logo' in authorProfile ? authorProfile.logo : undefined;
       }
-      authorName = authorProfile.name;
+      authorName = 'name' in authorProfile ? authorProfile.name : 'Unknown';
       authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
     }
   }
@@ -147,7 +150,7 @@ export async function getPostInfo(
     parentPost = await postModel.findOne({ _id: post.parent_post_id }).exec();
 
     if (!parentPost) {
-      throw new NotFoundException('Parent post not found');
+      console.log('Parent post not found');
     } else {
       parentPostDto = await getPostInfo(
         parentPost,

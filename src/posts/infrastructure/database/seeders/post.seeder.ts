@@ -190,4 +190,16 @@ export class PostSeeder {
     }
     console.log('Post comment counts updated.');
   }
+
+  async updateShareCounts(): Promise<void> {
+    const posts = await this.postModel.find().exec();
+    for (const post of posts) {
+      const shareCount = await this.postModel
+        .countDocuments({ parent_post_id: post._id })
+        .exec();
+      post.share_count = shareCount;
+      await post.save();
+    }
+    console.log('Post share counts updated.');
+  }
 }

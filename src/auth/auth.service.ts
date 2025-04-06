@@ -302,7 +302,7 @@ export class AuthService {
       if (!profile?.email) {
         throw new BadRequestException('Invalid Google token');
       }
-
+      
       let user = await this.userModel.findOne({ email: profile.email });
       const isNewUser = !user;
 

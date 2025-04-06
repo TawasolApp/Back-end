@@ -5,6 +5,7 @@ import {
   IsISO8601,
   ValidateNested,
   IsEnum,
+  IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -59,11 +60,18 @@ export class GetCommentDto {
 
   @IsArray()
   @IsString({ each: true })
-  replies: string[];
+  repliesCount: number;
 
-  @IsInt()
-  reactCount: number;
-
+  @IsObject()
+  reactCounts: {
+    Like: number;
+    Love: number;
+    Funny: number;
+    Celebrate: number;
+    Insightful: number;
+    Support: number;
+  };
+  
   @IsISO8601()
   timestamp: string;
 

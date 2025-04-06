@@ -1,5 +1,9 @@
 import { Types } from 'mongoose';
-import { Certification, Education, Profile } from '../infrastructure/database/schemas/profile.schema';
+import {
+  Certification,
+  Education,
+  Profile,
+} from '../infrastructure/database/schemas/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
 import { GetProfileDto } from './get-profile.dto';
 import { UpdateProfileDto } from './update-profile.dto';
@@ -7,18 +11,26 @@ import { EducationDto } from './education.dto';
 import { SkillDto } from './skill.dto';
 import { CertificationDto } from './certification.dto';
 import { WorkExperienceDto } from './work-experience.dto';
-import {  Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
+import {
+  Visibility,
+  EmploymentType,
+  LocationType,
+  PlanType,
+} from '../enums/profile-enums';
 
 /**
  * Maps CreateProfileDto to the Profile schema.
  */
 export function toCreateProfileSchema(
   id: Types.ObjectId,
+  firstName: string,
+  lastName: string,
   createProfileDto: Partial<CreateProfileDto>,
 ) {
   return {
     _id: new Types.ObjectId(id),
-    name: createProfileDto.name,
+    first_name: firstName,
+    last_name: lastName,
     profile_picture: createProfileDto.profilePicture,
     cover_photo: createProfileDto.coverPhoto,
     resume: createProfileDto.resume,
@@ -73,7 +85,11 @@ export function toUpdateProfileSchema(
   updateProfileDto: Partial<UpdateProfileDto>,
 ): Partial<Profile> {
   return {
-    ...(updateProfileDto.name && { name: updateProfileDto.name }),
+    ...(updateProfileDto.firstName && {
+      first_name: updateProfileDto.firstName,
+    }),
+
+    ...(updateProfileDto.lastName && { last_name: updateProfileDto.lastName }),
     ...(updateProfileDto.bio && { bio: updateProfileDto.bio }),
     ...(updateProfileDto.location && { location: updateProfileDto.location }),
     ...(updateProfileDto.industry && { industry: updateProfileDto.industry }),
@@ -97,7 +113,8 @@ export function toUpdateProfileSchema(
  */ export function toGetProfileDto(profile: Profile): GetProfileDto {
   return {
     _id: profile._id ?? null,
-    name: profile.name ?? null,
+    firstName: profile.first_name ?? null,
+    lastName: profile.last_name ?? null,
     profilePicture: profile.profile_picture ?? null,
     coverPhoto: profile.cover_photo ?? null,
     resume: profile.resume ?? null,
@@ -170,7 +187,7 @@ export function toCreateEducationSchema(educationDto: Partial<EducationDto>) {
  * Maps Partial<EducationDto> to the education schema for updates.
  */
 export function toUpdateEducationSchema(
-  educationDto: Partial<EducationDto>
+  educationDto: Partial<EducationDto>,
 ): Partial<Education> {
   return {
     ...(educationDto.school && { school: educationDto.school }),
@@ -183,7 +200,6 @@ export function toUpdateEducationSchema(
   };
 }
 
-
 /**
  * Maps the EducationDto to the education schema.
  */
@@ -191,16 +207,15 @@ export function toCreateSkillSchema(skillDto: Partial<SkillDto>) {
   return {
     skill_name: skillDto.skillName,
     endorsements: [] as Types.ObjectId[],
-
   };
 }
-
 
 /**
  * Maps the CertificationDto to the Certification schema.
  */
 export function toCreateCertificationSchema(
-  certificationDto: Partial<CertificationDto>,) {
+  certificationDto: Partial<CertificationDto>,
+) {
   return {
     _id: new Types.ObjectId(),
     name: certificationDto.name,
@@ -213,21 +228,24 @@ export function toCreateCertificationSchema(
  * Maps Partial<CertificationDto> to the Certification schema for updates.
  */
 export function toUpdateCertificationSchema(
-  certificationDto: Partial<CertificationDto>
+  certificationDto: Partial<CertificationDto>,
 ): Partial<Certification> {
   return {
     ...(certificationDto.name && { name: certificationDto.name }),
     ...(certificationDto.company && { company: certificationDto.company }),
-    ...(certificationDto.issueDate && { issue_date: certificationDto.issueDate }),
+    ...(certificationDto.issueDate && {
+      issue_date: certificationDto.issueDate,
+    }),
   };
 }
-
 
 /**
  * Maps the WorkExperienceDto to the WorkExperience schema.
  */
 
-export function toCreateWorkExperienceSchema(workExperienceDto: Partial<WorkExperienceDto>) {
+export function toCreateWorkExperienceSchema(
+  workExperienceDto: Partial<WorkExperienceDto>,
+) {
   return {
     _id: new Types.ObjectId(),
     title: workExperienceDto.title,

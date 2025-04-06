@@ -27,12 +27,11 @@ import { ApiBody } from '@nestjs/swagger';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
 import { PostsService } from '../posts/posts.service';
-
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
-  
-  constructor(private profilesService: ProfilesService,
+  constructor(
+    private profilesService: ProfilesService,
     private readonly postsService: PostsService, // Assuming you have a PostsService for handling posts
   ) {}
 
@@ -72,14 +71,20 @@ export class ProfilesController {
    * Retrieves a user profile by ID.
    * @param id - The profile ID
    */
-  @Get(':id')
+  @Get(':userId')
   @UsePipes(new ValidationPipe())
-  async getProfile(@Param('id') id: string) {
+  async getProfile(@Req() req, @Param('userId') id: string) {
     try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
       if (!Types.ObjectId.isValid(id)) {
         throw new BadRequestException('Invalid profile ID format');
       }
-      return await this.profilesService.getProfile(new Types.ObjectId(id));
+      return await this.profilesService.getProfile(
+        new Types.ObjectId(id),
+        req.user['sub'],
+      );
     } catch (error) {
       this.handleException(error, 'Failed to retrieve profile.');
     }
@@ -249,9 +254,9 @@ export class ProfilesController {
    * @param req - The request object containing the authenticated user
    * @param skillName - The name of the skill to be deleted
    */
-  @Delete('skills/:skill_name')
+  @Delete('skills/:skillName')
   @UsePipes(new ValidationPipe())
-  async deleteSkill(@Req() req, @Param('skill_name') skillName: string) {
+  async deleteSkill(@Req() req, @Param('skillName') skillName: string) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -274,8 +279,8 @@ export class ProfilesController {
       this.handleException(error, 'Failed to add education.');
     }
   }
-
-  @Patch('education/:education_id')
+  
+  @Patch('education/:educationId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
     type: EducationDto,
@@ -285,7 +290,7 @@ export class ProfilesController {
   async editEducation(
     @Req() req,
     @Body() updateEducationDto: Partial<EducationDto>,
-    @Param('education_id') educationId: Types.ObjectId,
+    @Param('educationId') educationId: Types.ObjectId,
   ) {
     try {
       if (!req.user) {
@@ -301,12 +306,9 @@ export class ProfilesController {
     }
   }
 
-  @Delete('education/:education_id')
+  @Delete('education/:educationId')
   @UsePipes(new ValidationPipe())
-  async deleteEducation(
-    @Req() req,
-    @Param('education_id') educationId: string,
-  ) {
+  async deleteEducation(@Req() req, @Param('educationId') educationId: string) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -336,7 +338,7 @@ export class ProfilesController {
     }
   }
 
-  @Patch('certification/:certification_id')
+  @Patch('certification/:certificationId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
     type: CertificationDto,
@@ -346,7 +348,7 @@ export class ProfilesController {
   async editCertification(
     @Req() req,
     @Body() updateCertificationDto: Partial<CertificationDto>,
-    @Param('certification_id') certificationId: Types.ObjectId,
+    @Param('certificationId') certificationId: Types.ObjectId,
   ) {
     try {
       if (!req.user) {
@@ -362,11 +364,11 @@ export class ProfilesController {
     }
   }
 
-  @Delete('certification/:certification_id')
+  @Delete('certification/:certificationId')
   @UsePipes(new ValidationPipe())
   async deleteCertification(
     @Req() req,
-    @Param('certification_id') certificationId: string,
+    @Param('certificationId') certificationId: string,
   ) {
     try {
       if (!req.user) {
@@ -400,7 +402,7 @@ export class ProfilesController {
     }
   }
 
-  @Patch('work-experience/:work_experience_id')
+  @Patch('work-experience/:workExperienceId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
     type: WorkExperienceDto,
@@ -410,7 +412,7 @@ export class ProfilesController {
   async editWorkExperience(
     @Req() req,
     @Body() updateWorkExperienceDto: Partial<WorkExperienceDto>,
-    @Param('work_experience_id') workExperienceId: Types.ObjectId,
+    @Param('workExperienceId') workExperienceId: Types.ObjectId,
   ) {
     try {
       if (!req.user) {
@@ -426,11 +428,11 @@ export class ProfilesController {
     }
   }
 
-  @Delete('work-experience/:work_experience_id')
+  @Delete('work-experience/:workExperienceId')
   @UsePipes(new ValidationPipe())
   async deleteWorkExperience(
     @Req() req,
-    @Param('work_experience_id') workExperienceId: string,
+    @Param('workExperienceId') workExperienceId: string,
   ) {
     try {
       if (!req.user) {
@@ -452,7 +454,9 @@ export class ProfilesController {
         throw new UnauthorizedException('User not authenticated.');
       }
 
-      return await this.profilesService.getFollowedCompanies(new Types.ObjectId(userId));
+      return await this.profilesService.getFollowedCompanies(
+        new Types.ObjectId(userId),
+      );
     } catch (error) {
       this.handleException(error, `Failed to get followed companies.`);
     }

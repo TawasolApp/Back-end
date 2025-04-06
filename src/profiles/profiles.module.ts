@@ -11,7 +11,10 @@ import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConnectionsModule } from '../connections/connections.module';
-import { User, UserSchema } from '../users/infrastructure/database/schemas/user.schema';
+import {
+  User,
+  UserSchema,
+} from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesModule } from '../companies/companies.module';
 import { PostsService } from '../posts/posts.service';
 import { PostsModule } from '../posts/posts.module';
@@ -26,6 +29,7 @@ import { PostsModule } from '../posts/posts.module';
     UsersModule,
     ConnectionsModule,
     PostsModule,
+    UsersModule,
     forwardRef(() => CompaniesModule),
     JwtModule.register({
       secret:
@@ -37,7 +41,7 @@ import { PostsModule } from '../posts/posts.module';
   ),
   ],
   providers: [ProfileSeeder, ProfilesService],
-  exports: [ProfileSeeder,MongooseModule],
+  exports: [ProfileSeeder, MongooseModule],
   controllers: [ProfilesController],
 })
 export class ProfilesModule {}
