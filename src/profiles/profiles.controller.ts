@@ -26,7 +26,7 @@ import { EducationDto } from './dto/education.dto';
 import { ApiBody } from '@nestjs/swagger';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
-import { PostsService } from 'src/posts/posts.service';
+import { PostsService } from '../posts/posts.service';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {

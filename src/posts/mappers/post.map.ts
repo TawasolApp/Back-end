@@ -12,7 +12,12 @@ export function mapPostToDto(
   return {
     id: post.id.toString(),
     authorId: post.author_id.toString(),
-    authorName: authorProfile.name,
+    authorName:
+      'first_name' in authorProfile && 'last_name' in authorProfile
+        ? `${authorProfile.first_name} ${authorProfile.last_name}`
+        : 'name' in authorProfile
+          ? authorProfile.name
+          : 'Unknown',
     authorPicture:
       'profile_picture' in authorProfile
         ? authorProfile.profile_picture
