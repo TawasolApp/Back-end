@@ -106,6 +106,12 @@ export class ProfilesService {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
+    if (updateProfileDto.firstName != undefined) {
+      await this.updateUserFirstName(updateProfileDto.firstName, id);
+    }
+    if (updateProfileDto.lastName != undefined) {
+      await this.updateUserLastName(updateProfileDto.lastName, id);
+    }
     console.log('updateProfile service id: ' + id);
     console.log('updateProfile service name: ' + updateProfileDto.headline);
     const updateData = toUpdateProfileSchema(updateProfileDto);
@@ -586,6 +592,42 @@ export class ProfilesService {
         throw error;
       }
       throw new BadRequestException('Failed to retrieve user name');
+    }
+  }
+
+  async updateUserFirstName(firstName: string, id: Types.ObjectId) {
+    try {
+      const user = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { first_name: firstName },
+          { new: true, runValidators: true },
+        )
+        .exec();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update user first name');
+    }
+  }
+
+  async updateUserLastName(lastName: string, id: Types.ObjectId) {
+    try {
+      const user = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { last_name: lastName },
+          { new: true, runValidators: true },
+        )
+        .exec();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update user last name');
     }
   }
 }
