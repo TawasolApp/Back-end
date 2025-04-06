@@ -15,9 +15,17 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { ConnectionStatus } from './enums/connection-status.enum';
-import { toGetUserDto } from './mappers/user.mapper';
+import { toGetUserDto } from '../common/mappers/user.mapper';
+import { GetUserDto } from '../common/dtos/get-user.dto';
 import { CreateRequestDto } from './dtos/create-request.dto';
 import { UpdateRequestDto } from './dtos/update-request.dto';
+import { handleError } from '../common/utils/exception-handler';
+import {
+  getConnection,
+  getFollow,
+  getPending,
+} from './helpers/connection-helpers';
+import { AddEndoresementDto } from './dtos/add-endorsement.dto';
 
 @Injectable()
 export class ConnectionsService {
@@ -28,380 +36,581 @@ export class ConnectionsService {
     private readonly profileModel: Model<ProfileDocument>,
   ) {}
 
-  async getConnectionId(sendingParty: string, receivingParty: string) {
-    const connectionRecord = await this.userConnectionModel
-      .findOne({
-        sending_party: new Types.ObjectId(sendingParty),
-        receiving_party: new Types.ObjectId(receivingParty),
-      })
-      .lean<{ _id: Types.ObjectId }>();
-    return connectionRecord?._id || null;
-  }
-
-  async searchUsers(name?: string, company?: string, industry?: string) {
-    const filter: any = {};
-    if (name) {
-      filter.name = { $regex: name, $options: 'i' };
+  async searchUsers(
+    page: number,
+    limit: number,
+    name?: string,
+    company?: string,
+  ): Promise<GetUserDto[]> {
+    try {
+      const filter: any = {};
+      if (name) {
+        filter.$or = [
+          { first_name: { $regex: name, $options: 'i' } },
+          { last_name: { $regex: name, $options: 'i' } },
+        ];
+      }
+      // if (company) {
+      //   filter.industry = { $regex: company, $options: 'i' };
+      // }
+      const skip = (page - 1) * limit;
+      const users = await this.profileModel
+        .find(filter)
+        .select('_id first_name last_name profile_picture headline')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      return users.map(toGetUserDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of users.');
     }
-    // if (company) {
-    //   filter.industry = { $regex: company, $options: 'i' };
-    // }
-    // if (industry) {
-    //   filter.industry = { $regex: industry, $options: 'i' };
-    // }
-    const users = await this.profileModel
-      .find(filter)
-      .select('_id name profile_picture headline')
-      .lean();
-    return users.map(toGetUserDto);
   }
 
   async requestConnection(
     sendingParty: string,
     createRequestDto: CreateRequestDto,
   ) {
-    const { userId } = createRequestDto;
-    const receivingParty = userId;
-    const exisitngUser = await this.profileModel
-      .findById(new Types.ObjectId(receivingParty))
-      .lean();
-    if (!exisitngUser) {
-      throw new NotFoundException('User not found.');
-    }
-    if (sendingParty === receivingParty) {
-      throw new BadRequestException(
-        'Cannot request a connection with yourself.',
+    try {
+      const { userId } = createRequestDto;
+      const receivingParty = userId;
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      if (sendingParty === receivingParty) {
+        throw new BadRequestException(
+          'Cannot request a connection with yourself.',
+        );
+      }
+      const request1 = await getPending(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
       );
-    }
-    const record1 = await this.getConnectionId(sendingParty, receivingParty);
-    const record2 = await this.getConnectionId(receivingParty, sendingParty);
-    if (record1 || record2) {
-      throw new ConflictException(
-        'Connection instance already estbalished between users.',
+      const request2 = await getPending(
+        this.userConnectionModel,
+        receivingParty,
+        sendingParty,
       );
+      if (request1 || request2) {
+        throw new ConflictException(
+          'Connection request already estbalished between users.',
+        );
+      }
+      const connection1 = await getConnection(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      const connection2 = await getConnection(
+        this.userConnectionModel,
+        receivingParty,
+        sendingParty,
+      );
+      if (connection1 || connection2) {
+        throw new ConflictException(
+          'Connection instance already estbalished between users.',
+        );
+      }
+      const newConnection = new this.userConnectionModel({
+        _id: new Types.ObjectId(),
+        sending_party: new Types.ObjectId(sendingParty),
+        receiving_party: new Types.ObjectId(receivingParty),
+        status: ConnectionStatus.Pending,
+      });
+      await newConnection.save();
+    } catch (error) {
+      handleError(error, 'Failed to request connection.');
     }
-    const newConnection = new this.userConnectionModel({
-      _id: new Types.ObjectId(),
-      sending_party: new Types.ObjectId(sendingParty),
-      receiving_party: new Types.ObjectId(receivingParty),
-      status: ConnectionStatus.Pending,
-    });
-    await newConnection.save();
   }
 
+  async removeRequest(
+    sendingParty: string,
+    receivingParty: string,
+  ): Promise<GetUserDto[]> {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      const existingRequest = await getPending(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      if (!existingRequest) {
+        throw new NotFoundException(
+          'Pending connection request was not found.',
+        );
+      }
+      await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
+      return this.getPendingRequests(sendingParty, 1, 0);
+    } catch (error) {
+      handleError(error, 'Failed to remove pending request.');
+    }
+  }
   async updateConnection(
     sendingParty: string,
     receivingParty: string,
     updateRequestDto: UpdateRequestDto,
-  ) {
-    const exisitngUser = await this.profileModel
-      .findById(new Types.ObjectId(sendingParty))
-      .lean();
-    if (!exisitngUser) {
-      throw new NotFoundException('User not found.');
-    }
-    const connectionId = await this.getConnectionId(
-      sendingParty,
-      receivingParty,
-    );
-    if (!connectionId) {
-      throw new NotFoundException('Connection request was not found.');
-    }
-    const existingConnection = await this.userConnectionModel
-      .findById(new Types.ObjectId(connectionId))
-      .lean();
-    if (existingConnection?.status !== ConnectionStatus.Pending) {
-      throw new BadRequestException(
-        'Only pending connections can be accepted/ignored.',
+  ): Promise<GetUserDto[]> {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(sendingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      const existingRequest = await getPending(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
       );
+      if (!existingRequest) {
+        throw new NotFoundException('Connection request was not found.');
+      }
+      const { isAccept } = updateRequestDto;
+      const status = isAccept
+        ? ConnectionStatus.Connected
+        : ConnectionStatus.Ignored;
+      const updatedConnection =
+        await this.userConnectionModel.findByIdAndUpdate(
+          existingRequest._id,
+          { status: status, created_at: new Date().toISOString() },
+          { new: true },
+        );
+      if (status === ConnectionStatus.Connected) {
+        await this.profileModel.findByIdAndUpdate(
+          updatedConnection?.sending_party,
+          { $inc: { connection_count: 1 } },
+          { new: true },
+        );
+        await this.profileModel.findByIdAndUpdate(
+          updatedConnection?.receiving_party,
+          { $inc: { connection_count: 1 } },
+          { new: true },
+        );
+        const newFollow = new this.userConnectionModel({
+          _id: new Types.ObjectId(),
+          sending_party: new Types.ObjectId(sendingParty),
+          receiving_party: new Types.ObjectId(receivingParty),
+          status: ConnectionStatus.Following,
+        });
+        await newFollow.save();
+      }
+      return this.getPendingRequests(receivingParty, 1, 0);
+    } catch (error) {
+      handleError(error, 'Failed to update connection request status.');
     }
-    const { isAccept } = updateRequestDto;
-    const status = isAccept
-      ? ConnectionStatus.Connected
-      : ConnectionStatus.Ignored;
-    const updatedConnection = await this.userConnectionModel.findByIdAndUpdate(
-      new Types.ObjectId(connectionId),
-      { status: status, created_at: new Date().toISOString() },
-      { new: true },
-    );
-    if (status === ConnectionStatus.Connected) {
-      await this.profileModel.findByIdAndUpdate(
-        updatedConnection?.sending_party,
-        { $inc: { connection_count: 1 } },
-        { new: true },
-      );
-      await this.profileModel.findByIdAndUpdate(
-        updatedConnection?.receiving_party,
-        { $inc: { connection_count: 1 } },
-        { new: true },
-      );
-    }
-    return this.getPendingRequests(sendingParty);
   }
 
   async removeConnection(sendingParty: string, receivingParty: string) {
-    const exisitngUser = await this.profileModel
-      .findById(new Types.ObjectId(receivingParty))
-      .lean();
-    if (!exisitngUser) {
-      throw new NotFoundException('User not found.');
-    }
-    const connectionId1 = await this.getConnectionId(
-      sendingParty,
-      receivingParty,
-    );
-    const connectionId2 = await this.getConnectionId(
-      receivingParty,
-      sendingParty,
-    );
-    let deletedConnection;
-    if (!connectionId1 && !connectionId2) {
-      throw new NotFoundException('Connection not found.');
-    } else if (connectionId1) {
-      const connection = await this.userConnectionModel.findById(
-        new Types.ObjectId(connectionId1),
-      );
-      if (connection?.status === ConnectionStatus.Connected) {
-        deletedConnection = await this.userConnectionModel.findByIdAndDelete(
-          new Types.ObjectId(connectionId1),
-        );
-      } else {
-        throw new BadRequestException('Cannot remove a non-connection.');
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
       }
-    } else if (connectionId2) {
-      const connection = await this.userConnectionModel.findById(
-        new Types.ObjectId(connectionId2),
+      const connection1 = await getConnection(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
       );
-      if (connection?.status === ConnectionStatus.Connected) {
-        deletedConnection = await this.userConnectionModel.findByIdAndDelete(
-          new Types.ObjectId(connectionId2),
-        );
+      const connection2 = await getConnection(
+        this.userConnectionModel,
+        receivingParty,
+        sendingParty,
+      );
+      const follow = await getFollow(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      let deletedConnection;
+      if (!connection1 && !connection2) {
+        throw new NotFoundException('Connection instance not found.');
       } else {
-        throw new BadRequestException('Cannot remove a non-connection.');
+        await this.userConnectionModel.findByIdAndDelete(follow?._id);
+        if (connection1) {
+          deletedConnection = await this.userConnectionModel.findByIdAndDelete(
+            connection1._id,
+          );
+        } else if (connection2) {
+          deletedConnection = await this.userConnectionModel.findByIdAndDelete(
+            connection2._id,
+          );
+        }
       }
+      await this.profileModel.findByIdAndUpdate(
+        deletedConnection?.sending_party,
+        { $inc: { connection_count: -1 } },
+        { new: true },
+      );
+      await this.profileModel.findByIdAndUpdate(
+        deletedConnection?.receiving_party,
+        { $inc: { connection_count: -1 } },
+        { new: true },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to remove connection.');
     }
-    await this.profileModel.findByIdAndUpdate(
-      deletedConnection?.sending_party,
-      { $inc: { connection_count: -1 } },
-      { new: true },
-    );
-    await this.profileModel.findByIdAndUpdate(
-      deletedConnection?.receiving_party,
-      { $inc: { connection_count: -1 } },
-      { new: true },
-    );
+  }
+
+  async getConnections(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const connections = await this.userConnectionModel
+        .find({
+          $or: [
+            { sending_party: new Types.ObjectId(userId) },
+            { receiving_party: new Types.ObjectId(userId) },
+          ],
+          status: ConnectionStatus.Connected,
+        })
+        .sort({ created_at: -1 })
+        .select('sending_party receiving_party created_at')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      const usersDto = await Promise.all(
+        connections.map(async (connection) => {
+          const otherUserId = connection.sending_party.equals(
+            new Types.ObjectId(userId),
+          )
+            ? connection.receiving_party
+            : connection.sending_party;
+          const profile = await this.profileModel
+            .findById(otherUserId)
+            .select('_id first_name last_name profile_picture headline')
+            .lean();
+          const userDto = toGetUserDto(profile!);
+          userDto.createdAt = connection.created_at;
+          return userDto;
+        }),
+      );
+      return usersDto;
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of connections.');
+    }
+  }
+
+  async getPendingRequests(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const pendingRequests = await this.userConnectionModel
+        .find({
+          receiving_party: new Types.ObjectId(userId),
+          status: ConnectionStatus.Pending,
+        })
+        .sort({ created_at: -1 })
+        .select('sending_party receiving_party created_at')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      const usersDto = await Promise.all(
+        pendingRequests.map(async (connection) => {
+          const senderUserId = connection.sending_party;
+          const profile = await this.profileModel
+            .findById(senderUserId)
+            .select('_id first_name last_name profile_picture headline')
+            .lean();
+          const userDto = toGetUserDto(profile!);
+          userDto.createdAt = connection.created_at;
+          return userDto;
+        }),
+      );
+      return usersDto;
+    } catch (error) {
+      handleError(
+        error,
+        'Failed to retrieve list of pending connection requests.',
+      );
+    }
+  }
+
+  async getSentRequests(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const sentRequests = await this.userConnectionModel
+        .find({
+          sending_party: new Types.ObjectId(userId),
+          status: ConnectionStatus.Pending,
+        })
+        .sort({ created_at: -1 })
+        .select('sending_party receiving_party created_at')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      const usersDto = await Promise.all(
+        sentRequests.map(async (connection) => {
+          const receiverUserId = connection.receiving_party;
+
+          const profile = await this.profileModel
+            .findById(receiverUserId)
+            .select('_id first_name last_name profile_picture headline')
+            .lean();
+          const userDto = toGetUserDto(profile!);
+          userDto.createdAt = connection.created_at;
+          return userDto;
+        }),
+      );
+      return usersDto;
+    } catch (error) {
+      handleError(
+        error,
+        'Failed to retrieve list of sent connection requests.',
+      );
+    }
+  }
+
+  async getRecommendedUsers(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const connections = await this.userConnectionModel
+        .find({
+          $or: [
+            {
+              $and: [
+                {
+                  status: {
+                    $in: [
+                      ConnectionStatus.Connected,
+                      ConnectionStatus.Following,
+                    ],
+                  },
+                },
+                {
+                  $or: [
+                    { sending_party: new Types.ObjectId(userId) },
+                    { receiving_party: new Types.ObjectId(userId) },
+                  ],
+                },
+              ],
+            },
+            {
+              status: ConnectionStatus.Pending,
+              sending_party: new Types.ObjectId(userId),
+            },
+          ],
+        })
+        .select('sending_party receiving_party')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      const excludedUserIds = new Set<string>();
+      connections.forEach((connection) => {
+        excludedUserIds.add(connection.sending_party.toString());
+        excludedUserIds.add(connection.receiving_party.toString());
+      });
+      excludedUserIds.add(userId);
+      const recommendedProfiles = await this.profileModel
+        .find({
+          _id: {
+            $nin: Array.from(excludedUserIds).map(
+              (id) => new Types.ObjectId(id),
+            ),
+          },
+        })
+        .select('_id first_name last_name profile_picture headline')
+        .lean();
+      return recommendedProfiles.map(toGetUserDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve people you may know.');
+    }
   }
 
   async follow(sendingParty: string, createRequestDto: CreateRequestDto) {
-    const { userId } = createRequestDto;
-    const receivingParty = userId;
-    const exisitngUser = await this.profileModel
-      .findById(new Types.ObjectId(receivingParty))
-      .lean();
-    if (!exisitngUser) {
-      throw new NotFoundException('User not found.');
+    try {
+      const { userId } = createRequestDto;
+      const receivingParty = userId;
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      if (sendingParty === receivingParty) {
+        throw new BadRequestException('Cannot follow yourself.');
+      }
+      const existingFollow = await getFollow(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      if (existingFollow) {
+        throw new ConflictException('Follow instance already exists.');
+      }
+      const newConnection = new this.userConnectionModel({
+        _id: new Types.ObjectId(),
+        sending_party: new Types.ObjectId(sendingParty),
+        receiving_party: new Types.ObjectId(receivingParty),
+        status: ConnectionStatus.Following,
+      });
+      await newConnection.save();
+    } catch (error) {
+      handleError(error, 'Failed to follow user.');
     }
-    if (sendingParty === receivingParty) {
-      throw new BadRequestException('Cannot follow yourself.');
-    }
-    const record = await this.getConnectionId(sendingParty, receivingParty);
-    if (record) {
-      throw new ConflictException('Follow instance already exists.');
-    }
-    const newConnection = new this.userConnectionModel({
-      _id: new Types.ObjectId(),
-      sending_party: new Types.ObjectId(sendingParty),
-      receiving_party: new Types.ObjectId(receivingParty),
-      status: ConnectionStatus.Following,
-    });
-    await newConnection.save();
   }
 
   async unfollow(sendingParty: string, receivingParty: string) {
-    const exisitngUser = await this.profileModel
-      .findById(new Types.ObjectId(receivingParty))
-      .lean();
-    if (!exisitngUser) {
-      throw new NotFoundException('User not found.');
-    }
-    const connectionId = await this.getConnectionId(
-      sendingParty,
-      receivingParty,
-    );
-    let deletedConnection;
-    if (!connectionId) {
-      throw new NotFoundException('Follow not found.');
-    }
-    const connection = await this.userConnectionModel.findById(
-      new Types.ObjectId(connectionId),
-    );
-    if (connection?.status === ConnectionStatus.Following) {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      const existingFollow = await getFollow(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      let deletedConnection;
+      if (!existingFollow) {
+        throw new NotFoundException('Follow instance not found.');
+      }
       deletedConnection = await this.userConnectionModel.findByIdAndDelete(
-        new Types.ObjectId(connectionId),
+        existingFollow._id,
       );
-    } else {
-      throw new BadRequestException(
-        'Cannot unfollow a user who is not followed.',
-      );
+    } catch (error) {
+      handleError(error, 'Failed to unfollow user.');
     }
   }
 
-  async getConnections(userId: string) {
-    const connections = await this.userConnectionModel
-      .find({
-        $or: [
-          { sending_party: new Types.ObjectId(userId) },
-          { receiving_party: new Types.ObjectId(userId) },
-        ],
-        status: ConnectionStatus.Connected,
-      })
-      .sort({ created_at: -1 })
-      .select('sending_party receiving_party created_at')
-      .lean();
-    const result = await Promise.all(
-      connections.map(async (connection) => {
-        const otherUserId = connection.sending_party.equals(
-          new Types.ObjectId(userId),
+  async getFollowers(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const pendingRequests = await this.userConnectionModel
+        .find({
+          receiving_party: new Types.ObjectId(userId),
+          status: ConnectionStatus.Following,
+        })
+        .sort({ created_at: -1 })
+        .select('sending_party receiving_party created_at')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      const usersDto = await Promise.all(
+        pendingRequests.map(async (connection) => {
+          const senderUserId = connection.sending_party;
+          const profile = await this.profileModel
+            .findById(senderUserId)
+            .select('_id first_name last_name profile_picture headline')
+            .lean();
+          const userDto = toGetUserDto(profile!);
+          userDto.createdAt = connection.created_at;
+          return userDto;
+        }),
+      );
+      return usersDto;
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of followers.');
+    }
+  }
+
+  async getFollowing(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const sentRequests = await this.userConnectionModel
+        .find({
+          sending_party: new Types.ObjectId(userId),
+          status: ConnectionStatus.Following,
+        })
+        .sort({ created_at: -1 })
+        .select('sending_party receiving_party created_at')
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const usersDto = await Promise.all(
+        sentRequests.map(async (connection) => {
+          const receiverUserId = connection.receiving_party;
+
+          const profile = await this.profileModel
+            .findById(receiverUserId)
+            .select('_id first_name last_name profile_picture headline')
+            .lean();
+          const userDto = toGetUserDto(profile!);
+          userDto.createdAt = connection.created_at;
+          return userDto;
+        }),
+      );
+      return usersDto;
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list followed users.');
+    }
+  }
+
+  async endorseSkill(
+    endorserId: string,
+    userId: string,
+    addEndorsementDto: AddEndoresementDto,
+  ): Promise<GetUserDto[]> {
+    try {
+      const exisitngUser = await this.profileModel.findById(
+        new Types.ObjectId(userId),
+      );
+      if (!exisitngUser) {
+        throw new NotFoundException('Endorsee profile not found.');
+      }
+      if (endorserId === userId) {
+        throw new BadRequestException('User cannot endorse their own skill.');
+      }
+      const { skillName } = addEndorsementDto;
+      const skill = exisitngUser.skills?.find(
+        (s) => s.skill_name === skillName,
+      );
+      if (!skill) {
+        throw new NotFoundException('Skill not found in endorsee profile.');
+      }
+      if (
+        skill.endorsements?.some((id) =>
+          id.equals(new Types.ObjectId(endorserId)),
         )
-          ? connection.receiving_party
-          : connection.sending_party;
-        const profile = await this.profileModel
-          .findById(otherUserId)
-          .select('name profile_picture headline')
-          .lean();
-        return {
-          userId: profile?._id,
-          username: profile?.name,
-          profilePicture: profile?.profile_picture,
-          headline: profile?.headline,
-          createdAt: connection.created_at,
-        };
-      }),
-    );
-    return result;
-  }
-
-  async getPendingRequests(userId: string) {
-    const pendingRequests = await this.userConnectionModel
-      .find({
-        receiving_party: new Types.ObjectId(userId),
-        status: ConnectionStatus.Pending,
-      })
-      .sort({ created_at: -1 })
-      .select('sending_party receiving_party created_at')
-      .lean();
-
-    const result = await Promise.all(
-      pendingRequests.map(async (connection) => {
-        const senderUserId = connection.sending_party;
-
-        const profile = await this.profileModel
-          .findById(senderUserId)
-          .select('name profile_picture headline')
-          .lean();
-
-        return {
-          userId: profile?._id,
-          username: profile?.name,
-          profilePicture: profile?.profile_picture,
-          headline: profile?.headline,
-          createdAt: connection.created_at,
-        };
-      }),
-    );
-    return result;
-  }
-
-  async getSentRequests(userId: string) {
-    const sentRequests = await this.userConnectionModel
-      .find({
-        sending_party: new Types.ObjectId(userId),
-        status: ConnectionStatus.Pending,
-      })
-      .sort({ created_at: -1 })
-      .select('sending_party receiving_party created_at')
-      .lean();
-
-    const result = await Promise.all(
-      sentRequests.map(async (connection) => {
-        const receiverUserId = connection.receiving_party;
-
-        const profile = await this.profileModel
-          .findById(receiverUserId)
-          .select('name profile_picture headline')
-          .lean();
-
-        return {
-          userId: profile?._id,
-          username: profile?.name,
-          profilePicture: profile?.profile_picture,
-          headline: profile?.headline,
-          createdAt: connection.created_at,
-        };
-      }),
-    );
-    return result;
-  }
-
-  async getFollowers(userId: string) {
-    const pendingRequests = await this.userConnectionModel
-      .find({
-        receiving_party: new Types.ObjectId(userId),
-        status: ConnectionStatus.Following,
-      })
-      .sort({ created_at: -1 })
-      .select('sending_party receiving_party created_at')
-      .lean();
-
-    const result = await Promise.all(
-      pendingRequests.map(async (connection) => {
-        const senderUserId = connection.sending_party;
-
-        const profile = await this.profileModel
-          .findById(senderUserId)
-          .select('name profile_picture headline')
-          .lean();
-
-        return {
-          userId: profile?._id,
-          username: profile?.name,
-          profilePicture: profile?.profile_picture,
-          headline: profile?.headline,
-          createdAt: connection.created_at,
-        };
-      }),
-    );
-    return result;
-  }
-
-  async getFollowing(userId: string) {
-    const sentRequests = await this.userConnectionModel
-      .find({
-        sending_party: new Types.ObjectId(userId),
-        status: ConnectionStatus.Following,
-      })
-      .sort({ created_at: -1 })
-      .select('sending_party receiving_party created_at')
-      .lean();
-
-    const result = await Promise.all(
-      sentRequests.map(async (connection) => {
-        const receiverUserId = connection.receiving_party;
-
-        const profile = await this.profileModel
-          .findById(receiverUserId)
-          .select('name profile_picture headline')
-          .lean();
-
-        return {
-          userId: profile?._id,
-          username: profile?.name,
-          profilePicture: profile?.profile_picture,
-          headline: profile?.headline,
-          createdAt: connection.created_at,
-        };
-      }),
-    );
-    return result;
+      ) {
+        throw new ConflictException(
+          'Endorser has already endorsed this skill.',
+        );
+      }
+      skill.endorsements.push(new Types.ObjectId(endorserId));
+      await exisitngUser.save();
+      const endorsers = await this.profileModel
+        .find({ _id: { $in: skill.endorsements } })
+        .select('_id first_name last_name profile_picture')
+        .lean();
+      const endorsersDto = endorsers.map(toGetUserDto);
+      return endorsersDto;
+    } catch (error) {
+      handleError(error, 'Failed to endorse skill.');
+    }
   }
 }

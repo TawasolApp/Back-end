@@ -8,8 +8,11 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, isValidObjectId } from 'mongoose';
-import { Post, PostDocument } from './infrastructure/database/schemas/post.schema';
+import { Connection, Model, Types, isValidObjectId } from 'mongoose';
+import {
+  Post,
+  PostDocument,
+} from './infrastructure/database/schemas/post.schema';
 import { CreatePostDto } from './dto/create-post.dto';
 import { GetPostDto } from './dto/get-post.dto';
 import {
@@ -20,10 +23,16 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import { React, ReactDocument } from './infrastructure/database/schemas/react.schema';
+import {
+  React,
+  ReactDocument,
+} from './infrastructure/database/schemas/react.schema';
 import { UpdateReactionsDto } from './dto/update-reactions.dto';
 import { ReactionDto } from './dto/get-reactions.dto';
-import { Save, SaveDocument } from './infrastructure/database/schemas/save.schema';
+import {
+  Save,
+  SaveDocument,
+} from './infrastructure/database/schemas/save.schema';
 import { EditPostDto } from './dto/edit-post.dto';
 import {
   Comment,
@@ -39,6 +48,11 @@ import {
   getPostInfo,
   getReactionInfo,
 } from './helpers/posts.helpers';
+import {
+  UserConnection,
+  UserConnectionDocument,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
+import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 
 @Injectable()
 export class PostsService {
@@ -49,6 +63,8 @@ export class PostsService {
     @InjectModel(React.name) private reactModel: Model<ReactDocument>,
     @InjectModel(Save.name) private saveModel: Model<SaveDocument>,
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
+    @InjectModel(UserConnection.name)
+    private userConnectionModel: Model<UserConnectionDocument>,
   ) {}
 
   // Edit an existing post by checking the author's validity and updating the fields.
@@ -150,20 +166,43 @@ export class PostsService {
           throw new NotFoundException('Author not found');
         }
       }
+      let parentPost: PostDocument | null = null;
+      if (createPostDto.parentPostId) {
+        if (!isValidObjectId(createPostDto.parentPostId)) {
+          throw new BadRequestException('Invalid parent post ID format');
+        }
+        parentPost = await this.postModel
+          .findById({ _id: createPostDto.parentPostId })
+          .exec();
+        if (!parentPost) {
+          throw new NotFoundException('Parent post not found');
+        } else {
+          parentPost.share_count++;
+          await parentPost.save();
+        }
+      }
 
       const createdPost = new this.postModel({
         _id: new Types.ObjectId(),
         text: createPostDto.content,
         media: createPostDto.media,
-        tags: [],
+        tags: createPostDto.taggedUsers,
         visibility: createPostDto.visibility,
         author_id: new Types.ObjectId(author_id),
         author_type: authorType,
+        parent_post_id: new Types.ObjectId(createPostDto.parentPostId),
       });
 
       await createdPost.save();
-      const author = authorType === 'User' ? authorProfile : authorCompany;
-      return mapPostToDto(createdPost, author, null, false);
+      return getPostInfo(
+        createdPost,
+        author_id,
+        this.postModel,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+        this.saveModel,
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
       // console.log(error);
@@ -177,23 +216,76 @@ export class PostsService {
   // 2. Retrieve a paginated list of posts.
   // 3. If no posts found, throw an error.
   // 4. Map each post to GetPostDto and return.
-
   async getAllPosts(
     page: number,
     limit: number,
     userId: string,
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
+
     try {
-      const posts = await this.postModel.find().skip(skip).limit(limit).exec();
-      if (posts.length === 0) {
-        throw new NotFoundException('No posts found for the requested page');
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format.');
       }
+
+      const objectId = new Types.ObjectId(userId);
+
+      // Step 1: Get connected users (both directions)
+      const connected = await this.userConnectionModel
+        .find({
+          $or: [{ sending_party: objectId }, { receiving_party: objectId }],
+          status: ConnectionStatus.Connected,
+        })
+        .select('sending_party receiving_party')
+        .lean();
+
+      const connectedUserIds = connected.map((conn) =>
+        conn.sending_party.equals(objectId)
+          ? conn.receiving_party
+          : conn.sending_party,
+      );
+
+      // Step 2: Get following users (you are the sender)
+      const following = await this.userConnectionModel
+        .find({
+          sending_party: objectId,
+          status: ConnectionStatus.Following,
+        })
+        .select('receiving_party')
+        .lean();
+
+      const followingUserIds = following.map((conn) => conn.receiving_party);
+
+      // Step 3: Merge all unique author_ids: connections + following + myself
+      const allAuthorIds = [
+        ...new Set([
+          ...connectedUserIds.map((id) => id.toString()),
+          ...followingUserIds.map((id) => id.toString()),
+          userId,
+        ]),
+      ].map((id) => new Types.ObjectId(id));
+
+      // Step 4: Fetch posts
+      const posts = await this.postModel
+        .find({
+          $or: [{ visibility: 'Public' }, { author_id: { $in: allAuthorIds } }],
+        })
+        .sort({ posted_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      if (!posts || posts.length === 0) {
+        return [];
+      }
+
+      // Step 5: Enrich post data
       return Promise.all(
         posts.map((post) =>
           getPostInfo(
             post,
             userId,
+            this.postModel,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -201,9 +293,9 @@ export class PostsService {
           ),
         ),
       );
-    } catch (err) {
-      if (err instanceof HttpException) throw err;
-      throw new InternalServerErrorException('Failed to fetch posts');
+    } catch (error) {
+      if (error instanceof HttpException) throw error;
+      throw new InternalServerErrorException('Failed to fetch posts.');
     }
   }
 
@@ -224,6 +316,7 @@ export class PostsService {
       return getPostInfo(
         post,
         userId,
+        this.postModel,
         this.profileModel,
         this.companyModel,
         this.reactModel,
@@ -251,7 +344,7 @@ export class PostsService {
         .exec();
 
       if (!posts || posts.length === 0) {
-        throw new NotFoundException('No posts found');
+        return [];
       }
 
       return Promise.all(
@@ -259,6 +352,7 @@ export class PostsService {
           getPostInfo(
             post,
             userId,
+            this.postModel,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -285,6 +379,16 @@ export class PostsService {
       }
       if (post.author_id.toString() !== userId) {
         throw new ForbiddenException('User not authorized to delete this post');
+      }
+
+      if (post.parent_post_id) {
+        const parentPost = await this.postModel
+          .findById(post.parent_post_id)
+          .exec();
+        if (parentPost) {
+          parentPost.share_count--;
+          await parentPost.save();
+        }
       }
 
       const result = await this.postModel.deleteOne({ _id: postId }).exec();
@@ -461,7 +565,7 @@ export class PostsService {
         .limit(limit)
         .exec();
       if (!reactions || reactions.length === 0) {
-        throw new NotFoundException('Reactions not found');
+        return [];
       }
 
       return Promise.all(
@@ -554,7 +658,7 @@ export class PostsService {
         .exec();
 
       if (!savedPosts || savedPosts.length === 0) {
-        throw new NotFoundException('No saved posts found');
+        return [];
       }
 
       return Promise.all(
@@ -568,6 +672,7 @@ export class PostsService {
           return getPostInfo(
             post,
             userId,
+            this.postModel,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -594,11 +699,20 @@ export class PostsService {
     userId: string,
   ): Promise<Comment> {
     try {
-      const post = await this.postModel
-        .findById(new Types.ObjectId(postId))
-        .exec();
-      if (!post) {
-        throw new NotFoundException('Post not found');
+      let post: PostDocument | null = null;
+      let comment: CommentDocument | null = null;
+      if (!createCommentDto.isReply) {
+        post = await this.postModel.findById(new Types.ObjectId(postId)).exec();
+        if (!post) {
+          throw new NotFoundException('Post not found');
+        }
+      } else {
+        comment = await this.commentModel
+          .findById(new Types.ObjectId(postId))
+          .exec();
+        if (!comment) {
+          throw new NotFoundException('Comment not found');
+        }
       }
 
       let authorType: 'User' | 'Company';
@@ -624,14 +738,19 @@ export class PostsService {
         author_type: authorType,
         author_id: new Types.ObjectId(userId),
         content: createCommentDto.content,
-        tags: [],
+        tags: createCommentDto.tagged,
         react_count: 0,
         replies: [],
       });
 
       await newComment.save();
-      post.comment_count++;
-      await post.save();
+      if (post) {
+        post.comment_count++;
+        await post.save();
+      } else {
+        comment?.replies.push(newComment._id);
+        await comment?.save();
+      }
 
       return newComment;
     } catch (err) {
@@ -661,7 +780,7 @@ export class PostsService {
         .exec();
 
       if (!comments || comments.length === 0) {
-        throw new NotFoundException('No comments found for the requested page');
+        return [];
       }
 
       return Promise.all(
@@ -734,9 +853,206 @@ export class PostsService {
 
       await this.reactModel.deleteMany({ post_id: commentId }).exec();
       await this.commentModel.deleteOne({ _id: commentId }).exec();
+      await this.commentModel.deleteMany({ post_id: commentId }).exec();
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to delete comment');
+    }
+  }
+  async searchPosts(
+    userId: string,
+    query: string,
+    networkOnly: boolean,
+    timeframe: '24h' | 'week' | 'all',
+    page = 1,
+    limit = 10,
+  ): Promise<GetPostDto[]> {
+    const skip = (page - 1) * limit;
+
+    console.log(
+      'searchPosts',
+      userId,
+      query,
+      networkOnly,
+      timeframe,
+      page,
+      limit,
+    );
+
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID format');
+    }
+
+    const objectId = new Types.ObjectId(userId);
+
+    const searchWords = query.trim().split(/\s+/);
+
+    const postQuery: any = {
+      $or: searchWords.map((word) => ({
+        text: { $regex: new RegExp(word, 'i') }, // ✅ CORRECT regex usage
+      })),
+    };
+
+    // ⏰ Time filter
+    if (timeframe === '24h') {
+      postQuery.posted_at = {
+        $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      };
+    } else if (timeframe === 'week') {
+      postQuery.posted_at = {
+        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+      };
+    }
+
+    // 👥 Network filter
+    if (networkOnly) {
+      const [connections, following] = await Promise.all([
+        this.userConnectionModel
+          .find({
+            $or: [{ sending_party: objectId }, { receiving_party: objectId }],
+            status: ConnectionStatus.Connected,
+          })
+          .lean(),
+
+        this.userConnectionModel
+          .find({
+            sending_party: objectId,
+            status: ConnectionStatus.Following,
+          })
+          .lean(),
+      ]);
+
+      const networkIds = new Set<string>([
+        ...connections.map((conn) =>
+          conn.sending_party.equals(objectId)
+            ? conn.receiving_party.toString()
+            : conn.sending_party.toString(),
+        ),
+        ...following.map((conn) => conn.receiving_party.toString()),
+        userId, // include self
+      ]);
+
+      // 🔁 Convert all IDs to ObjectId before querying
+      postQuery.author_id = {
+        $in: Array.from(networkIds).map((id) => new Types.ObjectId(id)),
+      };
+    }
+
+    // 🔎 Search and enrich results
+    const posts = await this.postModel
+      .find(postQuery)
+      .sort({ posted_at: -1 })
+      .skip(skip)
+      .limit(limit)
+      .exec();
+
+    console.log(posts);
+
+    return Promise.all(
+      posts.map((post) =>
+        getPostInfo(
+          post,
+          userId,
+          this.postModel,
+          this.profileModel,
+          this.companyModel,
+          this.reactModel,
+          this.saveModel,
+        ),
+      ),
+    );
+  }
+
+  // Retrieve all reposts of a given post (with visibility filtering).
+  // Description:
+  // 1. Validate the post ID and user ID formats.
+  // 2. Get list of user’s connections and following.
+  // 3. Include reposts that are:
+  //    - Public
+  //    - From connections/followed
+  //    - Authored by the user themselves
+  // 4. Return enriched repost DTOs.
+  async getRepostsOfPost(
+    postId: string,
+    userId: string,
+  ): Promise<GetPostDto[]> {
+    try {
+      if (!Types.ObjectId.isValid(postId)) {
+        throw new BadRequestException('Invalid post ID format');
+      }
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
+
+      const objectId = new Types.ObjectId(userId);
+
+      // Step 1: Get connected users
+      const connected = await this.userConnectionModel
+        .find({
+          $or: [{ sending_party: objectId }, { receiving_party: objectId }],
+          status: ConnectionStatus.Connected,
+        })
+        .select('sending_party receiving_party')
+        .lean();
+
+      const connectedUserIds = connected.map((conn) =>
+        conn.sending_party.equals(objectId)
+          ? conn.receiving_party
+          : conn.sending_party,
+      );
+
+      // Step 2: Get following users
+      const following = await this.userConnectionModel
+        .find({
+          sending_party: objectId,
+          status: ConnectionStatus.Following,
+        })
+        .select('receiving_party')
+        .lean();
+
+      const followingUserIds = following.map((conn) => conn.receiving_party);
+
+      // Step 3: Merge author IDs (connected + following + self)
+      const visibleAuthorIds = [
+        ...new Set([
+          ...connectedUserIds.map((id) => id.toString()),
+          ...followingUserIds.map((id) => id.toString()),
+          userId,
+        ]),
+      ].map((id) => new Types.ObjectId(id));
+
+      // Step 4: Fetch visible reposts of this post
+      const reposts = await this.postModel
+        .find({
+          parent_post_id: new Types.ObjectId(postId),
+          $or: [
+            { visibility: 'Public' },
+            { author_id: { $in: visibleAuthorIds } },
+          ],
+        })
+        .sort({ posted_at: -1 })
+        .exec();
+
+      if (!reposts || reposts.length === 0) {
+        return [];
+      }
+
+      return Promise.all(
+        reposts.map((post) =>
+          getPostInfo(
+            post,
+            userId,
+            this.postModel,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+          ),
+        ),
+      );
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to fetch reposts');
     }
   }
 }

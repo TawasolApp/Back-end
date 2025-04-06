@@ -16,7 +16,7 @@ export class MailerService {
   }
 
   async sendVerificationEmail(email: string, token: string) {
-    const verificationUrl = `http://localhost:3000/auth/verify-email?token=${token}`;
+    const verificationUrl = `http://localhost:5173/auth/verify-email?token=${token}`;
 
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
@@ -29,7 +29,7 @@ export class MailerService {
   }
 
   async sendEmailChangeConfirmation(to: string, token: string) {
-    const link = `http://localhost:3000/users/confirm-email-change?token=${token}`;
+    const link = `http://localhost:5173/users/confirm-email-change?token=${token}`;
     await this.transporter.sendMail({
       to,
       from: '"TawasolApp" <noreply@tawasolapp.com>',
@@ -39,7 +39,7 @@ export class MailerService {
   }
 
   async sendPasswordResetEmail(to: string, token: string) {
-    const resetUrl = `http://localhost:3000/auth/reset-password?token=${token}`;
+    const resetUrl = `http://localhost:5173/auth/reset-password?token=${token}`;
 
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',

@@ -5,9 +5,10 @@ import {
   NotFoundException,
   UnauthorizedException,
   InternalServerErrorException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
@@ -21,6 +22,7 @@ import {
 import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
+import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class AuthService {
@@ -29,6 +31,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
+  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
   /**
    * Registers a new user by validating CAPTCHA, checking email availability, hashing the password, and sending a verification email.
@@ -101,16 +104,23 @@ export class AuthService {
     if (!user) throw new NotFoundException('User not found');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid)
-      throw new UnauthorizedException('Invalid credentials');
+    if (!isPasswordValid) {
+      throw new BadRequestException('Invalid password');
+    }
 
-    if (!user.isVerified) throw new BadRequestException('Email not verified');
+    if (!user.isVerified) {
+      throw new ForbiddenException('Email not verified');
+    }
 
     const payload = { sub: user._id, email: user.email, role: user.role };
-    const accessToken = this.jwtService.sign(payload, { expiresIn: '15m' });
+    const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
-    return { token: accessToken, refreshToken };
+    return {
+      token: accessToken,
+      refreshToken,
+      userId: user._id as Types.ObjectId,
+    };
   }
 
   /**
@@ -257,6 +267,44 @@ export class AuthService {
         throw err;
       }
       throw new BadRequestException('Invalid or expired token');
+    }
+  }
+
+  async googleLogin(idToken: string) {
+    try {
+      const ticket = await this.googleClient.verifyIdToken({ idToken });
+      const payload = ticket.getPayload();
+
+      if (!payload || !payload.email) {
+        throw new BadRequestException('Invalid Google token');
+      }
+
+      let user = await this.userModel.findOne({ email: payload.email });
+      const isNewUser = !user;
+
+      if (!user) {
+        user = new this.userModel({
+          first_name: payload.given_name || '',
+          last_name: payload.family_name || '',
+          email: payload.email,
+          password: '',
+          isVerified: true,
+        });
+        await user.save();
+      }
+
+      const token = this.jwtService.sign({ sub: user._id });
+      return {
+        access_token: token,
+        userId: user._id,
+        isNewUser,
+        message: 'Login successful',
+      };
+    } catch (err) {
+      if (err.message === 'Invalid Google token') {
+        throw new BadRequestException('Invalid Google token');
+      }
+      throw new InternalServerErrorException('Google login failed');
     }
   }
 }
