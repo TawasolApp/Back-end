@@ -12,7 +12,8 @@ export function mapPostToDto(
   return {
     id: post.id.toString(),
     authorId: post.author_id.toString(),
-    authorName: authorProfile.name,
+    // authorName: authorProfile.name,
+    authorName: 'mohamed',
     authorPicture:
       'profile_picture' in authorProfile
         ? authorProfile.profile_picture

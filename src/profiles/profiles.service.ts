@@ -32,14 +32,7 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import {
-  CompanyConnection,
-  CompanyConnectionDocument,
-} from '../companies/infrastructure/database/schemas/company-connection.schema';
-import {
-  Company,
-  CompanyDocument,
-} from '../companies/infrastructure/database/schemas/company.schema';
+
 import { toGetCompanyDto } from '../companies/mappers/company.mapper';
 import { handleError } from '../common/utils/exception-handler';
 import { GetCompanyDto } from '../companies/dtos/get-company.dto';
@@ -68,10 +61,6 @@ export class ProfilesService {
     private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
-
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
-    private readonly companyModel: Model<CompanyDocument>,
-
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
   /**

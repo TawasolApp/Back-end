@@ -51,7 +51,8 @@ export async function getCommentInfo(
         'profile_picture' in authorProfile
           ? authorProfile.profile_picture
           : undefined;
-      authorName = authorProfile.name;
+      //authorName = authorProfile.name;
+      authorName = 'mohamed';
       authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
     }
   } else if (comment.author_type === 'Company') {
@@ -61,7 +62,8 @@ export async function getCommentInfo(
         authorProfilePicture =
           'logo' in authorProfile ? authorProfile.logo : undefined;
       }
-      authorName = authorProfile.name;
+      //authorName = authorProfile.name;
+      authorName = 'mohamed';
       authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
     }
   }
