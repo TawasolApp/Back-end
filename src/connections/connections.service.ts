@@ -45,7 +45,10 @@ export class ConnectionsService {
     try {
       const filter: any = {};
       if (name) {
-        filter.name = { $regex: name, $options: 'i' };
+        filter.$or = [
+          { first_name: { $regex: name, $options: 'i' } },
+          { last_name: { $regex: name, $options: 'i' } },
+        ];
       }
       // if (company) {
       //   filter.industry = { $regex: company, $options: 'i' };
@@ -145,7 +148,7 @@ export class ConnectionsService {
         );
       }
       await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
-      return this.getPendingRequests(sendingParty,1,0);
+      return this.getPendingRequests(sendingParty, 1, 0);
     } catch (error) {
       handleError(error, 'Failed to remove pending request.');
     }
@@ -199,7 +202,7 @@ export class ConnectionsService {
         });
         await newFollow.save();
       }
-      return this.getPendingRequests(receivingParty,1, 0);
+      return this.getPendingRequests(receivingParty, 1, 0);
     } catch (error) {
       handleError(error, 'Failed to update connection request status.');
     }
@@ -287,7 +290,7 @@ export class ConnectionsService {
             : connection.sending_party;
           const profile = await this.profileModel
             .findById(otherUserId)
-            .select('_id name profile_picture headline')
+            .select('_id first_name last_name profile_picture headline')
             .lean();
           const userDto = toGetUserDto(profile!);
           userDto.createdAt = connection.created_at;
@@ -322,7 +325,7 @@ export class ConnectionsService {
           const senderUserId = connection.sending_party;
           const profile = await this.profileModel
             .findById(senderUserId)
-            .select('_id name profile_picture headline')
+            .select('_id first_name last_name profile_picture headline')
             .lean();
           const userDto = toGetUserDto(profile!);
           userDto.createdAt = connection.created_at;
@@ -429,7 +432,7 @@ export class ConnectionsService {
             ),
           },
         })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return recommendedProfiles.map(toGetUserDto);
     } catch (error) {
@@ -602,7 +605,7 @@ export class ConnectionsService {
       await exisitngUser.save();
       const endorsers = await this.profileModel
         .find({ _id: { $in: skill.endorsements } })
-        .select('_id name profile_picture')
+        .select('_id first_name last_name profile_picture')
         .lean();
       const endorsersDto = endorsers.map(toGetUserDto);
       return endorsersDto;

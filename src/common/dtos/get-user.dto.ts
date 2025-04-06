@@ -7,7 +7,11 @@ export class GetUserDto {
 
   @IsString()
   @IsNotEmpty()
-  username: string;
+  firstName: string;
+
+  @IsString()
+  @IsNotEmpty()
+  lastName: string;
 
   @IsUrl()
   @IsOptional()

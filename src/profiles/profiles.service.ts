@@ -36,15 +36,9 @@ import { toGetCompanyDto } from '../companies/mappers/company.mapper';
 import { handleError } from '../common/utils/exception-handler';
 import { GetCompanyDto } from '../companies/dtos/get-company.dto';
 import {
-  getConnection,
-  getFollow,
-  getPending,
-} from '../connections/helpers/connection-helpers';
-import { ProfileStatus } from './infrastructure/database/enums/profile-enums';
-import {
-  UserConnection,
-  UserConnectionDocument,
-} from '../connections/infrastructure/database/schemas/user-connection.schema';
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
 
 @Injectable()
 export class ProfilesService {
@@ -52,10 +46,10 @@ export class ProfilesService {
     @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
     @InjectModel(CompanyConnection.name)
     private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
-    @InjectModel(UserConnection.name)
-    private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
+
+    @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -66,9 +60,14 @@ export class ProfilesService {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
-    console.log('createProfile service: ' + createProfileDto.name);
+    const { firstName, lastName } = await this.getUserFirstLastName(id);
 
-    const profileData = toCreateProfileSchema(id, createProfileDto);
+    const profileData = toCreateProfileSchema(
+      id,
+      firstName,
+      lastName,
+      createProfileDto,
+    );
     try {
       const createdProfile = await this.profileModel.create(profileData);
       await createdProfile.save();
@@ -86,7 +85,7 @@ export class ProfilesService {
    * Retrieves a profile by ID.
    * @param id - The profile ID.
    */
-  async getProfile(id: Types.ObjectId, loggedInUser: string) {
+  async getProfile(id: Types.ObjectId) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
@@ -96,38 +95,7 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-    const profileDto = toGetProfileDto(profile);
-    if (id.toString() === loggedInUser) {
-      profileDto.status = ProfileStatus.ME;
-    } else if (
-      (await getConnection(
-        this.userConnectionModel,
-        id.toString(),
-        loggedInUser,
-      )) ||
-      (await getConnection(
-        this.userConnectionModel,
-        loggedInUser,
-        id.toString(),
-      ))
-    ) {
-      profileDto.status = ProfileStatus.CONNECTION;
-    } else if (
-      await getFollow(this.userConnectionModel, loggedInUser, id.toString())
-    ) {
-      profileDto.status = ProfileStatus.FOLLOWING;
-    } else if (
-      await getPending(this.userConnectionModel, loggedInUser, id.toString())
-    ) {
-      profileDto.status = ProfileStatus.PENDING;
-    } else if (
-      await getPending(this.userConnectionModel, id.toString(), loggedInUser)
-    ) {
-      profileDto.status = ProfileStatus.REQUEST;
-    } else {
-      profileDto.status = ProfileStatus.NULL;
-    }
-    return profileDto;
+    return toGetProfileDto(profile);
   }
   /**
    * Updates an existing profile.
@@ -176,7 +144,7 @@ export class ProfilesService {
     }
 
     if (!profile[field]) {
-      throw new BadRequestException(
+      throw new NotFoundException(
         `${field} is already unset or does not exist`,
       );
     }
@@ -593,6 +561,31 @@ export class ProfilesService {
       return companies.map(toGetCompanyDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followed companies.');
+    }
+  }
+
+  async getUserFirstLastName(id: Types.ObjectId) {
+    try {
+      const user = await this.userModel
+        .findById(id)
+        .select('first_name last_name')
+        .exec();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+      console.log('user first name:', user.first_name);
+      console.log('user last name:', user.last_name);
+
+      return {
+        firstName: user.first_name,
+        lastName: user.last_name,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new BadRequestException('Failed to retrieve user name');
     }
   }
 }

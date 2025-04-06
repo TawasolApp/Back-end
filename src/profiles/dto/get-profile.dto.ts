@@ -1,48 +1,25 @@
-import {
-  IsNotEmpty,
-  IsString,
-  IsOptional,
-  IsArray,
-  ValidateNested,
-  IsEnum,
-  IsBoolean,
-} from 'class-validator';
+import { IsNotEmpty, IsString, IsOptional, IsArray, ValidateNested, IsEnum, IsBoolean } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { SkillDto } from './skill.dto';
 import { Types } from 'mongoose';
 import { Skill } from '../infrastructure/database/schemas/profile.schema';
 import { CertificationDto } from './certification.dto';
-import {
-  Visibility,
-  EmploymentType,
-  LocationType,
-  PlanType,
-  ProfileStatus,
-} from '../infrastructure/database/enums/profile-enums';
+import { Visibility, EmploymentType, LocationType, PlanType } from '../enums/profile-enums';
 
 class Education {
-  _id: Types.ObjectId;
-  @ApiProperty({
-    description: 'Name of the educational institution',
-    example: 'Harvard University',
-  })
+    _id: Types.ObjectId;
+  @ApiProperty({ description: 'Name of the educational institution', example: 'Harvard University' })
   @IsNotEmpty()
   @IsString()
   school: string;
 
-  @ApiPropertyOptional({
-    description: 'Degree obtained',
-    example: 'Bachelor of Science',
-  })
+  @ApiPropertyOptional({ description: 'Degree obtained', example: 'Bachelor of Science' })
   @IsOptional()
   @IsString()
   degree?: string;
 
-  @ApiPropertyOptional({
-    description: 'Field of study',
-    example: 'Computer Science',
-  })
+  @ApiPropertyOptional({ description: 'Field of study', example: 'Computer Science' })
   @IsOptional()
   @IsString()
   field?: string;
@@ -62,28 +39,19 @@ class Education {
   @IsString()
   grade?: string;
 
-  @ApiPropertyOptional({
-    description: 'Additional details',
-    example: 'Graduated with honors',
-  })
+  @ApiPropertyOptional({ description: 'Additional details', example: 'Graduated with honors' })
   @IsOptional()
   @IsString()
   description?: string;
 }
 
 class Certification {
-  @ApiProperty({
-    description: 'Name of the certification',
-    example: 'AWS Certified Solutions Architect',
-  })
+  @ApiProperty({ description: 'Name of the certification', example: 'AWS Certified Solutions Architect' })
   @IsNotEmpty()
   @IsString()
   name: string;
 
-  @ApiProperty({
-    description: 'Issuing company',
-    example: 'Amazon Web Services',
-  })
+  @ApiProperty({ description: 'Issuing company', example: 'Amazon Web Services' })
   @IsNotEmpty()
   @IsString()
   company: string;
@@ -95,7 +63,8 @@ class Certification {
 }
 
 class WorkExperience {
-  _id: Types.ObjectId;
+
+    _id: Types.ObjectId;
 
   @ApiProperty({ description: 'Job title', example: 'Software Engineer' })
   @IsNotEmpty()
@@ -126,10 +95,7 @@ class WorkExperience {
   @IsString()
   endDate?: string;
 
-  @ApiPropertyOptional({
-    description: 'Location',
-    example: 'Mountain View, CA',
-  })
+  @ApiPropertyOptional({ description: 'Location', example: 'Mountain View, CA' })
   @IsOptional()
   @IsString()
   location?: string;
@@ -143,10 +109,7 @@ class WorkExperience {
   @IsEnum(LocationType)
   locationType?: LocationType;
 
-  @ApiPropertyOptional({
-    description: 'Job role description',
-    example: 'Worked on AI projects',
-  })
+  @ApiPropertyOptional({ description: 'Job role description', example: 'Worked on AI projects' })
   @IsOptional()
   @IsString()
   description?: string;
@@ -167,10 +130,7 @@ class PlanDetails {
   @IsString()
   startDate: string;
 
-  @ApiProperty({
-    description: 'Expiry date of the plan',
-    example: '2023-12-31',
-  })
+  @ApiProperty({ description: 'Expiry date of the plan', example: '2023-12-31' })
   @IsNotEmpty()
   @IsString()
   expiryDate: string;
@@ -180,10 +140,7 @@ class PlanDetails {
   @IsBoolean()
   autoRenewal: boolean;
 
-  @ApiPropertyOptional({
-    description: 'Cancel date of the plan',
-    example: '2023-12-31',
-  })
+  @ApiPropertyOptional({ description: 'Cancel date of the plan', example: '2023-12-31' })
   @IsOptional()
   @IsString()
   cancelDate?: string;
@@ -191,56 +148,49 @@ class PlanDetails {
 
 class PlanStatistics {
   @ApiProperty({ description: 'Message count', example: 10 })
+  
   messageCount: number;
 
   @ApiProperty({ description: 'Application count', example: 5 })
+
   applicationCount: number;
 }
 
 export class GetProfileDto {
-  _id: Types.ObjectId;
 
-  @ApiProperty({ description: 'name', example: 'ziad asar' })
+  _id: Types.ObjectId;
+  
+  @ApiProperty({ description: 'name', example: 'ziad' })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  firstName: string;
 
-  @ApiPropertyOptional({
-    description: 'Profile picture URL',
-    example: 'https://example.com/profile.jpg',
-  })
+  @ApiProperty({ description: 'name', example: 'asar' })
+  @IsNotEmpty()
+  @IsString()
+  lastName: string;
+
+  @ApiPropertyOptional({ description: 'Profile picture URL', example: 'https://example.com/profile.jpg' })
   @IsOptional()
   @IsString()
   profilePicture?: string;
 
-  @ApiPropertyOptional({
-    description: 'Cover photo URL',
-    example: 'https://example.com/cover.jpg',
-  })
+  @ApiPropertyOptional({ description: 'Cover photo URL', example: 'https://example.com/cover.jpg' })
   @IsOptional()
   @IsString()
   coverPhoto?: string;
 
-  @ApiPropertyOptional({
-    description: 'Resume URL',
-    example: 'https://example.com/resume.pdf',
-  })
+  @ApiPropertyOptional({ description: 'Resume URL', example: 'https://example.com/resume.pdf' })
   @IsOptional()
   @IsString()
   resume?: string;
 
-  @ApiPropertyOptional({
-    description: 'Headline',
-    example: 'Software Engineer at Google',
-  })
+  @ApiPropertyOptional({ description: 'Headline', example: 'Software Engineer at Google' })
   @IsOptional()
   @IsString()
   headline?: string;
 
-  @ApiPropertyOptional({
-    description: 'Bio',
-    example: 'Passionate about AI and cloud computing',
-  })
+  @ApiPropertyOptional({ description: 'Bio', example: 'Passionate about AI and cloud computing' })
   @IsOptional()
   @IsString()
   bio?: string;
@@ -250,10 +200,7 @@ export class GetProfileDto {
   @IsString()
   location?: string;
 
-  @ApiPropertyOptional({
-    description: 'Industry',
-    example: 'Computer Software',
-  })
+  @ApiPropertyOptional({ description: 'Industry', example: 'Computer Software' })
   @IsOptional()
   @IsString()
   industry?: string;
@@ -279,10 +226,7 @@ export class GetProfileDto {
   @Type(() => CertificationDto)
   certification?: CertificationDto[];
 
-  @ApiPropertyOptional({
-    description: 'Work experience',
-    type: [WorkExperience],
-  })
+  @ApiPropertyOptional({ description: 'Work experience', type: [WorkExperience] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -302,12 +246,5 @@ export class GetProfileDto {
   @IsOptional()
   connectionCount?: number;
 
-  @ApiPropertyOptional({
-    description: 'Profile status',
-    example: ProfileStatus.ME,
-    enum: ProfileStatus,
-  })
-  @IsOptional()
-  @IsEnum(ProfileStatus)
-  status?: ProfileStatus;
+ 
 }
