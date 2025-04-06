@@ -170,7 +170,7 @@ export class JobsService {
       }
       const profiles = await this.profileModel
         .find(filter)
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {

@@ -436,7 +436,7 @@ export class CompaniesService {
       }
       const profiles = await this.profileModel
         .find(filter)
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
@@ -646,7 +646,7 @@ export class CompaniesService {
       const followerIds = followers.map((follower) => follower.user_id);
       const profiles = await this.profileModel
         .find({ _id: { $in: followerIds } })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
@@ -905,7 +905,7 @@ export class CompaniesService {
       const managerIds = managers.map((manager) => manager.manager_id);
       const profiles = await this.profileModel
         .find({ _id: { $in: managerIds } })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
@@ -953,7 +953,7 @@ export class CompaniesService {
       const employerIds = employers.map((employer) => employer.employer_id);
       const profiles = await this.profileModel
         .find({ _id: { $in: employerIds } })
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
