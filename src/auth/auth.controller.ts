@@ -15,6 +15,7 @@ import { ResendConfirmationDto } from './dtos/resend-confirmation.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
 import { SetNewPassword } from './dtos/set-new-password.dto';
+import { SocialLoginDto } from './dtos/social-login.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -61,15 +62,12 @@ export class AuthController {
   }
 
   @Patch('set-new-password')
-  async setNewPassword(
-    @Body('email') email: string,
-    @Body() dto: SetNewPassword,
-  ) {
-    return this.authService.setNewPassword(dto, email);
+  async setNewPassword(@Body() dto: SetNewPassword) {
+    return this.authService.setNewPassword(dto);
   }
 
   @Post('social-login/google')
-  async googleLogin(@Body('accessToken') accessToken: string) {
-    return this.authService.googleLogin(accessToken);
+  async googleLogin(@Body() dto: SocialLoginDto) {
+    return this.authService.googleLogin(dto);
   }
 }

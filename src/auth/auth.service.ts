@@ -24,6 +24,7 @@ import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
 import { OAuth2Client } from 'google-auth-library';
 import { SetNewPassword } from './dtos/set-new-password.dto';
+import { SocialLoginDto } from './dtos/social-login.dto';
 
 @Injectable()
 export class AuthService {
@@ -32,7 +33,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
-  private googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+  // Initialize Google OAuth2 clients for both frontend and Android
+  private googleClientFrontend = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  private googleClientAndroid = new OAuth2Client(process.env.ANDROID_CLIENT_ID);
 
   /**
    * Registers a new user by validating CAPTCHA, checking email availability, hashing the password, and sending a verification email.
@@ -120,7 +124,6 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      userId: user._id as Types.ObjectId,
     };
   }
 
@@ -262,11 +265,10 @@ export class AuthService {
   /**
    * Sets a new password for the user by finding them via email.
    * @param dto - New password data
-   * @param email - User's email
    * @returns Success message
    */
-  async setNewPassword(dto: SetNewPassword, email: string) {
-    const { newPassword } = dto;
+  async setNewPassword(dto: SetNewPassword) {
+    const { email, newPassword } = dto;
 
     try {
       const user = await this.userModel.findOne({ email });
@@ -288,21 +290,27 @@ export class AuthService {
     }
   }
 
-  async googleLogin(accessToken: string) {
+  async googleLogin(dto: SocialLoginDto) {
+    const { idToken, isAndroid } = dto;
+
     try {
-      const tokenInfo = await this.googleClient.getTokenInfo(accessToken);
+      const googleClient = isAndroid
+        ? this.googleClientAndroid
+        : this.googleClientFrontend;
+
+      const tokenInfo = await googleClient.getTokenInfo(idToken);
 
       const { data: profile } = await axios.get(
         'https://www.googleapis.com/oauth2/v3/userinfo',
         {
-          headers: { Authorization: `Bearer ${accessToken}` },
+          headers: { Authorization: `Bearer ${idToken}` },
         },
       );
 
       if (!profile?.email) {
         throw new BadRequestException('Invalid Google token');
       }
-      
+
       let user = await this.userModel.findOne({ email: profile.email });
       const isNewUser = !user;
 
@@ -324,7 +332,6 @@ export class AuthService {
       return {
         token: token,
         refreshToken,
-        userId: user._id,
         isNewUser,
         message: 'Login successful',
       };

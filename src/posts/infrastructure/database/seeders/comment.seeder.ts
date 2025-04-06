@@ -184,29 +184,7 @@ export class CommentSeeder {
     console.log('Replies array of comments updated successfully!');
   }
 
-  async updateCommentReplies(): Promise<void> {
-    const comments = await this.commentModel.find().select('_id').lean();
-    if (comments.length === 0) {
-      console.log('No comments found to update replies.');
-      return;
-    }
-
-    for (const comment of comments) {
-      const replies = await this.commentModel
-        .find({ post_id: comment._id }) // Find comments where post_id matches the current comment's ID
-        .select('_id')
-        .lean();
-
-      if (replies.length > 0) {
-        await this.commentModel.updateOne(
-          { _id: comment._id },
-          { $set: { replies: replies.map((reply) => reply._id) } },
-        );
-      }
-    }
-
-    console.log('Replies array of comments updated successfully!');
-  }
+  
 
   async clearComments(): Promise<void> {
     await this.commentModel.deleteMany({});
