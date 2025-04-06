@@ -175,7 +175,7 @@ export class PostsService {
           .findById({ _id: createPostDto.parentPostId })
           .exec();
         if (!parentPost) {
-          console.log('Parent post not found');
+          console.log();
         } else {
           parentPost.share_count++;
           await parentPost.save();
@@ -1072,6 +1072,59 @@ export class PostsService {
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch reposts');
+    }
+  }
+  // Retrieve all reposts created by a specific user (paginated).
+  // Description:
+  // 1. Validate the user ID format.
+  // 2. Query the database for posts where the user is the author AND has a parent_post_id (indicating it's a repost).
+  // 3. Apply pagination (skip + limit).
+  // 4. If no reposts found, return an empty array.
+  // 5. Enrich each repost with full post info (author, reactions, saves, parent post, etc.)
+  // 6. Return the array of enriched GetPostDto objects.
+  async getRepostsByUser(
+    userId: string,
+    page: number,
+    limit: number,
+    viewerId: string,
+  ): Promise<GetPostDto[]> {
+    const skip = (page - 1) * limit;
+
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
+
+      const reposts = await this.postModel
+        .find({
+          author_id: new Types.ObjectId(userId),
+          parent_post_id: { $ne: null },
+        })
+        .sort({ posted_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      if (!reposts || reposts.length === 0) {
+        return [];
+      }
+
+      return await Promise.all(
+        reposts.map((post) =>
+          getPostInfo(
+            post,
+            viewerId,
+            this.postModel,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+          ),
+        ),
+      );
+    } catch (err) {
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to fetch user reposts');
     }
   }
 }
