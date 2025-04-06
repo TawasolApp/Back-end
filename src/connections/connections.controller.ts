@@ -34,8 +34,8 @@ export class ConnectionsController {
   @HttpCode(HttpStatus.OK)
   async searchUsers(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
     @Query('name') name?: string,
     @Query('company') company?: string,
   ) {
@@ -49,7 +49,7 @@ export class ConnectionsController {
     }
     name = name?.trim();
     company = company?.trim();
-    return await this.connectionsService.searchUsers(name, company, page, limit);
+    return await this.connectionsService.searchUsers(page, limit, name, company);
   }
 
   @Post()
@@ -121,8 +121,8 @@ export class ConnectionsController {
   @Get('/list')
   async getConnections(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -134,8 +134,8 @@ export class ConnectionsController {
   @Get('/pending')
   async getPendingRequests(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -147,8 +147,8 @@ export class ConnectionsController {
   @Get('/sent')
   async getSentRequests(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -161,8 +161,8 @@ export class ConnectionsController {
   @Get('/recommended')
   async getRecommendedUsers(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -209,8 +209,8 @@ export class ConnectionsController {
   @Get('/followers')
   async getFollowers(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -222,8 +222,8 @@ export class ConnectionsController {
   @Get('/following')
   async getFollowing(
     @Req() request: Request,
-    @Query('page') page?: number,
-    @Query('limit') limit?: number,
+    @Query('page') page: number,
+    @Query('limit') limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
