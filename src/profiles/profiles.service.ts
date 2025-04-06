@@ -127,7 +127,7 @@ export class ProfilesService {
     }
 
     if (!profile[field]) {
-      throw new BadRequestException(
+      throw new NotFoundException(
         `${field} is already unset or does not exist`,
       );
     }
