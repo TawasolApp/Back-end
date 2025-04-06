@@ -58,6 +58,14 @@ export class WorkExperienceDto {
   endDate?: Date;
 
   @ApiProperty({
+    example: 'https://example.com/certification.jpg',
+    description: 'The URL of the work experience picture.',
+  })
+  @IsOptional()
+  @IsString()
+  workExperiencePicture?: string;
+
+  @ApiProperty({
     example: 'San Francisco, CA',
     description: 'The work location.',
   })

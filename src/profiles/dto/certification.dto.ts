@@ -12,6 +12,14 @@ export class CertificationDto {
   name: string;
 
   @ApiProperty({
+    example: 'https://example.com/certification.jpg',
+    description: 'The URL of the certification picture.',
+  })
+  @IsOptional()
+  @IsString()
+  certificationPicture?: string;
+
+  @ApiProperty({
     example: 'Amazon Web Services',
     description: 'The company or organization that issued the certification.',
   })
