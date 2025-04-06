@@ -144,6 +144,16 @@ export class ConnectionsController {
     return sentRequests;
   }
 
+  @Get('/recommended')
+  async getRecommendedUsers(@Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userId = request.user['sub'];
+    const recommendedUsers = await this.connectionsService.getRecommendedUsers(userId);
+    return recommendedUsers;
+  }
+
   @Post('/follow')
   @HttpCode(HttpStatus.CREATED)
   async follow(

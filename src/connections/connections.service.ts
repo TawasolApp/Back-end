@@ -351,6 +351,59 @@ export class ConnectionsService {
     }
   }
 
+  async getRecommendedUsers(userId: string): Promise<GetUserDto[]> {
+    try {
+      const connections = await this.userConnectionModel
+        .find({
+          $or: [
+            {
+              $and: [
+                {
+                  status: {
+                    $in: [
+                      ConnectionStatus.Connected,
+                      ConnectionStatus.Following,
+                    ],
+                  },
+                },
+                {
+                  $or: [
+                    { sending_party: new Types.ObjectId(userId) },
+                    { receiving_party: new Types.ObjectId(userId) },
+                  ],
+                },
+              ],
+            },
+            {
+              status: ConnectionStatus.Pending,
+              sending_party: new Types.ObjectId(userId),
+            },
+          ],
+        })
+        .select('sending_party receiving_party')
+        .lean();
+      const excludedUserIds = new Set<string>();
+      connections.forEach((connection) => {
+        excludedUserIds.add(connection.sending_party.toString());
+        excludedUserIds.add(connection.receiving_party.toString());
+      });
+      excludedUserIds.add(userId);
+      const recommendedProfiles = await this.profileModel
+        .find({
+          _id: {
+            $nin: Array.from(excludedUserIds).map(
+              (id) => new Types.ObjectId(id),
+            ),
+          },
+        })
+        .select('_id name profile_picture headline')
+        .lean();
+      return recommendedProfiles.map(toGetUserDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve people you may know.');
+    }
+  }
+
   async follow(sendingParty: string, createRequestDto: CreateRequestDto) {
     try {
       const { userId } = createRequestDto;

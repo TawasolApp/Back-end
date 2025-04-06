@@ -63,7 +63,6 @@ export class GetJobDto {
   @IsNotEmpty()
   isOpen: boolean;
 
-  // TODO: add postedAt field 
   @IsString()
   @IsISO8601()
   @IsNotEmpty()
