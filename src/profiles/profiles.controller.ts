@@ -81,7 +81,10 @@ export class ProfilesController {
       if (!Types.ObjectId.isValid(id)) {
         throw new BadRequestException('Invalid profile ID format');
       }
-      return await this.profilesService.getProfile(new Types.ObjectId(id));
+      return await this.profilesService.getProfile(
+        new Types.ObjectId(id),
+        req.user['sub'],
+      );
     } catch (error) {
       this.handleException(error, 'Failed to retrieve profile.');
     }
