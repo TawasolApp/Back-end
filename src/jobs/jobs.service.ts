@@ -171,7 +171,6 @@ export class JobsService {
         filter.name = { $regex: name, $options: 'i' };
       }
       const skip = (page - 1) * limit;
-      const skip = (page - 1) * limit;
       const profiles = await this.profileModel
         .find(filter)
         .select('_id first_name last_name profile_picture headline')

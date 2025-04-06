@@ -26,12 +26,13 @@ import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
 import { PostsService } from '../posts/posts.service';
 import { handleError } from '../common/utils/exception-handler';
+import { Request } from 'express';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
   constructor(
-    private profilesService: ProfilesService,
-    private readonly postsService: PostsService, // Assuming you have a PostsService for handling posts
+    private readonly profilesService: ProfilesService,
+    private readonly postsService: PostsService, 
   ) {}
 
   /**
@@ -71,7 +72,7 @@ export class ProfilesController {
       }
       return await this.profilesService.getProfile(
         new Types.ObjectId(id),
-        req.user['sub'],
+        req.user.sub,
       );
     } catch (error) {
       handleError(error, 'Failed to retrieve profile.');
