@@ -87,6 +87,7 @@ export function mapCommentToDto(
     | null,
   replies: string[],
 ): GetCommentDto {
+  console.log('Comment:', comment);
   return {
     id: comment._id.toString(),
     postId: comment.post_id.toString(),
@@ -96,8 +97,8 @@ export function mapCommentToDto(
     authorBio: authorBio,
     authorType: comment.author_type as 'User' | 'Company',
     content: comment.content,
-    replies: replies, // Assuming replies are handled elsewhere
-    reactCount: comment.react_count,
+    repliesCount: replies.length, // Assuming replies are handled elsewhere
+    reactCounts: comment.react_count,
     timestamp: comment.commented_at.toISOString(),
     taggedUsers: [], // Assuming tagged users are handled elsewhere
     reactType: userReactionType,

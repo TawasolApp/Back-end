@@ -74,6 +74,7 @@ async function bootstrap() {
   await commentSeeder.updateCommentReactCounts();
   await postSeeder.updateCommentCounts();
   await commentSeeder.updateCommentReplies();
+  await postSeeder.updateShareCounts();
   await app.close();
 }
 

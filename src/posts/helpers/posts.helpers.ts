@@ -150,7 +150,7 @@ export async function getPostInfo(
     parentPost = await postModel.findOne({ _id: post.parent_post_id }).exec();
 
     if (!parentPost) {
-      throw new NotFoundException('Parent post not found');
+      console.log('Parent post not found');
     } else {
       parentPostDto = await getPostInfo(
         parentPost,

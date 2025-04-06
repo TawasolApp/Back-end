@@ -42,8 +42,25 @@ export class Comment {
   @Prop({ type: [Types.ObjectId], default: [] })
   replies: Types.ObjectId[];
 
-  @Prop({ default: 0 })
-  react_count: number;
+  @Prop({
+    type: Object,
+    default: {
+      Like: 0,
+      Love: 0,
+      Funny: 0,
+      Celebrate: 0,
+      Insightful: 0,
+      Support: 0,
+    },
+  })
+  react_count: {
+    Like: number;
+    Love: number;
+    Funny: number;
+    Celebrate: number;
+    Insightful: number;
+    Support: number;
+  };
 
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   tags: Types.ObjectId[];

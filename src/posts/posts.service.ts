@@ -175,7 +175,7 @@ export class PostsService {
           .findById({ _id: createPostDto.parentPostId })
           .exec();
         if (!parentPost) {
-          throw new NotFoundException('Parent post not found');
+          console.log('Parent post not found');
         } else {
           parentPost.share_count++;
           await parentPost.save();
@@ -190,7 +190,10 @@ export class PostsService {
         visibility: createPostDto.visibility,
         author_id: new Types.ObjectId(author_id),
         author_type: authorType,
-        parent_post_id: new Types.ObjectId(createPostDto.parentPostId),
+        parent_post_id: createPostDto.parentPostId
+          ? new Types.ObjectId(createPostDto.parentPostId)
+          : null,
+        is_silent_repost: createPostDto.isSilentRepost,
       });
 
       await createdPost.save();
@@ -486,7 +489,8 @@ export class PostsService {
             }
 
             if (comment) {
-              comment.react_count++;
+              comment.react_count[reactionType] =
+                (comment.react_count[reactionType] || 0) + 1;
               await comment.save();
             }
 
@@ -498,6 +502,14 @@ export class PostsService {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               await post.save();
+            }
+
+            if (comment) {
+              comment.react_count[existingReaction.react_type] =
+                (comment.react_count[existingReaction.react_type] || 1) - 1;
+              comment.react_count[reactionType] =
+                (comment.react_count[reactionType] || 0) + 1;
+              await comment.save();
             }
 
             existingReaction.react_type = reactionType;
@@ -525,14 +537,17 @@ export class PostsService {
             }
 
             if (comment) {
-              comment.react_count--;
+              comment.react_count[reactionType] =
+                (comment.react_count[reactionType] || 1) - 1;
               await comment.save();
             }
           }
         }
       }
+
       if (post) return post;
       if (comment) return comment;
+
       throw new InternalServerErrorException('Failed to update reaction');
     } catch (error) {
       if (error instanceof HttpException) throw error;
@@ -550,6 +565,7 @@ export class PostsService {
     postId: string,
     page: number,
     limit: number,
+    reactionType: string,
     userId: string, // For user-specific reactions later.
   ): Promise<ReactionDto[]> {
     try {
@@ -560,7 +576,10 @@ export class PostsService {
       }
       const objectIdPostId = new Types.ObjectId(postId);
       const reactions = await this.reactModel
-        .find({ post_id: objectIdPostId })
+        .find({
+          post_id: objectIdPostId,
+          ...(reactionType !== 'all' && { react_type: reactionType }),
+        })
         .skip(skip)
         .limit(limit)
         .exec();

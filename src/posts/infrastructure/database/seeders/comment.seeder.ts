@@ -61,7 +61,14 @@ export class CommentSeeder {
         post_id: post._id,
         replies,
         tags,
-        react_count: 0,
+        react_count: {
+          Like: 0,
+          Love: 0,
+          Funny: 0,
+          Celebrate: 0,
+          Insightful: 0,
+          Support: 0,
+        },
         content: faker.lorem.sentence(),
         commented_at: faker.date.recent(),
       });
@@ -72,10 +79,7 @@ export class CommentSeeder {
   }
 
   async seedReplies(count: number): Promise<void> {
-    const users = await this.profileModel
-      .find()
-      .select('_id')
-      .lean();
+    const users = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
     const comments = await this.commentModel.find().select('_id').lean();
 
@@ -109,7 +113,14 @@ export class CommentSeeder {
         post_id: parentComment._id, // Linking to a parent comment instead of a post
         replies: [],
         tags,
-        react_count: 0,
+        react_count: {
+          Like: 0,
+          Love: 0,
+          Funny: 0,
+          Celebrate: 0,
+          Insightful: 0,
+          Support: 0,
+        },
         content: faker.lorem.sentence(),
         commented_at: faker.date.recent(),
       });
@@ -118,17 +129,34 @@ export class CommentSeeder {
     await this.commentModel.insertMany(replies);
     console.log(`${count} replies seeded successfully!`);
   }
-
   async updateCommentReactCounts(): Promise<void> {
     const comments = await this.commentModel.find().exec();
     for (const comment of comments) {
-      const reactCount = await this.reactModel
-        .countDocuments({ post_id: new Types.ObjectId(comment._id) })
+      const reacts = await this.reactModel
+        .find({ post_id: comment._id })
         .exec();
-      comment.react_count = reactCount;
+
+      // Reset react counts
+      comment.react_count = {
+        Like: 0,
+        Love: 0,
+        Funny: 0,
+        Celebrate: 0,
+        Insightful: 0,
+        Support: 0,
+      };
+
+      // Update react counts
+      for (const react of reacts) {
+        comment.react_count[react.react_type]++;
+      }
+      console.log(comment);
+      console.log(comment.react_count);
+
+      // Mark react_count as modified and save the post
+      comment.markModified('react_count');
       await comment.save();
     }
-    console.log('Comment react counts updated.');
   }
 
   async updateCommentReplies(): Promise<void> {
