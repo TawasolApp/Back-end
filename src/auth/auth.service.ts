@@ -23,6 +23,7 @@ import * as bcrypt from 'bcrypt';
 import axios from 'axios';
 import { MailerService } from '../common/services/mailer.service';
 import { OAuth2Client } from 'google-auth-library';
+import { SetNewPassword } from './dtos/set-new-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -240,16 +241,35 @@ export class AuthService {
   }
 
   /**
-   * Resets the user's password using a token.
-   * @param dto - Token and new password data
+   * Verifies the reset password token.
+   * @param dto - Token data
    * @returns Success message
    */
   async resetPassword(dto: ResetPasswordDto) {
-    const { token, newPassword } = dto;
+    const { token } = dto;
 
     try {
       const { sub: userId } = await this.jwtService.verify(token);
       const user = await this.userModel.findById(userId);
+      if (!user) throw new NotFoundException('User not found');
+
+      return { message: 'Token is valid' };
+    } catch (err) {
+      throw new BadRequestException('Invalid or expired token');
+    }
+  }
+
+  /**
+   * Sets a new password for the user by finding them via email.
+   * @param dto - New password data
+   * @param email - User's email
+   * @returns Success message
+   */
+  async setNewPassword(dto: SetNewPassword, email: string) {
+    const { newPassword } = dto;
+
+    try {
+      const user = await this.userModel.findOne({ email });
       if (!user) throw new NotFoundException('User not found');
 
       const isSame = await bcrypt.compare(newPassword, user.password);
@@ -264,42 +284,46 @@ export class AuthService {
 
       return { message: 'Password reset successfully' };
     } catch (err) {
-      if (
-        err instanceof BadRequestException ||
-        err instanceof NotFoundException
-      ) {
-        throw err;
-      }
-      throw new BadRequestException('Invalid or expired token');
+      throw new InternalServerErrorException('Failed to reset password');
     }
   }
 
-  async googleLogin(idToken: string) {
+  async googleLogin(accessToken: string) {
     try {
-      const ticket = await this.googleClient.verifyIdToken({ idToken });
-      const payload = ticket.getPayload();
+      const tokenInfo = await this.googleClient.getTokenInfo(accessToken);
 
-      if (!payload || !payload.email) {
+      const { data: profile } = await axios.get(
+        'https://www.googleapis.com/oauth2/v3/userinfo',
+        {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        },
+      );
+
+      if (!profile?.email) {
         throw new BadRequestException('Invalid Google token');
       }
 
-      let user = await this.userModel.findOne({ email: payload.email });
+      let user = await this.userModel.findOne({ email: profile.email });
       const isNewUser = !user;
 
       if (!user) {
         user = new this.userModel({
-          first_name: payload.given_name || '',
-          last_name: payload.family_name || '',
-          email: payload.email,
-          password: '',
+          first_name: profile.given_name || '',
+          last_name: profile.family_name || '',
+          email: profile.email,
+          password: '12345678',
           isVerified: true,
         });
         await user.save();
       }
 
-      const token = this.jwtService.sign({ sub: user._id });
+      const payload = { sub: user._id, email: user.email, role: user.role };
+      const token = this.jwtService.sign(payload, { expiresIn: '1h' });
+      const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
       return {
-        access_token: token,
+        token: token,
+        refreshToken,
         userId: user._id,
         isNewUser,
         message: 'Login successful',

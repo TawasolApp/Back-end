@@ -1,10 +1,20 @@
-import { Controller, Post, Body, Get, Query, HttpCode, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  Get,
+  Query,
+  HttpCode,
+  HttpStatus,
+  Patch,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dtos/register.dto';
 import { LoginDto } from './dtos/login.dto';
 import { ResendConfirmationDto } from './dtos/resend-confirmation.dto';
 import { ForgotPasswordDto } from './dtos/forgot-password.dto';
 import { ResetPasswordDto } from './dtos/reset-password.dto';
+import { SetNewPassword } from './dtos/set-new-password.dto';
 
 @Controller('auth')
 export class AuthController {
@@ -12,7 +22,7 @@ export class AuthController {
 
   @Post('register')
   async register(@Body() registerDto: RegisterDto) {
-    return this.authService.register(registerDto); 
+    return this.authService.register(registerDto);
   }
 
   @Post('check-email')
@@ -27,7 +37,7 @@ export class AuthController {
 
   @Get('verify-email')
   async verifyEmail(@Query('token') token: string) {
-    return this.authService.verifyEmail({ token }); 
+    return this.authService.verifyEmail({ token });
   }
 
   @Post('resend-confirmation')
@@ -50,8 +60,16 @@ export class AuthController {
     return this.authService.resetPassword(dto);
   }
 
+  @Patch('set-new-password')
+  async setNewPassword(
+    @Body('email') email: string,
+    @Body() dto: SetNewPassword,
+  ) {
+    return this.authService.setNewPassword(dto, email);
+  }
+
   @Post('social-login/google')
-  async googleLogin(@Body('idToken') idToken: string) {
-    return this.authService.googleLogin(idToken);
+  async googleLogin(@Body('accessToken') accessToken: string) {
+    return this.authService.googleLogin(accessToken);
   }
 }
