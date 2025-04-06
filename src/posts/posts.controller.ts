@@ -240,4 +240,21 @@ export class PostsController {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getRepostsOfPost(postId, req.user['sub']);
   }
+
+  @Get('reposts/:userId')
+  @HttpCode(HttpStatus.OK)
+  async getUserReposts(
+    @Param('userId') userId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+    @Req() req: Request,
+  ): Promise<GetPostDto[]> {
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getRepostsByUser(
+      userId,
+      page,
+      limit,
+      req.user['sub'],
+    );
+  }
 }
