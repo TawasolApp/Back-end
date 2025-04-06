@@ -184,8 +184,6 @@ export class CommentSeeder {
     console.log('Replies array of comments updated successfully!');
   }
 
-  
-
   async clearComments(): Promise<void> {
     await this.commentModel.deleteMany({});
     console.log('Comments collection cleared.');

@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
   Query,
@@ -65,10 +66,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     if (!updateCompanyDto || !Object.keys(updateCompanyDto).length) {
       throw new BadRequestException('No update data provided.');
     }
@@ -91,10 +92,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     await this.companiesService.deleteCompany(userId, companyId);
   }
 
@@ -120,6 +121,8 @@ export class CompaniesController {
   @HttpCode(HttpStatus.OK)
   async filterCompanies(
     @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Query('name') name?: string,
     @Query('industry') industry?: string,
   ) {
@@ -136,6 +139,8 @@ export class CompaniesController {
     const userId = request.user['sub'];
     const companiesDto = await this.companiesService.filterCompanies(
       userId,
+      page,
+      limit,
       name,
       industry,
     );
@@ -146,6 +151,8 @@ export class CompaniesController {
   @HttpCode(HttpStatus.OK)
   async getCompanyFollowers(
     @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Param('companyId') companyId: string,
     @Query('name') name?: string,
   ) {
@@ -155,6 +162,8 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const followersDto = await this.companiesService.getCompanyFollowers(
       companyId,
+      page,
+      limit,
       name,
     );
     return followersDto;
@@ -192,6 +201,8 @@ export class CompaniesController {
   @HttpCode(HttpStatus.OK)
   async getSuggestedCompanies(
     @Param('companyId') companyId: string,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Req() request: Request,
   ) {
     if (!request.user) {
@@ -199,7 +210,12 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    return await this.companiesService.getSuggestedCompanies(userId, companyId);
+    return await this.companiesService.getSuggestedCompanies(
+      userId,
+      companyId,
+      page,
+      limit,
+    );
   }
 
   @Get('/:companyId/common')
@@ -228,10 +244,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager' && role !== 'employer') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager' && role !== 'employer') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     const newJobDto = await this.jobsService.postJob(
       userId,
       companyId,
@@ -256,13 +272,19 @@ export class CompaniesController {
   @HttpCode(HttpStatus.OK)
   async getCompanyJobs(
     @Param('companyId') companyId: string,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Req() request: Request,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
-    const jobsDto = await this.companiesService.getCompanyJobs(companyId);
+    const jobsDto = await this.companiesService.getCompanyJobs(
+      companyId,
+      page,
+      limit,
+    );
     return jobsDto;
   }
 
@@ -271,6 +293,8 @@ export class CompaniesController {
   async getJobApplicants(
     @Param('jobId') jobId: string,
     @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Query('name') name?: string,
   ) {
     if (!request.user) {
@@ -278,13 +302,15 @@ export class CompaniesController {
     }
     validateId(jobId, 'job');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager' && role !== 'employer') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager' && role !== 'employer') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     const applicantsDto = await this.jobsService.getJobApplicants(
       userId,
       jobId,
+      page,
+      limit,
       name,
     );
     return applicantsDto;
@@ -302,10 +328,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     await this.companiesService.addCompanyManager(
       userId,
       companyId,
@@ -326,9 +352,9 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     await this.companiesService.addCompanyEmployer(
       userId,
       companyId,
@@ -340,6 +366,8 @@ export class CompaniesController {
   @HttpCode(HttpStatus.OK)
   async getCompanyManagers(
     @Param('companyId') companyId: string,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Req() request: Request,
   ) {
     if (!request.user) {
@@ -348,16 +376,23 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
-    await this.companiesService.getCompanyManagers(companyId, userId);
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
+    return await this.companiesService.getCompanyManagers(
+      companyId,
+      userId,
+      page,
+      limit,
+    );
   }
 
   @Get('/:companyId/employers')
   @HttpCode(HttpStatus.OK)
   async getCompanyEmployers(
     @Param('companyId') companyId: string,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Req() request: Request,
   ) {
     if (!request.user) {
@@ -366,9 +401,14 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
-    await this.companiesService.getCompanyEmployers(companyId, userId);
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
+    return await this.companiesService.getCompanyEmployers(
+      companyId,
+      userId,
+      page,
+      limit,
+    );
   }
 }

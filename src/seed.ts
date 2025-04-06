@@ -38,13 +38,13 @@ async function bootstrap() {
   await profileSeeder.seedProfiles();
 
   await userConnectionSeeder.clearUserConnections();
-  await userConnectionSeeder.seedUserConnections(20);
+  await userConnectionSeeder.seedUserConnections(30);
   await profileSeeder.updateConnectionCounts();
 
   await companySeeder.clearCompanies();
   await companySeeder.seedCompanies(10);
   await companyConnectionSeeder.clearCompanyConnections();
-  await companyConnectionSeeder.seedCompanyConnections(20);
+  await companyConnectionSeeder.seedCompanyConnections(30);
   await companySeeder.updateFollowerCounts();
   await companyManagerSeeder.clearCompanyManagers();
   await companyManagerSeeder.seedCompanyManagers(10);
@@ -58,7 +58,7 @@ async function bootstrap() {
 
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();
-  await postSeeder.seedPosts(10);
+  await postSeeder.seedPosts(30);
   await postSeeder.seedReposts(10);
   await commentSeeder.clearComments();
   await commentSeeder.seedComments(15);

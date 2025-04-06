@@ -14,6 +14,9 @@ export class Skill {
   @Prop({ required: true })
   skill_name: string;
 
+  @Prop()
+  position: string;
+
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   endorsements: Types.ObjectId[];
 }
@@ -57,6 +60,9 @@ export class Certification {
   company: string;
 
   @Prop()
+  certification_picture: string;
+
+  @Prop()
   issue_date: Date;
 }
 
@@ -67,6 +73,9 @@ export class WorkExperience {
 
   @Prop({ required: true })
   title: string;
+
+  @Prop()
+  work_experience_picture: string;
 
   @Prop({
     enum: [EmploymentType],

@@ -74,6 +74,7 @@ export class ProfileSeeder {
           _id: new this.profileModel()._id, // Generate a unique ObjectId
           name: faker.person.jobTitle(),
           company: faker.company.name(),
+          certification_picture: faker.image.url(),
           issue_date: faker.date.past({ years: 3 }),
         },
       ],
@@ -81,6 +82,7 @@ export class ProfileSeeder {
         {
           _id: new this.profileModel()._id, // Generate a unique ObjectId
           title: faker.person.jobTitle(),
+          work_experience_picture: faker.image.url(),
           employment_type: faker.helpers.enumValue(EmploymentType),
           company: faker.company.name(),
           start_date: faker.date.past({ years: 5 }),

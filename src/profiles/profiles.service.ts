@@ -50,6 +50,11 @@ import {
   UserConnection,
   UserConnectionDocument,
 } from '../connections/infrastructure/database/schemas/user-connection.schema';
+import {
+  Post,
+  PostDocument,
+} from '../posts/infrastructure/database/schemas/post.schema';
+import { use } from 'passport';
 
 @Injectable()
 export class ProfilesService {
@@ -62,6 +67,7 @@ export class ProfilesService {
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -279,6 +285,33 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
+  async editSkillPosition(
+    skillName: string,
+    position: string,
+    profileId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(profileId)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    console.log('editSkillPosition service profileId: ' + position);
+    // Find the profile by profileId and update the specific skill's position
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(profileId), 'skills.skill_name': skillName }, // Match profileId and skillId in skills array
+      {
+        $set: {
+          'skills.$.position': position, // Update the position of the skill
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    console.log('after editSkillPosition service profileId: ' + position);
+    if (!updatedProfile) {
+      throw new NotFoundException('Profile or Skill not found');
+    }
+
+    return toGetProfileDto(updatedProfile); // Assuming this converts the updated profile to a DTO
+  }
+
   /**
    * Deletes a skill from a user's profile.
    * @param skillName - The skill name to be removed.
@@ -454,6 +487,8 @@ export class ProfilesService {
           'certification.$.name': certification.name,
           'certification.$.company': certification.company,
           'certification.$.issue_date': certification.issueDate,
+          'certification.$.certification_picture':
+            certification.certificationPicture,
         },
       },
       { new: true, runValidators: true },
@@ -540,7 +575,10 @@ export class ProfilesService {
       );
     }
 
-    console.log('editWorkExperience service title: ' + workExperience.title);
+    console.log(
+      'editWorkExperience service title: ' +
+        workExperience.workExperiencePicture,
+    );
     // const updateData = toUpdateWorkExperienceSchema(workExperience);
 
     const updatedProfile = await this.profileModel.findOneAndUpdate(
@@ -554,10 +592,12 @@ export class ProfilesService {
           'work_experience.$.company': workExperience.company,
           'work_experience.$.start_date': workExperience.startDate,
           'work_experience.$.end_date': workExperience.endDate,
-          //'work_experience.$.employment_type': workExperience.employmentType,
+          'work_experience.$.employment_type': workExperience.employmentType,
           'work_experience.$.location': workExperience.location,
-          //'work_experience.$.location_type': workExperience.locationType,
+          'work_experience.$.location_type': workExperience.locationType,
           'work_experience.$.description': workExperience.description,
+          'work_experience.$.work_experience_picture':
+            workExperience.workExperiencePicture,
         },
       },
       { new: true, runValidators: true },
@@ -594,6 +634,9 @@ export class ProfilesService {
 
   async getFollowedCompanies(id: Types.ObjectId): Promise<GetCompanyDto[]> {
     try {
+      if (!isValidObjectId(id)) {
+        throw new BadRequestException('Invalid profile ID format');
+      }
       const connections = await this.companyConnectionModel
         .find({ user_id: new Types.ObjectId(id) })
         .sort({ created_at: -1 })
