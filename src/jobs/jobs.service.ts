@@ -144,6 +144,8 @@ export class JobsService {
   async getJobApplicants(
     userId: string,
     jobId: string,
+    page: number,
+    limit: number,
     name?: string,
   ): Promise<GetUserDto[]> {
     try {
@@ -168,9 +170,12 @@ export class JobsService {
       if (name) {
         filter.name = { $regex: name, $options: 'i' };
       }
+      const skip = (page - 1) * limit;
       const profiles = await this.profileModel
         .find(filter)
         .select('_id first_name last_name profile_picture headline')
+        .skip(skip)
+        .limit(limit)
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
