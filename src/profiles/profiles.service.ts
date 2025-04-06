@@ -32,6 +32,7 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
+
 import { toGetCompanyDto } from '../companies/mappers/company.mapper';
 import { handleError } from '../common/utils/exception-handler';
 import { GetCompanyDto } from '../companies/dtos/get-company.dto';
@@ -60,7 +61,6 @@ export class ProfilesService {
     private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
-
     @InjectModel(User.name) private userModel: Model<UserDocument>,
   ) {}
   /**
@@ -148,6 +148,12 @@ export class ProfilesService {
   async updateProfile(updateProfileDto: UpdateProfileDto, id: Types.ObjectId) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
+    }
+    if (updateProfileDto.firstName != undefined) {
+      await this.updateUserFirstName(updateProfileDto.firstName, id);
+    }
+    if (updateProfileDto.lastName != undefined) {
+      await this.updateUserLastName(updateProfileDto.lastName, id);
     }
     console.log('updateProfile service id: ' + id);
     console.log('updateProfile service name: ' + updateProfileDto.headline);
@@ -629,6 +635,42 @@ export class ProfilesService {
         throw error;
       }
       throw new BadRequestException('Failed to retrieve user name');
+    }
+  }
+
+  async updateUserFirstName(firstName: string, id: Types.ObjectId) {
+    try {
+      const user = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { first_name: firstName },
+          { new: true, runValidators: true },
+        )
+        .exec();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update user first name');
+    }
+  }
+
+  async updateUserLastName(lastName: string, id: Types.ObjectId) {
+    try {
+      const user = await this.userModel
+        .findByIdAndUpdate(
+          id,
+          { last_name: lastName },
+          { new: true, runValidators: true },
+        )
+        .exec();
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update user last name');
     }
   }
 }
