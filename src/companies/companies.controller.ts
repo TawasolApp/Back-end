@@ -65,10 +65,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     if (!updateCompanyDto || !Object.keys(updateCompanyDto).length) {
       throw new BadRequestException('No update data provided.');
     }
@@ -91,10 +91,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     await this.companiesService.deleteCompany(userId, companyId);
   }
 
@@ -228,10 +228,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager' && role !== 'employer') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager' && role !== 'employer') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     const newJobDto = await this.jobsService.postJob(
       userId,
       companyId,
@@ -278,10 +278,10 @@ export class CompaniesController {
     }
     validateId(jobId, 'job');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager' && role !== 'employer') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager' && role !== 'employer') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     const applicantsDto = await this.jobsService.getJobApplicants(
       userId,
       jobId,
@@ -302,10 +302,10 @@ export class CompaniesController {
     }
     validateId(companyId, 'company');
     const userId = request.user['sub'];
-    const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // const role = request.user['role'];
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     await this.companiesService.addCompanyManager(
       userId,
       companyId,
@@ -326,9 +326,9 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
     await this.companiesService.addCompanyEmployer(
       userId,
       companyId,
@@ -348,10 +348,10 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
-    await this.companiesService.getCompanyManagers(companyId, userId);
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
+    return await this.companiesService.getCompanyManagers(companyId, userId);
   }
 
   @Get('/:companyId/employers')
@@ -366,9 +366,9 @@ export class CompaniesController {
     validateId(companyId, 'company');
     const userId = request.user['sub'];
     const role = request.user['role'];
-    if (role !== 'manager') {
-      throw new ForbiddenException('User cannot access this endpoint.');
-    }
-    await this.companiesService.getCompanyEmployers(companyId, userId);
+    // if (role !== 'manager') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
+    return await this.companiesService.getCompanyEmployers(companyId, userId);
   }
 }

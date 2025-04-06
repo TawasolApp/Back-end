@@ -118,21 +118,6 @@ export class CompaniesService {
   ): Promise<GetCompanyDto> {
     try {
       const companyData = toCreateCompanySchema(createCompanyDto);
-      // const existingFields = await this.companyModel
-      //   .findOne({
-      //     $or: [
-      //       { name: companyData.name },
-      //       { website: companyData.website },
-      //       { email: companyData.email },
-      //       { contact_number: companyData.contact_number },
-      //     ],
-      //   })
-      //   .lean();
-      // if (existingFields) {
-      //   throw new ConflictException(
-      //     'Company name, website, email and contact number must be unique.',
-      //   );
-      // }
       const conflictFilters: { [key: string]: any }[] = [];
       if (companyData.name) {
         conflictFilters.push({ name: companyData.name });
@@ -853,7 +838,7 @@ export class CompaniesService {
         company_id: new Types.ObjectId(companyId),
       });
       await newEmployer.save();
-      if (user.role !== 'employer') {
+      if (user.role === 'customer') {
         await this.userModel.findByIdAndUpdate(
           new Types.ObjectId(newEmployerId),
           { $set: { role: 'employer' } },
@@ -900,13 +885,16 @@ export class CompaniesService {
       const managers = await this.companyManagerModel
         .find({ company_id: new Types.ObjectId(companyId) })
         .sort({ created_at: -1 })
-        .select('user_id')
+        .select('manager_id')
         .lean();
       const managerIds = managers.map((manager) => manager.manager_id);
+      console.log(managerIds);
       const profiles = await this.profileModel
         .find({ _id: { $in: managerIds } })
         .select('_id first_name last_name profile_picture headline')
         .lean();
+      console.log(profiles);
+      console.log(profiles.map(toGetUserDto));
       return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of managers.');
@@ -948,7 +936,7 @@ export class CompaniesService {
       const employers = await this.companyEmployerModel
         .find({ company_id: new Types.ObjectId(companyId) })
         .sort({ created_at: -1 })
-        .select('user_id')
+        .select('employer_id')
         .lean();
       const employerIds = employers.map((employer) => employer.employer_id);
       const profiles = await this.profileModel

@@ -26,7 +26,7 @@ import { CommentSeeder } from './infrastructure/database/seeders/comment.seeder'
 import { ReactSeeder } from './infrastructure/database/seeders/react.seeder';
 import { SaveSeeder } from './infrastructure/database/seeders/save.seeder';
 import { ShareSeeder } from './infrastructure/database/seeders/share.seeder';
-import { PostsController } from './posts.controller';
+// import { PostsController } from './posts.controller';
 import { ValidationPipe } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
@@ -41,7 +41,7 @@ import {
 import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
-import { PostsService } from './posts.service';
+// import { PostsService } from './posts.service';
 import {
   UserConnection,
   UserConnectionSchema,
@@ -77,7 +77,7 @@ import {
     ReactSeeder,
     SaveSeeder,
     ShareSeeder,
-    PostsService,
+    // PostsService,
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,
@@ -89,8 +89,8 @@ import {
     ReactSeeder,
     SaveSeeder,
     ShareSeeder,
-    PostsService,
+    // PostsService,
   ],
-  controllers: [PostsController],
+  // controllers: [PostsController],
 })
 export class PostsModule {}
