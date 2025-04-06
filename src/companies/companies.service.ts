@@ -341,6 +341,8 @@ export class CompaniesService {
    */
   async filterCompanies(
     userId: string,
+    page: number,
+    limit: number,
     name?: string,
     industry?: string,
   ): Promise<GetCompanyDto[]> {
@@ -352,10 +354,13 @@ export class CompaniesService {
       if (industry) {
         filter.industry = { $regex: industry, $options: 'i' };
       }
+      const skip = (page - 1) * limit;
       const companies = await this.companyModel
         .find(filter)
         .select('_id name logo industry followers')
-        .sort({ followers: -1 })
+        .sort({ followers: -1, _id: 1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
       const companyIds = companies.map((company) => company._id);
       const connections = await this.companyConnectionModel
@@ -400,6 +405,8 @@ export class CompaniesService {
    */
   async getCompanyFollowers(
     companyId: string,
+    page: number,
+    limit: number,
     name?: string,
   ): Promise<GetUserDto[]> {
     try {
@@ -411,7 +418,7 @@ export class CompaniesService {
       }
       const followers = await this.companyConnectionModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1 })
+        .sort({ created_at: -1, _id: 1 })
         .select('user_id')
         .lean();
       const followerIds = followers.map((follower) => follower.user_id);
@@ -419,9 +426,12 @@ export class CompaniesService {
       if (name) {
         filter.name = { $regex: name, $options: 'i' };
       }
+      const skip = (page - 1) * limit;
       const profiles = await this.profileModel
         .find(filter)
         .select('_id first_name last_name profile_picture headline')
+        .skip(skip)
+        .limit(limit)
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {
@@ -529,6 +539,8 @@ export class CompaniesService {
   async getSuggestedCompanies(
     userId: string,
     companyId: string,
+    page: number,
+    limit: number,
   ): Promise<GetCompanyDto[]> {
     try {
       const company = await this.companyModel
@@ -538,6 +550,7 @@ export class CompaniesService {
       if (!company) {
         throw new NotFoundException('Company not found');
       }
+      const skip = (page - 1) * limit;
       const suggestedCompanies = await this.companyModel
         .find({
           _id: { $ne: new Types.ObjectId(companyId) },
@@ -545,7 +558,9 @@ export class CompaniesService {
           company_size: company.company_size,
         })
         .select('_id name logo industry followers')
-        .sort({ followers: -1 })
+        .sort({ followers: -1, _id: 1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
 
       const companyIds = suggestedCompanies.map((company) => company._id);
@@ -651,7 +666,11 @@ export class CompaniesService {
    * 2. fetch jobs from the database.
    * 4. map job data to job DTO and return.
    */
-  async getCompanyJobs(companyId: string): Promise<GetJobDto[]> {
+  async getCompanyJobs(
+    companyId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetJobDto[]> {
     try {
       const company = await this.companyModel
         .findById(new Types.ObjectId(companyId))
@@ -659,9 +678,12 @@ export class CompaniesService {
       if (!company) {
         throw new NotFoundException('Company not found.');
       }
+      const skip = (page - 1) * limit;
       const jobs = await this.jobModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ posted_at: -1 })
+        .sort({ posted_at: -1, _id: 1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
       return jobs.map(toGetJobDto);
     } catch (error) {
@@ -869,6 +891,8 @@ export class CompaniesService {
   async getCompanyManagers(
     companyId: string,
     userId: string,
+    page: number,
+    limit: number,
   ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
@@ -884,17 +908,17 @@ export class CompaniesService {
       }
       const managers = await this.companyManagerModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1 })
+        .sort({ created_at: -1, _id: 1 })
         .select('manager_id')
         .lean();
       const managerIds = managers.map((manager) => manager.manager_id);
-      console.log(managerIds);
+      const skip = (page - 1) * limit;
       const profiles = await this.profileModel
         .find({ _id: { $in: managerIds } })
         .select('_id first_name last_name profile_picture headline')
+        .skip(skip)
+        .limit(limit)
         .lean();
-      console.log(profiles);
-      console.log(profiles.map(toGetUserDto));
       return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of managers.');
@@ -920,6 +944,8 @@ export class CompaniesService {
   async getCompanyEmployers(
     companyId: string,
     userId: string,
+    page: number,
+    limit: number,
   ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
@@ -935,13 +961,16 @@ export class CompaniesService {
       }
       const employers = await this.companyEmployerModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1 })
+        .sort({ created_at: -1, _id: 1 })
         .select('employer_id')
         .lean();
       const employerIds = employers.map((employer) => employer.employer_id);
+      const skip = (page - 1) * limit;
       const profiles = await this.profileModel
         .find({ _id: { $in: employerIds } })
         .select('_id first_name last_name profile_picture headline')
+        .skip(skip)
+        .limit(limit)
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {

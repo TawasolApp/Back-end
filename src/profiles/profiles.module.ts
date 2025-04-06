@@ -6,7 +6,7 @@ import {
 } from './infrastructure/database/schemas/profile.schema';
 import { ProfileSeeder } from './infrastructure/database/seeders/profile.seeder';
 import { AuthModule } from '../auth/auth.module';
-// import { ProfilesController } from './profiles.controller';
+import { ProfilesController } from './profiles.controller';
 import { ProfilesService } from './profiles.service';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
@@ -40,6 +40,6 @@ import { PostsModule } from '../posts/posts.module';
   ],
   providers: [ProfileSeeder, ProfilesService],
   exports: [ProfileSeeder, MongooseModule],
-  // controllers: [ProfilesController],
+  controllers: [ProfilesController],
 })
 export class ProfilesModule {}
