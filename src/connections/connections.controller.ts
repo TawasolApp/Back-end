@@ -34,6 +34,8 @@ export class ConnectionsController {
   @HttpCode(HttpStatus.OK)
   async searchUsers(
     @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
     @Query('name') name?: string,
     @Query('company') company?: string,
   ) {
@@ -47,7 +49,7 @@ export class ConnectionsController {
     }
     name = name?.trim();
     company = company?.trim();
-    return await this.connectionsService.searchUsers(name, company);
+    return await this.connectionsService.searchUsers(name, company, page, limit);
   }
 
   @Post()
@@ -117,40 +119,57 @@ export class ConnectionsController {
   }
 
   @Get('/list')
-  async getConnections(@Req() request: Request) {
+  async getConnections(
+    @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getConnections(userId);
+    return await this.connectionsService.getConnections(userId, page, limit);
   }
 
   @Get('/pending')
-  async getPendingRequests(@Req() request: Request) {
+  async getPendingRequests(
+    @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getPendingRequests(userId);
+    return await this.connectionsService.getPendingRequests(userId, page, limit);
   }
 
   @Get('/sent')
-  async getSentRequests(@Req() request: Request) {
+  async getSentRequests(
+    @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    const sentRequests = await this.connectionsService.getSentRequests(userId);
+    const sentRequests = await this.connectionsService.getSentRequests(userId, page, limit);
     return sentRequests;
   }
 
   @Get('/recommended')
-  async getRecommendedUsers(@Req() request: Request) {
+  async getRecommendedUsers(
+    @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    const recommendedUsers = await this.connectionsService.getRecommendedUsers(userId);
+    const recommendedUsers =
+      await this.connectionsService.getRecommendedUsers(userId, page, limit);
     return recommendedUsers;
   }
 
@@ -188,21 +207,29 @@ export class ConnectionsController {
   }
 
   @Get('/followers')
-  async getFollowers(@Req() request: Request) {
+  async getFollowers(
+    @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getFollowers(userId);
+    return await this.connectionsService.getFollowers(userId, page, limit);
   }
 
   @Get('/following')
-  async getFollowing(@Req() request: Request) {
+  async getFollowing(
+    @Req() request: Request,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getFollowing(userId);
+    return await this.connectionsService.getFollowing(userId, page, limit);
   }
 
   @Post('/:userId/endorse-skill')

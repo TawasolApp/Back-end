@@ -36,7 +36,7 @@ export class ConnectionsService {
     private readonly profileModel: Model<ProfileDocument>,
   ) {}
 
-  async searchUsers(name?: string, company?: string): Promise<GetUserDto[]> {
+  async searchUsers(name?: string, company?: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const filter: any = {};
       if (name) {
@@ -250,7 +250,7 @@ export class ConnectionsService {
     }
   }
 
-  async getConnections(userId: string): Promise<GetUserDto[]> {
+  async getConnections(userId: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const connections = await this.userConnectionModel
         .find({
@@ -285,7 +285,7 @@ export class ConnectionsService {
     }
   }
 
-  async getPendingRequests(userId: string): Promise<GetUserDto[]> {
+  async getPendingRequests(userId: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const pendingRequests = await this.userConnectionModel
         .find({
@@ -318,7 +318,7 @@ export class ConnectionsService {
     }
   }
 
-  async getSentRequests(userId: string): Promise<GetUserDto[]> {
+  async getSentRequests(userId: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const sentRequests = await this.userConnectionModel
         .find({
@@ -351,7 +351,7 @@ export class ConnectionsService {
     }
   }
 
-  async getRecommendedUsers(userId: string): Promise<GetUserDto[]> {
+  async getRecommendedUsers(userId: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const connections = await this.userConnectionModel
         .find({
@@ -462,7 +462,7 @@ export class ConnectionsService {
     }
   }
 
-  async getFollowers(userId: string): Promise<GetUserDto[]> {
+  async getFollowers(userId: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const pendingRequests = await this.userConnectionModel
         .find({
@@ -492,7 +492,7 @@ export class ConnectionsService {
     }
   }
 
-  async getFollowing(userId: string): Promise<GetUserDto[]> {
+  async getFollowing(userId: string, page?: number, limit?: number): Promise<GetUserDto[]> {
     try {
       const sentRequests = await this.userConnectionModel
         .find({
