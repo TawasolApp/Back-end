@@ -105,11 +105,11 @@ export class AuthService {
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new BadRequestException('Invalid password'); 
+      throw new BadRequestException('Invalid password');
     }
 
     if (!user.isVerified) {
-      throw new ForbiddenException('Email not verified'); 
+      throw new ForbiddenException('Email not verified');
     }
 
     const payload = { sub: user._id, email: user.email, role: user.role };
@@ -201,11 +201,15 @@ export class AuthService {
 
     try {
       const decoded = this.jwtService.verify(refreshToken);
-      const payload = { sub: decoded.sub };
+      const user = await this.userModel.findById(decoded.sub);
 
+      if (!user) throw new NotFoundException('User not found');
+
+      const payload = { sub: user._id, email: user.email, role: user.role };
       const newAccessToken = this.jwtService.sign(payload, {
-        expiresIn: '15m',
+        expiresIn: '1h',
       });
+
       return { token: newAccessToken, refreshToken };
     } catch {
       throw new BadRequestException('Invalid or expired token');
