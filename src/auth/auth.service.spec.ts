@@ -13,6 +13,7 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import axios from 'axios';
+import { Types } from 'mongoose';
 
 jest.mock('axios');
 
@@ -144,12 +145,12 @@ describe('AuthService', () => {
   });
 
   describe('login', () => {
-    it('should return access and refresh tokens for valid credentials', async () => {
+    it('should return access and refresh tokens along with userId for valid credentials', async () => {
       jest.spyOn(userModel, 'findOne').mockResolvedValue({
         email: 'test@example.com',
         password: await bcrypt.hash('password123', 10),
         isVerified: true,
-        _id: 'userId',
+        _id: new Types.ObjectId(), // Mock ObjectId
         role: 'user',
       });
       jest.spyOn(bcrypt, 'compare').mockResolvedValue(true); // Mock valid password
@@ -159,8 +160,11 @@ describe('AuthService', () => {
         password: 'password123',
       });
 
-      expect(result.token).toBe('test-token');
-      expect(result.refreshToken).toBe('test-token');
+      expect(result).toEqual({
+        token: 'test-token',
+        refreshToken: 'test-token',
+        userId: expect.any(Types.ObjectId), // Expect ObjectId
+      });
     });
 
     it('should throw UnauthorizedException for invalid credentials', async () => {

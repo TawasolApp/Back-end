@@ -57,6 +57,12 @@ export class Post {
 
   @Prop({ type: Date, default: () => new Date().toISOString() })
   posted_at: string;
+
+  @Prop({ type: Types.ObjectId, ref: 'Post', default: null })
+  parent_post_id: Types.ObjectId | null;
+
+  @Prop({ default: false })
+  is_silent_repost: boolean;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

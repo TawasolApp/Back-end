@@ -31,7 +31,7 @@ import { JobsModule } from '../jobs/jobs.module';
     ]),
     AuthModule,
     UsersModule,
-    ProfilesModule,
+    forwardRef(() =>ProfilesModule),
     ConnectionsModule,
     forwardRef(() => JobsModule),
     JwtModule.register({

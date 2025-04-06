@@ -11,15 +11,33 @@ import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import {
+  toCreateCertificationSchema,
+  toCreateEducationSchema,
   toCreateProfileSchema,
+  toCreateSkillSchema,
+  toCreateWorkExperienceSchema,
   toGetProfileDto,
+  toUpdateCertificationSchema,
+  toUpdateEducationSchema,
   toUpdateProfileSchema,
 } from './dto/profile.mapper';
+import { EducationDto } from './dto/education.dto';
+import { CertificationDto } from './dto/certification.dto';
+import { WorkExperienceDto } from './dto/work-experience.dto';
+import { CompanyConnection, CompanyConnectionDocument } from '../companies/infrastructure/database/schemas/company-connection.schema';
+import { Company, CompanyDocument } from '../companies/infrastructure/database/schemas/company.schema';
+import { toGetCompanyDto } from '../companies/mappers/company.mapper';
+import { handleError } from '../common/utils/exception-handler';
+import { GetCompanyDto } from '../companies/dtos/get-company.dto';
 
 @Injectable()
 export class ProfilesService {
   constructor(
-    @InjectModel(Profile.name) private profileModel: Model<Profile>,
+    @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
+    @InjectModel(CompanyConnection.name)
+    private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
+    @InjectModel(Company.name)
+        private readonly companyModel: Model<CompanyDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -178,11 +196,12 @@ export class ProfilesService {
     ) {
       throw new ConflictException(`Skill '${skill.skillName}' already exists`);
     }
+    const newSkill = toCreateSkillSchema(skill);
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id) },
       {
         $addToSet: {
-          skills: { skill_name: skill.skillName, endorsements: [] },
+          skills: newSkill,
         },
       },
       { new: true, runValidators: true },
@@ -212,5 +231,319 @@ export class ProfilesService {
       throw new NotFoundException(`Skill '${skillName}' not found in profile`);
     }
     return toGetProfileDto(updatedProfile);
+  }
+
+  async addEducation(education: EducationDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+    const newEducation = toCreateEducationSchema(education);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id) },
+      {
+        $addToSet: {
+          education: newEducation,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Updated Profile not found');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async editEducation(
+    education: Partial<EducationDto>,
+    id: Types.ObjectId,
+    educationId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found 1');
+    }
+    if (
+      !profile.education?.some(
+        (e) => e._id.toString() === educationId.toString(),
+      )
+    ) {
+      throw new NotFoundException(
+        `Education entry with ID ${educationId} not found in profile`,
+      );
+    }
+    const updateData = toUpdateEducationSchema(education);
+    console.log('editEducation service data id: ' + updateData.degree);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(id),
+        'education._id': new Types.ObjectId(educationId),
+      }, // Find profile and specific education entry
+      {
+        $set: {
+          'education.$.school': updateData.school,
+          'education.$.degree': updateData.degree,
+          'education.$.field': updateData.field,
+          'education.$.start_date': updateData.start_date,
+          'education.$.end_date': updateData.end_date,
+          'education.$.grade': updateData.grade,
+          'education.$.description': updateData.description,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    console.log('editEducation service updated profile: ' + updatedProfile);
+    if (!updatedProfile) {
+      throw new NotFoundException('Education not found in profile');
+    }
+
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async deleteEducation(educationId: Types.ObjectId, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'education._id': educationId },
+      { $pull: { education: { _id: educationId } } },
+      { new: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Education not found in profile');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async addCertification(certification: CertificationDto, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const newCertification = toCreateCertificationSchema(certification);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id) },
+      {
+        $addToSet: {
+          certification: newCertification,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Updated Profile not found');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async editCertification(
+    certification: Partial<CertificationDto>, // Assuming you have a CertificationDto
+    id: Types.ObjectId,
+    certificationId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    if (
+      !profile.certification?.some(
+        (c) => c._id.toString() === certificationId.toString(),
+      )
+    ) {
+      throw new NotFoundException(
+        `Certification entry with ID ${certificationId} not found in profile`,
+      );
+    }
+
+    const updateData = toUpdateCertificationSchema(certification); // Assuming you have a similar transformation function
+
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(id),
+        'certification._id': new Types.ObjectId(certificationId),
+      }, // Find profile and specific certification entry
+      {
+        $set: {
+          'certification.$.name': certification.name,
+          'certification.$.company': certification.company,
+          'certification.$.issue_date': certification.issueDate,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    console.log('editCertification service updated profile: ' + updatedProfile);
+    if (!updatedProfile) {
+      throw new NotFoundException('Certification not found in profile');
+    }
+
+    return toGetProfileDto(updatedProfile); // Assuming this function converts the profile to a DTO
+  }
+
+  async deleteCertification(
+    certificationId: Types.ObjectId,
+    id: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'certification._id': certificationId },
+      { $pull: { certification: { _id: certificationId } } },
+      { new: true },
+    );
+    if (!updatedProfile) {
+      throw new NotFoundException('Certification not found in profile');
+    }
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async addWorkExperience(
+    workExperience: WorkExperienceDto,
+    id: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const newWorkExperience = toCreateWorkExperienceSchema(workExperience);
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id) },
+      {
+        $addToSet: {
+          work_experience: newWorkExperience,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+
+    if (!updatedProfile) {
+      throw new NotFoundException('Updated Profile not found');
+    }
+
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async editWorkExperience(
+    workExperience: Partial<WorkExperienceDto>,
+    id: Types.ObjectId,
+    workExperienceId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    if (
+      !profile.work_experience?.some(
+        (we) => we._id.toString() === workExperienceId.toString(),
+      )
+    ) {
+      throw new NotFoundException(
+        `Work experience entry with ID ${workExperienceId} not found in profile`,
+      );
+    }
+
+    console.log('editWorkExperience service title: ' + workExperience.title);
+    // const updateData = toUpdateWorkExperienceSchema(workExperience);
+
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      {
+        _id: new Types.ObjectId(id),
+        'work_experience._id': new Types.ObjectId(workExperienceId),
+      },
+      {
+        $set: {
+          'work_experience.$.title': workExperience.title,
+          'work_experience.$.company': workExperience.company,
+          'work_experience.$.start_date': workExperience.startDate,
+          'work_experience.$.end_date': workExperience.endDate,
+          //'work_experience.$.employment_type': workExperience.employmentType,
+          'work_experience.$.location': workExperience.location,
+          //'work_experience.$.location_type': workExperience.locationType,
+          'work_experience.$.description': workExperience.description,
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    console.log('editWorkExperience service updated profile:  update profile');
+
+    if (!updatedProfile) {
+      throw new NotFoundException('Work experience not found in profile');
+    }
+
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async deleteWorkExperience(
+    workExperienceId: Types.ObjectId,
+    id: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(id), 'work_experience._id': workExperienceId },
+      { $pull: { work_experience: { _id: workExperienceId } } },
+      { new: true },
+    );
+
+    if (!updatedProfile) {
+      throw new NotFoundException('Work experience not found in profile');
+    }
+
+    return toGetProfileDto(updatedProfile);
+  }
+
+  async getFollowedCompanies(id: Types.ObjectId): Promise<GetCompanyDto[]> {
+    try {
+      const connections = await this.companyConnectionModel
+        .find({ user_id: new Types.ObjectId(id) })
+        .sort({ created_at: -1 })
+        .select('company_id')
+        .lean();
+      const followedCompanyIds = connections.map(
+        (connection) => connection.company_id,
+      );
+      const companies = await this.companyModel
+        .find({ _id: { $in: followedCompanyIds } })
+        .select('_id name logo industry followers')
+        .sort({ created_at: -1 })
+        .lean();
+      return companies.map(toGetCompanyDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of followed companies.');
+    }
   }
 }

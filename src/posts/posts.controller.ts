@@ -71,6 +71,32 @@ export class PostsController {
     );
   }
 
+  @Get('search')
+  @HttpCode(HttpStatus.OK)
+  async searchPosts(
+    @Req() req: Request,
+    @Query('q') query: string,
+    @Query('network') network?: string,
+    @Query('timeframe') timeframe?: '24h' | 'week' | 'all',
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
+  ): Promise<GetPostDto[]> {
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+
+    if (!query || query.trim().length === 0) {
+      throw new BadRequestException('Search query (q) is required');
+    }
+
+    return await this.postsService.searchPosts(
+      req.user['sub'],
+      query,
+      network === 'true',
+      timeframe ?? 'all',
+      page,
+      limit,
+    );
+  }
+
   @Get('reactions/:postId')
   @HttpCode(HttpStatus.OK)
   async getReactions(
@@ -202,5 +228,14 @@ export class PostsController {
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     await this.postsService.deleteComment(commentId, req.user['sub']);
+  }
+  @Get(':postId/reposts')
+  @HttpCode(HttpStatus.OK)
+  async getReposts(
+    @Param('postId') postId: string,
+    @Req() req: Request,
+  ): Promise<GetPostDto[]> {
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    return await this.postsService.getRepostsOfPost(postId, req.user['sub']);
   }
 }

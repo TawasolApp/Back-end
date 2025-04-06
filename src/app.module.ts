@@ -17,7 +17,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from './users/users.module';
-import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
+import { MediaModule } from './common/media/media.module';
 
 @Module({
   imports: [
@@ -42,6 +42,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
     AdminModule,
     PaymentsModule,
     UsersModule,
+    MediaModule,
   ],
   controllers: [AppController],
   providers: [AppService],

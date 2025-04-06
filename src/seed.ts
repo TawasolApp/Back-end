@@ -13,6 +13,7 @@ import { ShareSeeder } from './posts/infrastructure/database/seeders/share.seede
 import { JobSeeder } from './jobs/infrastructure/database/seeders/job.seeder';
 import { ApplicationSeeder } from './jobs/infrastructure/database/seeders/application.seeder';
 import { CompanyManagerSeeder } from './companies/infrastructure/database/seeders/company-manager.seeder';
+import { CompanyEmployerSeeder } from './jobs/infrastructure/database/seeders/company-employer.seeder';
 
 async function bootstrap() {
   const app = await NestFactory.createApplicationContext(AppModule);
@@ -29,14 +30,15 @@ async function bootstrap() {
   const shareSeeder = app.get(ShareSeeder);
   const jobSeeder = app.get(JobSeeder);
   const applicationSeeder = app.get(ApplicationSeeder);
+  const companyEmployerSeeder = app.get(CompanyEmployerSeeder);
 
   await userSeeder.clearUsers();
-  await userSeeder.seedUsers(30);
+  await userSeeder.seedUsers(20);
   await profileSeeder.clearProfiles();
   await profileSeeder.seedProfiles();
 
   await userConnectionSeeder.clearUserConnections();
-  await userConnectionSeeder.seedUserConnections(10);
+  await userConnectionSeeder.seedUserConnections(20);
   await profileSeeder.updateConnectionCounts();
 
   await companySeeder.clearCompanies();
@@ -44,19 +46,23 @@ async function bootstrap() {
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(20);
   await companySeeder.updateFollowerCounts();
-  await companyManagerSeeder.clearCompanyManagers()
-  await companyManagerSeeder.seedCompanyManagers(15);
+  await companyManagerSeeder.clearCompanyManagers();
+  await companyManagerSeeder.seedCompanyManagers(10);
   await jobSeeder.clearJobs();
   await jobSeeder.seedJobs(20);
   await applicationSeeder.clearApplications();
   await applicationSeeder.seedApplications(30);
   await jobSeeder.updateApplicantCounts();
+  await companyEmployerSeeder.clearCompanyEmployers();
+  await companyEmployerSeeder.seedCompanyEmployers(10);
 
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();
   await postSeeder.seedPosts(10);
+  await postSeeder.seedReposts(10);
   await commentSeeder.clearComments();
   await commentSeeder.seedComments(15);
+  await commentSeeder.seedReplies(20);
   await reactSeeder.clearReacts();
   await reactSeeder.seedReacts(30);
   await reactSeeder.seedCommentReacts(30);
@@ -67,7 +73,7 @@ async function bootstrap() {
   await postSeeder.updatePostCounts();
   await commentSeeder.updateCommentReactCounts();
   await postSeeder.updateCommentCounts();
-
+  await commentSeeder.updateCommentReplies();
   await app.close();
 }
 

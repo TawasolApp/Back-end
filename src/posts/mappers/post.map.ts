@@ -39,6 +39,7 @@ export function mapPostToDto(
       | null,
     timestamp: post.posted_at,
     isSaved: !!isSaved,
+    isSilentRepost: post.is_silent_repost,
   };
 }
 
@@ -79,6 +80,7 @@ export function mapCommentToDto(
     | 'Insightful'
     | 'Support'
     | null,
+  replies: string[],
 ): GetCommentDto {
   return {
     id: comment._id.toString(),
@@ -89,7 +91,7 @@ export function mapCommentToDto(
     authorBio: authorBio,
     authorType: comment.author_type as 'User' | 'Company',
     content: comment.content,
-    replies: [], // Assuming replies are handled elsewhere
+    replies: replies, // Assuming replies are handled elsewhere
     reactCount: comment.react_count,
     timestamp: comment.commented_at.toISOString(),
     taggedUsers: [], // Assuming tagged users are handled elsewhere

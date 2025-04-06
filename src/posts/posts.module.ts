@@ -1,14 +1,26 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { APP_PIPE } from '@nestjs/core';
 import { MongooseModule } from '@nestjs/mongoose';
-import { Post, PostSchema } from './infrastructure/database/schemas/post.schema';
+import {
+  Post,
+  PostSchema,
+} from './infrastructure/database/schemas/post.schema';
 import {
   Comment,
   CommentSchema,
 } from './infrastructure/database/schemas/comment.schema';
-import { React, ReactSchema } from './infrastructure/database/schemas/react.schema';
-import { Save, SaveSchema } from './infrastructure/database/schemas/save.schema';
-import { Share, ShareSchema } from './infrastructure/database/schemas/share.schema';
+import {
+  React,
+  ReactSchema,
+} from './infrastructure/database/schemas/react.schema';
+import {
+  Save,
+  SaveSchema,
+} from './infrastructure/database/schemas/save.schema';
+import {
+  Share,
+  ShareSchema,
+} from './infrastructure/database/schemas/share.schema';
 import { PostSeeder } from './infrastructure/database/seeders/post.seeder';
 import { CommentSeeder } from './infrastructure/database/seeders/comment.seeder';
 import { ReactSeeder } from './infrastructure/database/seeders/react.seeder';
@@ -30,6 +42,10 @@ import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
 import { JwtModule } from '@nestjs/jwt';
 import { PostsService } from './posts.service';
+import {
+  UserConnection,
+  UserConnectionSchema,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
 
 @Module({
   imports: [
@@ -41,11 +57,13 @@ import { PostsService } from './posts.service';
       { name: Share.name, schema: ShareSchema },
       { name: Company.name, schema: CompanySchema },
       { name: Profile.name, schema: ProfileSchema },
+      { name: UserConnection.name, schema: UserConnectionSchema },
     ]),
     AuthModule,
     CompaniesModule,
-    ProfilesModule,
+    forwardRef(() => ProfilesModule),
     UsersModule,
+
     JwtModule.register({
       secret: process.env.JWT_SECRET,
       signOptions: { expiresIn: '1h' },
@@ -63,7 +81,7 @@ import { PostsService } from './posts.service';
       useClass: ValidationPipe,
     },
   ],
-  exports: [PostSeeder, CommentSeeder, ReactSeeder, SaveSeeder, ShareSeeder],
+  exports: [PostSeeder, CommentSeeder, ReactSeeder, SaveSeeder, ShareSeeder,PostsService],
   controllers: [PostsController],
 })
 export class PostsModule {}

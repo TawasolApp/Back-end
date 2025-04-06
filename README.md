@@ -40,6 +40,10 @@ JWT_SECRET=4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4
 EMAIL_USER=noreply.tawasolapp@gmail.com
 EMAIL_PASS=gknjkmsddprpcanb
 RECAPTCHA_SECRET_KEY=6LdMDv0qAAAAAH2f77XnX3AN3RO01m26yTNTUUWR
+GOOGLE_CLIENT_ID=255166583275-q52g6235gpjiq68u9o23doqcs2sdi9h2.apps.googleusercontent.com
+CLOUDINARY_CLOUD_NAME=dkcwts3fw
+CLOUDINARY_API_KEY=437252129286352
+CLOUDINARY_API_SECRET=31Ms76RsQfKnNiLA12hMLs9UyLs
 ```
 
 ### 4. Run the application:
@@ -97,8 +101,9 @@ npm run test:cov
 Swagger is used for API documentation. Once the backend is running, visit:
 
 ```
-http://localhost:3000/api
+http://localhost:3000/api-docs
 ```
+
 
 ## Commit Format
 

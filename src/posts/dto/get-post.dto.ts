@@ -10,7 +10,7 @@ import {
   IsObject,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Repost } from '../infrastructure/database/schemas/repost.schema';
+import { PostDocument } from '../infrastructure/database/schemas/post.schema';
 
 export class GetPostDto {
   @IsString()
@@ -74,11 +74,14 @@ export class GetPostDto {
   @IsBoolean()
   isSaved: boolean;
 
-  @IsOptional()
-  @ValidateNested()
-  @Type(() => Repost)
-  repostDetails?: Repost;
-
   @IsISO8601()
   timestamp: string; // ISO 8601 format
+
+  @IsOptional()
+  @IsString()
+  parentPost?: GetPostDto; // Optional field for parent post ID
+
+  @IsOptional()
+  @IsBoolean()
+  isSilentRepost?: boolean; // Optional field for silent repost
 }
