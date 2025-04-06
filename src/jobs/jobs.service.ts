@@ -144,6 +144,8 @@ export class JobsService {
   async getJobApplicants(
     userId: string,
     jobId: string,
+    page: number,
+    limit: number,
     name?: string,
   ): Promise<GetUserDto[]> {
     try {
@@ -160,7 +162,7 @@ export class JobsService {
       }
       const applicants = await this.applicationModel
         .find({ job_id: new Types.ObjectId(jobId) })
-        .sort({ applied_at: -1 })
+        .sort({ applied_at: -1, _id: 1 })
         .select('user_id')
         .lean();
       const applicantIds = applicants.map((applicant) => applicant.user_id);
@@ -168,9 +170,13 @@ export class JobsService {
       if (name) {
         filter.name = { $regex: name, $options: 'i' };
       }
+      const skip = (page - 1) * limit;
       const profiles = await this.profileModel
         .find(filter)
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
+        .sort({ _id: 1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
       return profiles.map(toGetUserDto);
     } catch (error) {

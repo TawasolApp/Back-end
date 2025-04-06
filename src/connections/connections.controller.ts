@@ -15,6 +15,7 @@ import {
   ValidationPipe,
   UsePipes,
   Query,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -34,8 +35,8 @@ export class ConnectionsController {
   @HttpCode(HttpStatus.OK)
   async searchUsers(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Query('name') name?: string,
     @Query('company') company?: string,
   ) {
@@ -49,7 +50,12 @@ export class ConnectionsController {
     }
     name = name?.trim();
     company = company?.trim();
-    return await this.connectionsService.searchUsers(page, limit, name, company);
+    return await this.connectionsService.searchUsers(
+      page,
+      limit,
+      name,
+      company,
+    );
   }
 
   @Post()
@@ -121,8 +127,8 @@ export class ConnectionsController {
   @Get('/list')
   async getConnections(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -134,42 +140,53 @@ export class ConnectionsController {
   @Get('/pending')
   async getPendingRequests(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getPendingRequests(userId, page, limit);
+    return await this.connectionsService.getPendingRequests(
+      userId,
+      page,
+      limit,
+    );
   }
 
   @Get('/sent')
   async getSentRequests(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    const sentRequests = await this.connectionsService.getSentRequests(userId, page, limit);
+    const sentRequests = await this.connectionsService.getSentRequests(
+      userId,
+      page,
+      limit,
+    );
     return sentRequests;
   }
 
   @Get('/recommended')
   async getRecommendedUsers(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    const recommendedUsers =
-      await this.connectionsService.getRecommendedUsers(userId, page, limit);
+    const recommendedUsers = await this.connectionsService.getRecommendedUsers(
+      userId,
+      page,
+      limit,
+    );
     return recommendedUsers;
   }
 
@@ -209,8 +226,8 @@ export class ConnectionsController {
   @Get('/followers')
   async getFollowers(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -222,8 +239,8 @@ export class ConnectionsController {
   @Get('/following')
   async getFollowing(
     @Req() request: Request,
-    @Query('page') page: number,
-    @Query('limit') limit: number,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
