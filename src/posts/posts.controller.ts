@@ -101,6 +101,7 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   async getReactions(
     @Param('postId') postId: string,
+    @Query('reactionType') reactionType: string = 'all',
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
@@ -110,6 +111,7 @@ export class PostsController {
       postId,
       page,
       limit,
+      reactionType,
       req.user['sub'],
     );
   }
