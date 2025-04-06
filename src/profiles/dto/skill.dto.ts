@@ -1,6 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {  IsNotEmpty, IsString } from 'class-validator';
-
+import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class SkillDto {
   @ApiPropertyOptional({
@@ -11,5 +10,11 @@ export class SkillDto {
   @IsString()
   skillName: string;
 
- 
+  @ApiPropertyOptional({
+    description: 'Where did you learn this skill? (e.g. work, school, etc.)',
+    example: 'school',
+  })
+  @IsOptional()
+  @IsString()
+  position: string;
 }

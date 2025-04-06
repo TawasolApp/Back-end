@@ -126,6 +126,7 @@ export function toUpdateProfileSchema(
     skills:
       profile.skills?.map((skill) => ({
         skillName: skill?.skill_name ?? null,
+        position: skill?.position ?? null,
         endorsements: skill?.endorsements ?? [],
       })) ?? [],
 

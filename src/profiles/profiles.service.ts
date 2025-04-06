@@ -279,6 +279,33 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
+  async editSkillPosition(
+    skillName: string,
+    position: string,
+    profileId: Types.ObjectId,
+  ) {
+    if (!isValidObjectId(profileId)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+    console.log('editSkillPosition service profileId: ' + position);
+    // Find the profile by profileId and update the specific skill's position
+    const updatedProfile = await this.profileModel.findOneAndUpdate(
+      { _id: new Types.ObjectId(profileId), 'skills.skill_name': skillName }, // Match profileId and skillId in skills array
+      {
+        $set: {
+          'skills.$.position': position, // Update the position of the skill
+        },
+      },
+      { new: true, runValidators: true },
+    );
+    console.log('after editSkillPosition service profileId: ' + position);
+    if (!updatedProfile) {
+      throw new NotFoundException('Profile or Skill not found');
+    }
+
+    return toGetProfileDto(updatedProfile); // Assuming this converts the updated profile to a DTO
+  }
+
   /**
    * Deletes a skill from a user's profile.
    * @param skillName - The skill name to be removed.

@@ -14,6 +14,9 @@ export class Skill {
   @Prop({ required: true })
   skill_name: string;
 
+  @Prop()
+  position: string;
+
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
   endorsements: Types.ObjectId[];
 }
