@@ -56,7 +56,7 @@ export class ConnectionsService {
       const skip = (page - 1) * limit;
       const users = await this.profileModel
         .find(filter)
-        .select('_id name profile_picture headline')
+        .select('_id first_name last_name profile_picture headline')
         .skip(skip)
         .limit(limit)
         .lean();
@@ -364,7 +364,7 @@ export class ConnectionsService {
 
           const profile = await this.profileModel
             .findById(receiverUserId)
-            .select('name profile_picture headline')
+            .select('_id first_name last_name profile_picture headline')
             .lean();
           const userDto = toGetUserDto(profile!);
           userDto.createdAt = connection.created_at;
@@ -520,7 +520,7 @@ export class ConnectionsService {
           const senderUserId = connection.sending_party;
           const profile = await this.profileModel
             .findById(senderUserId)
-            .select('name profile_picture headline')
+            .select('_id first_name last_name profile_picture headline')
             .lean();
           const userDto = toGetUserDto(profile!);
           userDto.createdAt = connection.created_at;
@@ -557,7 +557,7 @@ export class ConnectionsService {
 
           const profile = await this.profileModel
             .findById(receiverUserId)
-            .select('name profile_picture headline')
+            .select('_id first_name last_name profile_picture headline')
             .lean();
           const userDto = toGetUserDto(profile!);
           userDto.createdAt = connection.created_at;
