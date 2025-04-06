@@ -30,5 +30,6 @@ export enum ProfileStatus {
   CONNECTION = 'Connection',
   FOLLOWING = 'Following',
   PENDING = 'Pending',
+  REQUEST = 'Request',
   NULL = 'No Connection',
 }

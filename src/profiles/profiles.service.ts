@@ -120,6 +120,10 @@ export class ProfilesService {
       await getPending(this.userConnectionModel, loggedInUser, id.toString())
     ) {
       profileDto.status = ProfileStatus.PENDING;
+    } else if (
+      await getPending(this.userConnectionModel, id.toString(), loggedInUser)
+    ) {
+      profileDto.status = ProfileStatus.REQUEST;
     } else {
       profileDto.status = ProfileStatus.NULL;
     }
