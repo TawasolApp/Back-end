@@ -470,16 +470,4 @@ export class ProfilesController {
       handleError(error, `Failed to get followed companies.`);
     }
   }
-
-  @Get('/posts/:userId')
-  async getPosts(@Param('userId') userId: string, @Req() req) {
-    try {
-      if (!req.user) {
-        throw new UnauthorizedException('User not authenticated.');
-      }
-      return await this.postsService.getUserPosts(userId, req.user['sub']);
-    } catch (error) {
-      handleError(error, `Failed to get posts.`);
-    }
-  }
 }

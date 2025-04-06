@@ -147,6 +147,7 @@ export function toUpdateProfileSchema(
         _id: cert?._id ?? null,
         name: cert?.name ?? null,
         company: cert?.company ?? null,
+        certificationPicture: cert?.certification_picture ?? null,
         issueDate: cert?.issue_date ?? null,
       })) ?? [],
 
@@ -154,6 +155,7 @@ export function toUpdateProfileSchema(
       profile.work_experience?.map((work) => ({
         _id: work?._id ?? null,
         title: work?.title ?? null,
+        workExperiencePicture: work?.work_experience_picture ?? null,
         company: work?.company ?? null,
         employmentType: work?.employment_type as EmploymentType,
         startDate: work?.start_date?.toISOString() ?? null,
@@ -222,6 +224,7 @@ export function toCreateCertificationSchema(
     name: certificationDto.name,
     company: certificationDto.company,
     issue_date: certificationDto.issueDate,
+    certification_picture: certificationDto.certificationPicture,
   };
 }
 
@@ -236,6 +239,9 @@ export function toUpdateCertificationSchema(
     ...(certificationDto.company && { company: certificationDto.company }),
     ...(certificationDto.issueDate && {
       issue_date: certificationDto.issueDate,
+    }),
+    ...(certificationDto.certificationPicture && {
+      certification_picture: certificationDto.certificationPicture,
     }),
   };
 }
@@ -257,5 +263,6 @@ export function toCreateWorkExperienceSchema(
     location: workExperienceDto.location,
     location_type: workExperienceDto.locationType as LocationType,
     description: workExperienceDto.description,
+    work_experience_picture: workExperienceDto.workExperiencePicture ?? null,
   };
 }

@@ -60,6 +60,9 @@ export class Certification {
   company: string;
 
   @Prop()
+  certification_picture: string;
+
+  @Prop()
   issue_date: Date;
 }
 
@@ -70,6 +73,9 @@ export class WorkExperience {
 
   @Prop({ required: true })
   title: string;
+
+  @Prop()
+  work_experience_picture: string;
 
   @Prop({
     enum: [EmploymentType],
