@@ -12,7 +12,7 @@ import {
 } from '../../../../connections/infrastructure/database/schemas/user-connection.schema';
 import { faker } from '@faker-js/faker';
 import { ConnectionStatus } from '../../../../connections/enums/connection-status.enum';
-import { EmploymentType, LocationType, PlanType, Visibility } from '../enums/profile-enums';
+import { EmploymentType, LocationType, PlanType, Visibility } from '../../../enums/profile-enums';
 
 @Injectable()
 export class ProfileSeeder {
@@ -35,7 +35,8 @@ export class ProfileSeeder {
 
     const profiles: Partial<ProfileDocument>[] = users.map((user) => ({
       _id: user._id,
-      name: `${user.first_name} ${user.last_name}`,
+      first_name: user.first_name,
+      last_name:user.first_name,
       profile_picture: faker.image.avatar(),
       cover_photo: faker.image.url(),
       resume: faker.internet.url(),

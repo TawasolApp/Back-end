@@ -30,8 +30,8 @@ import { PostsService } from 'src/posts/posts.service';
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
-  
-  constructor(private profilesService: ProfilesService,
+  constructor(
+    private profilesService: ProfilesService,
     private readonly postsService: PostsService, // Assuming you have a PostsService for handling posts
   ) {}
 
@@ -73,7 +73,7 @@ export class ProfilesController {
    */
   @Get(':userId')
   @UsePipes(new ValidationPipe())
-  async getProfile(@Req() req,@Param('userId') id: string) {
+  async getProfile(@Req() req, @Param('userId') id: string) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -305,10 +305,7 @@ export class ProfilesController {
 
   @Delete('education/:educationId')
   @UsePipes(new ValidationPipe())
-  async deleteEducation(
-    @Req() req,
-    @Param('educationId') educationId: string,
-  ) {
+  async deleteEducation(@Req() req, @Param('educationId') educationId: string) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -454,7 +451,9 @@ export class ProfilesController {
         throw new UnauthorizedException('User not authenticated.');
       }
 
-      return await this.profilesService.getFollowedCompanies(new Types.ObjectId(userId));
+      return await this.profilesService.getFollowedCompanies(
+        new Types.ObjectId(userId),
+      );
     } catch (error) {
       this.handleException(error, `Failed to get followed companies.`);
     }

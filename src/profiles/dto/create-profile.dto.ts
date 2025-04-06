@@ -1,12 +1,24 @@
-import { IsNotEmpty, IsString, IsOptional, IsArray, ValidateNested, IsEnum, IsBoolean } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { SkillDto } from './skill.dto';
 import { CertificationDto } from './certification.dto';
 import { EducationDto } from './education.dto';
 import { WorkExperienceDto } from './work-experience.dto';
-import {  Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
-
+import {
+  Visibility,
+  EmploymentType,
+  LocationType,
+  PlanType,
+} from '../enums/profile-enums';
 
 // class Education {
 //   @ApiProperty({ description: 'Name of the educational institution', example: 'Harvard University' })
@@ -127,7 +139,10 @@ class PlanDetails {
   @IsString()
   startDate: string;
 
-  @ApiProperty({ description: 'Expiry date of the plan', example: '2023-12-31' })
+  @ApiProperty({
+    description: 'Expiry date of the plan',
+    example: '2023-12-31',
+  })
   @IsNotEmpty()
   @IsString()
   expiryDate: string;
@@ -137,7 +152,10 @@ class PlanDetails {
   @IsBoolean()
   autoRenewal: boolean;
 
-  @ApiPropertyOptional({ description: 'Cancel date of the plan', example: '2023-12-31' })
+  @ApiPropertyOptional({
+    description: 'Cancel date of the plan',
+    example: '2023-12-31',
+  })
   @IsOptional()
   @IsString()
   cancelDate?: string;
@@ -145,43 +163,49 @@ class PlanDetails {
 
 class PlanStatistics {
   @ApiProperty({ description: 'Message count', example: 10 })
-  
   messageCount: number;
 
   @ApiProperty({ description: 'Application count', example: 5 })
-
   applicationCount: number;
 }
 
 export class CreateProfileDto {
-
-  
-  @ApiProperty({ description: 'name', example: 'ziad asar' })
-  @IsNotEmpty()
-  @IsString()
-  name: string;
-
-  @ApiPropertyOptional({ description: 'Profile picture URL', example: 'https://example.com/profile.jpg' })
+  @ApiPropertyOptional({
+    description: 'Profile picture URL',
+    example: 'https://example.com/profile.jpg',
+  })
   @IsOptional()
   @IsString()
   profilePicture?: string;
 
-  @ApiPropertyOptional({ description: 'Cover photo URL', example: 'https://example.com/cover.jpg' })
+  @ApiPropertyOptional({
+    description: 'Cover photo URL',
+    example: 'https://example.com/cover.jpg',
+  })
   @IsOptional()
   @IsString()
   coverPhoto?: string;
 
-  @ApiPropertyOptional({ description: 'Resume URL', example: 'https://example.com/resume.pdf' })
+  @ApiPropertyOptional({
+    description: 'Resume URL',
+    example: 'https://example.com/resume.pdf',
+  })
   @IsOptional()
   @IsString()
   resume?: string;
 
-  @ApiPropertyOptional({ description: 'Headline', example: 'Software Engineer at Google' })
+  @ApiPropertyOptional({
+    description: 'Headline',
+    example: 'Software Engineer at Google',
+  })
   @IsOptional()
   @IsString()
   headline?: string;
 
-  @ApiPropertyOptional({ description: 'Bio', example: 'Passionate about AI and cloud computing' })
+  @ApiPropertyOptional({
+    description: 'Bio',
+    example: 'Passionate about AI and cloud computing',
+  })
   @IsOptional()
   @IsString()
   bio?: string;
@@ -191,7 +215,10 @@ export class CreateProfileDto {
   @IsString()
   location?: string;
 
-  @ApiPropertyOptional({ description: 'Industry', example: 'Computer Software' })
+  @ApiPropertyOptional({
+    description: 'Industry',
+    example: 'Computer Software',
+  })
   @IsOptional()
   @IsString()
   industry?: string;
@@ -203,21 +230,30 @@ export class CreateProfileDto {
   @Type(() => SkillDto)
   skills?: SkillDto[];
 
-  @ApiPropertyOptional({ description: 'Education history', type: [EducationDto] })
+  @ApiPropertyOptional({
+    description: 'Education history',
+    type: [EducationDto],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => EducationDto)
   education?: EducationDto[];
 
-  @ApiPropertyOptional({ description: 'Certifications', type: [CertificationDto] })
+  @ApiPropertyOptional({
+    description: 'Certifications',
+    type: [CertificationDto],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CertificationDto)
   certification?: CertificationDto[];
 
-  @ApiPropertyOptional({ description: 'Work experience', type: [WorkExperienceDto] })
+  @ApiPropertyOptional({
+    description: 'Work experience',
+    type: [WorkExperienceDto],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -232,6 +268,4 @@ export class CreateProfileDto {
   @IsOptional()
   @IsEnum(Visibility)
   visibility?: Visibility;
-
-
 }
