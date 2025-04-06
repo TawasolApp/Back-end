@@ -279,7 +279,7 @@ export class ProfilesController {
       this.handleException(error, 'Failed to add education.');
     }
   }
-
+  
   @Patch('education/:educationId')
   @UsePipes(new ValidationPipe())
   @ApiBody({

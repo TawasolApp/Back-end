@@ -71,6 +71,7 @@ export class GetCommentDto {
     Insightful: number;
     Support: number;
   };
+  
   @IsISO8601()
   timestamp: string;
 

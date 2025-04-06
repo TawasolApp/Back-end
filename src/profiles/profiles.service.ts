@@ -612,7 +612,6 @@ export class ProfilesService {
       handleError(error, 'Failed to retrieve list of followed companies.');
     }
   }
-
   async getUserFirstLastName(id: Types.ObjectId) {
     try {
       const user = await this.userModel

@@ -7,11 +7,8 @@ import { NotFoundException, BadRequestException, ConflictException, forwardRef }
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
 import {  Visibility, EmploymentType, LocationType, PlanType } from './enums/profile-enums';
-
-
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { toGetProfileDto } from './dto/profile.mapper';
-
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { EducationDto } from './dto/education.dto';
