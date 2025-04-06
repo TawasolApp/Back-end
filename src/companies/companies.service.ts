@@ -430,6 +430,7 @@ export class CompaniesService {
       const profiles = await this.profileModel
         .find(filter)
         .select('_id first_name last_name profile_picture headline')
+        .sort({ _id: 1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -916,6 +917,7 @@ export class CompaniesService {
       const profiles = await this.profileModel
         .find({ _id: { $in: managerIds } })
         .select('_id first_name last_name profile_picture headline')
+        .sort({ _id: 1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -969,6 +971,7 @@ export class CompaniesService {
       const profiles = await this.profileModel
         .find({ _id: { $in: employerIds } })
         .select('_id first_name last_name profile_picture headline')
+        .sort({ _id: 1 })
         .skip(skip)
         .limit(limit)
         .lean();
