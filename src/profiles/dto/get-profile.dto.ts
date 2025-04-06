@@ -5,7 +5,7 @@ import { SkillDto } from './skill.dto';
 import { Types } from 'mongoose';
 import { Skill } from '../infrastructure/database/schemas/profile.schema';
 import { CertificationDto } from './certification.dto';
-import { Visibility, EmploymentType, LocationType, PlanType } from '../infrastructure/database/enums/profile-enums';
+import { Visibility, EmploymentType, LocationType, PlanType } from '../enums/profile-enums';
 
 class Education {
     _id: Types.ObjectId;
@@ -160,10 +160,15 @@ export class GetProfileDto {
 
   _id: Types.ObjectId;
   
-  @ApiProperty({ description: 'name', example: 'ziad asar' })
+  @ApiProperty({ description: 'name', example: 'ziad' })
   @IsNotEmpty()
   @IsString()
-  name: string;
+  firstName: string;
+
+  @ApiProperty({ description: 'name', example: 'asar' })
+  @IsNotEmpty()
+  @IsString()
+  lastName: string;
 
   @ApiPropertyOptional({ description: 'Profile picture URL', example: 'https://example.com/profile.jpg' })
   @IsOptional()

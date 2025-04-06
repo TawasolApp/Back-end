@@ -6,7 +6,7 @@ import {  Model, Types } from 'mongoose';
 import { NotFoundException, BadRequestException, ConflictException, forwardRef } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
-import {  Visibility, EmploymentType, LocationType, PlanType } from './infrastructure/database/enums/profile-enums';
+import {  Visibility, EmploymentType, LocationType, PlanType } from './enums/profile-enums';
 
 
 import { CreateProfileDto } from './dto/create-profile.dto';

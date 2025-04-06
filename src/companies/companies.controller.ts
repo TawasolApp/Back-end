@@ -160,8 +160,6 @@ export class CompaniesController {
     return followersDto;
   }
 
-  
-
   @Post('/:companyId/follow')
   @HttpCode(HttpStatus.CREATED)
   async followCompany(
@@ -200,7 +198,8 @@ export class CompaniesController {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
-    return await this.companiesService.getSuggestedCompanies(companyId);
+    const userId = request.user['sub'];
+    return await this.companiesService.getSuggestedCompanies(userId, companyId);
   }
 
   @Get('/:companyId/common')
@@ -301,10 +300,7 @@ export class CompaniesController {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
-    const { newUserId } = addAccessDto;
-    const newManagerId = newUserId;
     validateId(companyId, 'company');
-    validateId(newManagerId, 'user');
     const userId = request.user['sub'];
     const role = request.user['role'];
     if (role !== 'manager') {
@@ -313,7 +309,7 @@ export class CompaniesController {
     await this.companiesService.addCompanyManager(
       userId,
       companyId,
-      newManagerId,
+      addAccessDto,
     );
   }
 
@@ -327,10 +323,7 @@ export class CompaniesController {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated.');
     }
-    const { newUserId } = addAccessDto;
-    const newEmployerId = newUserId;
     validateId(companyId, 'company');
-    validateId(newEmployerId, 'user');
     const userId = request.user['sub'];
     const role = request.user['role'];
     if (role !== 'manager') {
@@ -339,7 +332,7 @@ export class CompaniesController {
     await this.companiesService.addCompanyEmployer(
       userId,
       companyId,
-      newEmployerId,
+      addAccessDto,
     );
   }
 

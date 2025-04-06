@@ -5,7 +5,7 @@ import {
   EmploymentType,
   LocationType,
   PlanType,
-} from '../enums/profile-enums';
+} from '../../../enums/profile-enums';
 
 export type ProfileDocument = Profile & Document;
 
@@ -125,7 +125,10 @@ export class Profile {
   _id: Types.ObjectId;
 
   @Prop({ required: true })
-  name: string;
+  first_name: string;
+
+  @Prop({ required: true })
+  last_name: string;
 
   @Prop()
   profile_picture: string;
