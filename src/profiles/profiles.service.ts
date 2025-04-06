@@ -24,11 +24,27 @@ import {
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
-import { CompanyConnection, CompanyConnectionDocument } from '../companies/infrastructure/database/schemas/company-connection.schema';
-import { Company, CompanyDocument } from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  CompanyConnection,
+  CompanyConnectionDocument,
+} from '../companies/infrastructure/database/schemas/company-connection.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
 import { toGetCompanyDto } from '../companies/mappers/company.mapper';
 import { handleError } from '../common/utils/exception-handler';
 import { GetCompanyDto } from '../companies/dtos/get-company.dto';
+import {
+  getConnection,
+  getFollow,
+  getPending,
+} from '../connections/helpers/connection-helpers';
+import { ProfileStatus } from './infrastructure/database/enums/profile-enums';
+import {
+  UserConnection,
+  UserConnectionDocument,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
 
 @Injectable()
 export class ProfilesService {
@@ -36,8 +52,10 @@ export class ProfilesService {
     @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
     @InjectModel(CompanyConnection.name)
     private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
+    @InjectModel(UserConnection.name)
+    private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(Company.name)
-        private readonly companyModel: Model<CompanyDocument>,
+    private readonly companyModel: Model<CompanyDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -68,7 +86,7 @@ export class ProfilesService {
    * Retrieves a profile by ID.
    * @param id - The profile ID.
    */
-  async getProfile(id: Types.ObjectId) {
+  async getProfile(id: Types.ObjectId, loggedInUser: string) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
@@ -78,7 +96,34 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-    return toGetProfileDto(profile);
+    const profileDto = toGetProfileDto(profile);
+    if (id.toString() === loggedInUser) {
+      profileDto.status = ProfileStatus.ME;
+    } else if (
+      (await getConnection(
+        this.userConnectionModel,
+        id.toString(),
+        loggedInUser,
+      )) ||
+      (await getConnection(
+        this.userConnectionModel,
+        loggedInUser,
+        id.toString(),
+      ))
+    ) {
+      profileDto.status = ProfileStatus.CONNECTION;
+    } else if (
+      await getFollow(this.userConnectionModel, loggedInUser, id.toString())
+    ) {
+      profileDto.status = ProfileStatus.FOLLOWING;
+    } else if (
+      await getPending(this.userConnectionModel, loggedInUser, id.toString())
+    ) {
+      profileDto.status = ProfileStatus.PENDING;
+    } else {
+      profileDto.status = ProfileStatus.NULL;
+    }
+    return profileDto;
   }
   /**
    * Updates an existing profile.

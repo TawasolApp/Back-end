@@ -74,13 +74,17 @@ export class ProfilesController {
    */
   @Get(':id')
   @UsePipes(new ValidationPipe())
-  async getProfile(@Param('id') id: string) {
+  async getProfile(@Req() req, @Param('id') id: string) {
     try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
       if (!Types.ObjectId.isValid(id)) {
         throw new BadRequestException('Invalid profile ID format');
       }
-      return await this.profilesService.getProfile(new Types.ObjectId(id));
+      return await this.profilesService.getProfile(new Types.ObjectId(id), req.user['sub']);
     } catch (error) {
+      console.log(error)
       this.handleException(error, 'Failed to retrieve profile.');
     }
   }
