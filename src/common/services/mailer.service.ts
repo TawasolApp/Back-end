@@ -29,7 +29,7 @@ export class MailerService {
   }
 
   async sendEmailChangeConfirmation(to: string, token: string) {
-    const link = `https://tawasolapp.me/api/user/update-email?token=${token}`;
+    const link = `https://tawasolapp.me/api/users/confirm-email-change?token=${token}`;
     await this.transporter.sendMail({
       to,
       from: '"TawasolApp" <noreply@tawasolapp.com>',
@@ -39,7 +39,7 @@ export class MailerService {
   }
 
   async sendPasswordResetEmail(to: string, token: string) {
-    const resetUrl = `https://tawasolapp.me/api/auth/forgot-password?token=${token}`;
+    const resetUrl = `https://tawasolapp.me/api/auth/reset-password?token=${token}`;
 
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
