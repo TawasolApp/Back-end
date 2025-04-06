@@ -1,47 +1,52 @@
-// import { ProfileDocument } from 'src/profiles/infrastructure/database/schemas/profile.schema';
-// import { GetCommentDto } from '../dto/get-comment.dto';
-// import { GetPostDto } from '../dto/get-post.dto';
-// import { ReactionDto } from '../dto/get-reactions.dto';
-// import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
-// export function mapPostToDto(
-//   post: any,
-//   authorProfile: ProfileDocument | CompanyDocument,
-//   userReactionType: string | null,
-//   isSaved: boolean,
-// ): GetPostDto {
-//   return {
-//     id: post.id.toString(),
-//     authorId: post.author_id.toString(),
-//     authorName: authorProfile.name,
-//     authorPicture:
-//       'profile_picture' in authorProfile
-//         ? authorProfile.profile_picture
-//         : authorProfile.logo,
-//     authorBio:
-//       'description' in authorProfile
-//         ? authorProfile.description
-//         : authorProfile.bio,
-//     content: post.text,
-//     media: post.media,
-//     reactCounts: post.react_count,
-//     comments: post.comment_count,
-//     shares: post.share_count,
-//     taggedUsers: [], // Assuming this is handled elsewhere
-//     visibility: post.visibility as 'Public' | 'Connections' | 'Private',
-//     authorType: post.author_type,
-//     reactType: userReactionType as
-//       | 'Like'
-//       | 'Love'
-//       | 'Funny'
-//       | 'Celebrate'
-//       | 'Insightful'
-//       | 'Support'
-//       | null,
-//     timestamp: post.posted_at,
-//     isSaved: !!isSaved,
-//     isSilentRepost: post.is_silent_repost,
-//   };
-// }
+import { ProfileDocument } from 'src/profiles/infrastructure/database/schemas/profile.schema';
+import { GetCommentDto } from '../dto/get-comment.dto';
+import { GetPostDto } from '../dto/get-post.dto';
+import { ReactionDto } from '../dto/get-reactions.dto';
+import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
+export function mapPostToDto(
+  post: any,
+  authorProfile: ProfileDocument | CompanyDocument,
+  userReactionType: string | null,
+  isSaved: boolean,
+): GetPostDto {
+  return {
+    id: post.id.toString(),
+    authorId: post.author_id.toString(),
+    authorName:
+      'first_name' in authorProfile && 'last_name' in authorProfile
+        ? `${authorProfile.first_name} ${authorProfile.last_name}`
+        : 'name' in authorProfile
+          ? authorProfile.name
+          : 'Unknown',
+    authorPicture:
+      'profile_picture' in authorProfile
+        ? authorProfile.profile_picture
+        : authorProfile.logo,
+    authorBio:
+      'description' in authorProfile
+        ? authorProfile.description
+        : authorProfile.bio,
+    content: post.text,
+    media: post.media,
+    reactCounts: post.react_count,
+    comments: post.comment_count,
+    shares: post.share_count,
+    taggedUsers: [], // Assuming this is handled elsewhere
+    visibility: post.visibility as 'Public' | 'Connections' | 'Private',
+    authorType: post.author_type,
+    reactType: userReactionType as
+      | 'Like'
+      | 'Love'
+      | 'Funny'
+      | 'Celebrate'
+      | 'Insightful'
+      | 'Support'
+      | null,
+    timestamp: post.posted_at,
+    isSaved: !!isSaved,
+    isSilentRepost: post.is_silent_repost,
+  };
+}
 
 // export function mapReactionToDto(
 //   reaction: any,

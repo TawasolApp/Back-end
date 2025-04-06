@@ -44,27 +44,30 @@
 //   let authorName = 'Unknown';
 //   let authorBio = '';
 
-//   if (comment.author_type === 'User') {
-//     authorProfile = await profileModel.findById(comment.author_id).exec();
-//     if (authorProfile) {
-//       authorProfilePicture =
-//         'profile_picture' in authorProfile
-//           ? authorProfile.profile_picture
-//           : undefined;
-//       authorName = authorProfile.name;
-//       authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
-//     }
-//   } else if (comment.author_type === 'Company') {
-//     authorProfile = await companyModel.findById(comment.author_id).exec();
-//     if (authorProfile) {
-//       if ('logo' in authorProfile) {
-//         authorProfilePicture =
-//           'logo' in authorProfile ? authorProfile.logo : undefined;
-//       }
-//       authorName = authorProfile.name;
-//       authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
-//     }
-//   }
+  if (comment.author_type === 'User') {
+    authorProfile = await profileModel.findById(comment.author_id).exec();
+    if (authorProfile) {
+      authorProfilePicture =
+        'profile_picture' in authorProfile
+          ? authorProfile.profile_picture
+          : undefined;
+      authorName =
+        'first_name' in authorProfile && 'last_name' in authorProfile
+          ? `${authorProfile.first_name} ${authorProfile.last_name}`
+          : 'Unknown';
+      authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
+    }
+  } else if (comment.author_type === 'Company') {
+    authorProfile = await companyModel.findById(comment.author_id).exec();
+    if (authorProfile) {
+      if ('logo' in authorProfile) {
+        authorProfilePicture =
+          'logo' in authorProfile ? authorProfile.logo : undefined;
+      }
+      authorName = 'name' in authorProfile ? authorProfile.name : 'Unknown';
+      authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
+    }
+  }
 
 //   let userReactionType:
 //     | 'Like'

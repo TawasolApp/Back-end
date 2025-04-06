@@ -1,39 +1,39 @@
-// import {
-//   BadRequestException,
-//   Body,
-//   Controller,
-//   Delete,
-//   Get,
-//   HttpException,
-//   InternalServerErrorException,
-//   Param,
-//   Patch,
-//   Post,
-//   Req,
-//   UnauthorizedException,
-//   UseGuards,
-//   UsePipes,
-//   ValidationPipe,
-// } from '@nestjs/common';
-// import { ProfilesService } from './profiles.service';
-// import { Types } from 'mongoose';
-// import { UpdateProfileDto } from './dto/update-profile.dto';
-// import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
-// import { CreateProfileDto } from './dto/create-profile.dto';
-// import { SkillDto } from './dto/skill.dto';
-// import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-// import { EducationDto } from './dto/education.dto';
-// import { ApiBody } from '@nestjs/swagger';
-// import { CertificationDto } from './dto/certification.dto';
-// import { WorkExperienceDto } from './dto/work-experience.dto';
-// import { PostsService } from 'src/posts/posts.service';
-// @UseGuards(JwtAuthGuard)
-// @Controller('profile')
-// export class ProfilesController {
-//   constructor(
-//     private profilesService: ProfilesService,
-//     private readonly postsService: PostsService, // Assuming you have a PostsService for handling posts
-//   ) {}
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpException,
+  InternalServerErrorException,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UnauthorizedException,
+  UseGuards,
+  UsePipes,
+  ValidationPipe,
+} from '@nestjs/common';
+import { ProfilesService } from './profiles.service';
+import { Types } from 'mongoose';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
+import { CreateProfileDto } from './dto/create-profile.dto';
+import { SkillDto } from './dto/skill.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { EducationDto } from './dto/education.dto';
+import { ApiBody } from '@nestjs/swagger';
+import { CertificationDto } from './dto/certification.dto';
+import { WorkExperienceDto } from './dto/work-experience.dto';
+import { PostsService } from '../posts/posts.service';
+@UseGuards(JwtAuthGuard)
+@Controller('profile')
+export class ProfilesController {
+  constructor(
+    private profilesService: ProfilesService,
+    private readonly postsService: PostsService, // Assuming you have a PostsService for handling posts
+  ) {}
 
 //   /**
 //    * Handles exceptions and throws an InternalServerErrorException if not already an HTTP exception.

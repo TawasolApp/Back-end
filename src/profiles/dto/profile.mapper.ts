@@ -85,9 +85,11 @@ export function toUpdateProfileSchema(
   updateProfileDto: Partial<UpdateProfileDto>,
 ): Partial<Profile> {
   return {
-    ...(updateProfileDto.firstName && { name: updateProfileDto.firstName }),
+    ...(updateProfileDto.firstName && {
+      first_name: updateProfileDto.firstName,
+    }),
 
-    ...(updateProfileDto.lastName && { name: updateProfileDto.lastName }),
+    ...(updateProfileDto.lastName && { last_name: updateProfileDto.lastName }),
     ...(updateProfileDto.bio && { bio: updateProfileDto.bio }),
     ...(updateProfileDto.location && { location: updateProfileDto.location }),
     ...(updateProfileDto.industry && { industry: updateProfileDto.industry }),
