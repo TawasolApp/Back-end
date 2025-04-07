@@ -310,7 +310,7 @@ export class ProfilesService {
       throw new NotFoundException('Profile or Skill not found');
     }
 
-    return toGetProfileDto(updatedProfile); // Assuming this converts the updated profile to a DTO
+    return toGetProfileDto(updatedProfile);
   }
 
   /**
@@ -453,7 +453,7 @@ export class ProfilesService {
   }
 
   async editCertification(
-    certification: Partial<CertificationDto>, // Assuming you have a CertificationDto
+    certification: Partial<CertificationDto>,
     id: Types.ObjectId,
     certificationId: Types.ObjectId,
   ) {
@@ -476,13 +476,13 @@ export class ProfilesService {
       );
     }
 
-    const updateData = toUpdateCertificationSchema(certification); // Assuming you have a similar transformation function
+    const updateData = toUpdateCertificationSchema(certification);
 
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       {
         _id: new Types.ObjectId(id),
         'certification._id': new Types.ObjectId(certificationId),
-      }, // Find profile and specific certification entry
+      },
       {
         $set: {
           'certification.$.name': certification.name,
@@ -500,7 +500,7 @@ export class ProfilesService {
       throw new NotFoundException('Certification not found in profile');
     }
 
-    return toGetProfileDto(updatedProfile); // Assuming this function converts the profile to a DTO
+    return toGetProfileDto(updatedProfile);
   }
 
   async deleteCertification(
@@ -633,29 +633,6 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
-  async getFollowedCompanies(id: Types.ObjectId): Promise<GetCompanyDto[]> {
-    try {
-      if (!isValidObjectId(id)) {
-        throw new BadRequestException('Invalid profile ID format');
-      }
-      const connections = await this.companyConnectionModel
-        .find({ user_id: new Types.ObjectId(id) })
-        .sort({ created_at: -1 })
-        .select('company_id')
-        .lean();
-      const followedCompanyIds = connections.map(
-        (connection) => connection.company_id,
-      );
-      const companies = await this.companyModel
-        .find({ _id: { $in: followedCompanyIds } })
-        .select('_id name logo industry followers')
-        .sort({ created_at: -1 })
-        .lean();
-      return companies.map(toGetCompanyDto);
-    } catch (error) {
-      handleError(error, 'Failed to retrieve list of followed companies.');
-    }
-  }
   async getUserFirstLastName(id: Types.ObjectId) {
     try {
       const user = await this.userModel
