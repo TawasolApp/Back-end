@@ -372,22 +372,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const pending = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -404,7 +391,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -436,22 +423,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const sent = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -468,7 +442,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -619,22 +593,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const followers = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -651,7 +612,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -680,22 +641,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const following = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -712,7 +660,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
