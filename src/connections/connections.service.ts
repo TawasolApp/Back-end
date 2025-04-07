@@ -276,7 +276,8 @@ export class ConnectionsService {
           ],
           status: ConnectionStatus.Connected,
         })
-        .sort({ created_at: -1, _id: 1 })
+        // .sort({ created_at: -1, _id: 1 })
+        .sort({ _id: -1 })
         .select('sending_party receiving_party created_at')
         .skip(skip)
         .limit(limit)
@@ -315,7 +316,7 @@ export class ConnectionsService {
           receiving_party: new Types.ObjectId(userId),
           status: ConnectionStatus.Pending,
         })
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .select('sending_party receiving_party created_at')
         .skip(skip)
         .limit(limit)
@@ -353,7 +354,7 @@ export class ConnectionsService {
           sending_party: new Types.ObjectId(userId),
           status: ConnectionStatus.Pending,
         })
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .select('sending_party receiving_party created_at')
         .skip(skip)
         .limit(limit)
@@ -513,7 +514,7 @@ export class ConnectionsService {
         })
         .sort({ created_at: -1 })
         .select('sending_party receiving_party created_at')
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -547,7 +548,7 @@ export class ConnectionsService {
           sending_party: new Types.ObjectId(userId),
           status: ConnectionStatus.Following,
         })
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .select('sending_party receiving_party created_at')
         .skip(skip)
         .limit(limit)
