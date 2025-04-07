@@ -65,7 +65,8 @@ export async function getCommentInfo(
           'logo' in authorProfile ? authorProfile.logo : undefined;
       }
       authorName = 'name' in authorProfile ? authorProfile.name : 'Unknown';
-      authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
+      authorBio =
+        'description' in authorProfile ? authorProfile.description : '';
     }
   }
 

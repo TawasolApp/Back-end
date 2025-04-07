@@ -129,9 +129,10 @@ export class CommentSeeder {
     await this.commentModel.insertMany(replies);
     console.log(`${count} replies seeded successfully!`);
   }
-  
+
   async updateCommentReactCounts(): Promise<void> {
     const comments = await this.commentModel.find().exec();
+    let count = 0;
     for (const comment of comments) {
       const reacts = await this.reactModel
         .find({ post_id: comment._id })
@@ -150,14 +151,17 @@ export class CommentSeeder {
       // Update react counts
       for (const react of reacts) {
         comment.react_count[react.react_type]++;
+        count++;
       }
-      console.log(comment);
-      console.log(comment.react_count);
+      // console.log(comment);
+      // console.log(comment.react_count);
 
       // Mark react_count as modified and save the post
       comment.markModified('react_count');
       await comment.save();
     }
+    console.log('Comments react counts updated.');
+    console.log(`Total reacts processed: ${count}`);
   }
 
   async updateCommentReplies(): Promise<void> {

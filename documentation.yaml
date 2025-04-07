@@ -262,6 +262,23 @@ paths:
           required: true
           schema:
             type: string
+        - in: query
+          name: type
+          required: false
+          description: Filter reactions by type or fetch all reactions
+          schema:
+            type: string
+            enum:
+              [
+                'all',
+                'Like',
+                'Love',
+                'Funny',
+                'Celebrate',
+                'Insightful',
+                'Support',
+              ]
+            default: 'all'
       responses:
         '200':
           description: List of reactions
@@ -357,32 +374,6 @@ paths:
           description: Post or user not found
         '500':
           description: Failed to add comment
-
-  /posts/{postId}/reply/{commentId}:
-    post:
-      summary: Reply to a comment
-      security:
-        - BearerAuth: []
-      parameters:
-        - in: path
-          name: postId
-          required: true
-          schema:
-            type: string
-        - in: path
-          name: commentId
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/CreateCommentDto'
-      responses:
-        '201':
-          description: Reply added successfully
 
   /posts/{postId}/reposts:
     get:
@@ -504,108 +495,157 @@ components:
     CreatePostDto:
       type: object
       properties:
-        authorId:
-          type: string
         content:
           type: string
+          example: 'This is a sample post content.'
         media:
           type: array
           items:
             type: string
+            example: 'http://example.com/image.jpg'
         taggedUsers:
           type: array
           items:
             type: string
+            example: '507f1f77bcf86cd799439011'
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
+          example: 'Public'
         parentPostId:
           type: string
+          example: '507f1f77bcf86cd799439012'
         isSilentRepost:
           type: boolean
+          example: false
     GetPostDto:
       type: object
       properties:
         id:
           type: string
+          example: '507f1f77bcf86cd799439013'
         authorId:
           type: string
+          example: '507f1f77bcf86cd799439014'
         authorName:
           type: string
+          example: 'John Doe'
         authorPicture:
           type: string
+          example: 'http://example.com/profile.jpg'
         authorBio:
           type: string
+          example: 'Software Engineer at Example Inc.'
         content:
           type: string
+          example: 'This is a sample post content.'
         media:
           type: array
           items:
             type: string
+            example: 'http://example.com/image.jpg'
         reactCounts:
           type: object
           properties:
             Like:
               type: integer
+              example: 10
             Love:
               type: integer
+              example: 5
             Funny:
               type: integer
+              example: 2
             Celebrate:
               type: integer
+              example: 3
             Insightful:
               type: integer
+              example: 1
             Support:
               type: integer
+              example: 4
         comments:
           type: integer
+          example: 15
         shares:
           type: integer
+          example: 7
         taggedUsers:
           type: array
           items:
             type: string
+            example: '507f1f77bcf86cd799439011'
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
+          example: 'Public'
         authorType:
           type: string
           enum: ['User', 'Company']
+          example: 'User'
         reactType:
           type: string
-          enum:
-            - Like
-            - Love
-            - Funny
-            - Celebrate
-            - Insightful
-            - Support
+          enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support']
+          example: 'Like'
         timestamp:
           type: string
           format: date-time
+          example: '2023-01-01T12:00:00Z'
         isSaved:
           type: boolean
+          example: true
         parentPost:
           $ref: '#/components/schemas/GetPostDto'
-
+          example:
+            id: '507f1f77bcf86cd799439019'
+            authorId: '507f1f77bcf86cd799439014'
+            authorName: 'Jane Doe'
+            authorPicture: 'http://example.com/profile2.jpg'
+            authorBio: 'Product Manager at Example Inc.'
+            content: 'This is a parent post content.'
+            media:
+              - 'http://example.com/parent-image.jpg'
+            reactCounts:
+              Like: 20
+              Love: 10
+              Funny: 5
+              Celebrate: 2
+              Insightful: 3
+              Support: 8
+            comments: 12
+            shares: 4
+            taggedUsers:
+              - '507f1f77bcf86cd799439011'
+            visibility: 'Public'
+            authorType: 'User'
+            reactType: 'Love'
+            timestamp: '2023-01-01T10:00:00Z'
+            isSaved: false
+            isSilentRepost: false
+        isSilentRepost:
+          type: boolean
+          example: false
     EditPostDto:
       type: object
       properties:
-        authorId:
-          type: string
         content:
           type: string
+          example: 'Updated post content.'
         media:
           type: array
           items:
             type: string
+            example: 'http://example.com/updated-image.jpg'
         taggedUsers:
           type: array
           items:
             type: string
+            example: '507f1f77bcf86cd799439011'
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
+          example: 'Connections'
     UpdateReactionsDto:
       type: object
       properties:
@@ -614,95 +654,130 @@ components:
           properties:
             Like:
               type: boolean
+              example: true
             Love:
               type: boolean
+              example: false
             Funny:
               type: boolean
+              example: false
             Celebrate:
               type: boolean
+              example: true
             Insightful:
               type: boolean
+              example: false
             Support:
               type: boolean
+              example: true
         postType:
           type: string
           enum: ['Post', 'Comment']
+          example: 'Post'
     ReactionDto:
       type: object
       properties:
         likeId:
           type: string
+          example: '507f1f77bcf86cd799439015'
         postId:
           type: string
+          example: '507f1f77bcf86cd799439013'
         authorId:
           type: string
+          example: '507f1f77bcf86cd799439014'
         authorType:
           type: string
           enum: ['User', 'Company']
+          example: 'User'
         type:
           type: string
           enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support']
+          example: 'Like'
         authorName:
           type: string
+          example: 'John Doe'
         authorPicture:
           type: string
+          example: 'http://example.com/profile.jpg'
         authorBio:
           type: string
+          example: 'Software Engineer at Example Inc.'
     CreateCommentDto:
       type: object
       properties:
         content:
           type: string
+          example: 'This is a sample comment.'
         tagged:
           type: array
           items:
             type: string
+            example: '507f1f77bcf86cd799439011'
         isReply:
           type: boolean
-
+          example: false
     GetCommentDto:
       type: object
       properties:
         id:
           type: string
+          example: '507f1f77bcf86cd799439016'
         postId:
           type: string
+          example: '507f1f77bcf86cd799439013'
         authorId:
           type: string
+          example: '507f1f77bcf86cd799439014'
         authorName:
           type: string
+          example: 'John Doe'
         authorPicture:
           type: string
+          example: 'http://example.com/profile.jpg'
         authorBio:
           type: string
+          example: 'Software Engineer at Example Inc.'
         authorType:
           type: string
           enum: ['User', 'Company']
+          example: 'User'
         content:
           type: string
-        replies:
+          example: 'This is a sample comment.'
+        repliesCount:
+          type: integer
+          example: 10
+        reactCounts:
+          type: object
+          properties:
+            Like:
+              type: integer
+              example: 10
+            Love:
+              type: integer
+              example: 5
+            Funny:
+              type: integer
+              example: 2
+            Celebrate:
+              type: integer
+              example: 3
+            Insightful:
+              type: integer
+              example: 1
+            Support:
+              type: integer
+              example: 4
+        timestamp:
+          type: string
+          format: date-time
+          example: '2023-01-01T12:00:00Z'
+        taggedUsers:
           type: array
           items:
-            type: object
-            properties:
-              authorId:
-                type: string
-              authorName:
-                type: string
-              authorPicture:
-                type: string
-              authorBio:
-                type: string
-              text:
-                type: string
-              reactCount:
-                type: integer
-              taggedUsers:
-                type: array
-                items:
-                  type: string
-        reactCount:
-          type: integer
+            type: string
+            example: '507f1f77bcf86cd799439011'
         reactType:
           type: string
           enum:
@@ -713,33 +788,6 @@ components:
               'Celebrate',
               'Insightful',
               'Support',
-              'null',
+              null,
             ]
-        timestamp:
-          type: string
-          format: date-time
-        taggedUsers:
-          type: array
-          items:
-            type: string
-    Repost:
-      type: object
-      properties:
-        authorId:
-          type: string
-        postId:
-          type: string
-        content:
-          type: string
-          nullable: true
-        taggedUsers:
-          type: array
-          items:
-            type: string
-          nullable: true
-        visibility:
-          type: string
-          enum: ['Public', 'Connections', 'Private']
-        authorType:
-          type: string
-          enum: ['User', 'Company']
+          example: 'Like'

@@ -9,30 +9,6 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-class ReplyDto {
-  @IsString()
-  authorId: string;
-
-  @IsString()
-  authorName: string;
-
-  @IsString()
-  authorPicture: string;
-
-  @IsString()
-  authorBio: string;
-
-  @IsString()
-  text: string;
-
-  @IsInt()
-  reactCount: number;
-
-  @IsArray()
-  @IsString({ each: true })
-  taggedUsers: string[];
-}
-
 export class GetCommentDto {
   @IsString()
   id: string;
@@ -71,7 +47,7 @@ export class GetCommentDto {
     Insightful: number;
     Support: number;
   };
-  
+
   @IsISO8601()
   timestamp: string;
 

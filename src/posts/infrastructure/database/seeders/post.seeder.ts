@@ -153,6 +153,7 @@ export class PostSeeder {
 
   async updatePostCounts() {
     const posts = await this.postModel.find().exec();
+    let count = 0;
     for (const post of posts) {
       const reacts = await this.reactModel.find({ post_id: post._id }).exec();
 
@@ -169,14 +170,17 @@ export class PostSeeder {
       // Update react counts
       for (const react of reacts) {
         post.react_count[react.react_type]++;
+        count++;
       }
-      console.log(post);
-      console.log(post.react_count);
+      // console.log(post);
+      // console.log(post.react_count);
 
       // Mark react_count as modified and save the post
       post.markModified('react_count');
       await post.save();
     }
+    console.log('Post react counts updated.');
+    console.log(`Total reacts processed: ${count}`);
   }
 
   async updateCommentCounts(): Promise<void> {
