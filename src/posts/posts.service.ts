@@ -934,6 +934,14 @@ export class PostsService {
         );
       }
 
+      let post = await this.postModel.findById(comment.post_id).exec();
+
+      if (!post) {
+        throw new NotFoundException('Post not found');
+      }
+      post.comment_count--;
+      await post.save();
+
       await this.reactModel
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
