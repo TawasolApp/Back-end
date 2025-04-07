@@ -76,7 +76,7 @@ export class ConnectionsController {
   }
 
   @Delete('/:userId/pending')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   async removeRequest(
     @Param('userId') receivingUserId: string,
     @Req() request: Request,
@@ -86,10 +86,7 @@ export class ConnectionsController {
     }
     validateId(receivingUserId, 'user');
     const sendingUserId = request.user['sub'];
-    return await this.connectionsService.removeRequest(
-      sendingUserId,
-      receivingUserId,
-    );
+    await this.connectionsService.removeRequest(sendingUserId, receivingUserId);
   }
 
   @Patch('/:userId')
@@ -104,7 +101,7 @@ export class ConnectionsController {
     }
     validateId(sendingUserId, 'user');
     const receivingUserId = request.user['sub'];
-    return await this.connectionsService.updateConnection(
+    await this.connectionsService.updateConnection(
       sendingUserId,
       receivingUserId,
       updateRequestDto,

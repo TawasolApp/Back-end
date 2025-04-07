@@ -129,10 +129,7 @@ export class ConnectionsService {
     }
   }
 
-  async removeRequest(
-    sendingParty: string,
-    receivingParty: string,
-  ): Promise<GetUserDto[]> {
+  async removeRequest(sendingParty: string, receivingParty: string) {
     try {
       const exisitngUser = await this.profileModel
         .findById(new Types.ObjectId(receivingParty))
@@ -151,22 +148,16 @@ export class ConnectionsService {
         );
       }
       await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
-      return this.getPendingRequests(
-        sendingParty,
-        1,
-        ConnectionsService.MAX_LIMIT,
-        1,
-        -1,
-      );
     } catch (error) {
       handleError(error, 'Failed to remove pending request.');
     }
   }
+
   async updateConnection(
     sendingParty: string,
     receivingParty: string,
     updateRequestDto: UpdateRequestDto,
-  ): Promise<GetUserDto[]> {
+  ) {
     try {
       const exisitngUser = await this.profileModel
         .findById(new Types.ObjectId(sendingParty))
@@ -211,13 +202,6 @@ export class ConnectionsService {
         });
         await newFollow.save();
       }
-      return this.getPendingRequests(
-        receivingParty,
-        1,
-        ConnectionsService.MAX_LIMIT,
-        1,
-        -1,
-      );
     } catch (error) {
       handleError(error, 'Failed to update connection request status.');
     }
