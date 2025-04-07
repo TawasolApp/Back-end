@@ -18,7 +18,6 @@ import {
   toCreateWorkExperienceSchema,
   toGetProfileDto,
   toUpdateCertificationSchema,
-  toUpdateEducationSchema,
   toUpdateProfileSchema,
 } from './dto/profile.mapper';
 import { EducationDto } from './dto/education.dto';
@@ -379,8 +378,8 @@ export class ProfilesService {
         `Education entry with ID ${educationId} not found in profile`,
       );
     }
-    const updateData = toUpdateEducationSchema(education);
-    console.log('editEducation service data id: ' + updateData.degree);
+
+    console.log('editEducation service data id: ' + education.degree);
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       {
         _id: new Types.ObjectId(id),
@@ -388,13 +387,13 @@ export class ProfilesService {
       }, // Find profile and specific education entry
       {
         $set: {
-          'education.$.school': updateData.school,
-          'education.$.degree': updateData.degree,
-          'education.$.field': updateData.field,
-          'education.$.start_date': updateData.start_date,
-          'education.$.end_date': updateData.end_date,
-          'education.$.grade': updateData.grade,
-          'education.$.description': updateData.description,
+          'education.$.school': education.school,
+          'education.$.degree': education.degree,
+          'education.$.field': education.field,
+          'education.$.start_date': education.startDate,
+          'education.$.end_date': education.endDate,
+          'education.$.grade': education.grade,
+          'education.$.description': education.description,
         },
       },
       { new: true, runValidators: true },
