@@ -64,6 +64,9 @@ export class Certification {
 
   @Prop()
   issue_date: Date;
+
+  @Prop()
+  expiry_date: Date;
 }
 
 @Schema({ _id: false })
