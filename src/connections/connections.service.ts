@@ -29,9 +29,12 @@ import {
 } from './helpers/connection-helpers';
 import { AddEndoresementDto } from './dtos/add-endorsement.dto';
 import { getSortData } from './helpers/sort-helper';
+import { getSortData } from './helpers/sort-helper';
 
 @Injectable()
 export class ConnectionsService {
+  static readonly MAX_LIMIT: number = 1000000;
+
   static readonly MAX_LIMIT: number = 1000000;
 
   constructor(
@@ -168,6 +171,14 @@ export class ConnectionsService {
       } else if (existingIgnored) {
         await this.userConnectionModel.findByIdAndDelete(existingIgnored._id);
       }
+      await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
+      return this.getPendingRequests(
+        sendingParty,
+        1,
+        ConnectionsService.MAX_LIMIT,
+        1,
+        -1,
+      );
     } catch (error) {
       handleError(error, 'Failed to remove pending request.');
     }
@@ -222,6 +233,13 @@ export class ConnectionsService {
         });
         await newFollow.save();
       }
+      return this.getPendingRequests(
+        receivingParty,
+        1,
+        ConnectionsService.MAX_LIMIT,
+        1,
+        -1,
+      );
     } catch (error) {
       handleError(error, 'Failed to update connection request status.');
     }
@@ -286,40 +304,79 @@ export class ConnectionsService {
     limit: number,
     by: number,
     direction: number,
+    by: number,
+    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const connections = await this.userConnectionModel
-        .find({
-          $or: [
-            { sending_party: new Types.ObjectId(userId) },
-            { receiving_party: new Types.ObjectId(userId) },
-          ],
-          status: ConnectionStatus.Connected,
-        })
-        // .sort({ created_at: -1, _id: 1 })
-        .sort({ _id: -1 })
-        .select('sending_party receiving_party created_at')
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      const usersDto = await Promise.all(
-        connections.map(async (connection) => {
-          const otherUserId = connection.sending_party.equals(
-            new Types.ObjectId(userId),
-          )
-            ? connection.receiving_party
-            : connection.sending_party;
-          const profile = await this.profileModel
-            .findById(otherUserId)
-            .select('_id first_name last_name profile_picture headline')
-            .lean();
-          const userDto = toGetUserDto(profile!);
-          userDto.createdAt = connection.created_at;
-          return userDto;
-        }),
-      );
-      return usersDto;
+      const params = getSortData(by, direction);
+      const field = Object.keys(params)[0];
+      const dir = params[field];
+
+      let sort: Record<string, 1 | -1> = {};
+      if (field === 'created_at') {
+        sort['created_at'] = dir;
+      } else {
+        sort[`profile.${field}`] = dir;
+      }
+      const connections = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            $or: [
+              { sending_party: new Types.ObjectId(userId) },
+              { receiving_party: new Types.ObjectId(userId) },
+            ],
+            status: ConnectionStatus.Connected,
+          },
+        },
+        {
+          $addFields: {
+            other_user: {
+              $cond: [
+                { $eq: ['$sending_party', new Types.ObjectId(userId)] },
+                '$receiving_party',
+                '$sending_party',
+              ],
+            },
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'other_user',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        {
+          $unwind: '$profile',
+        },
+        {
+          $sort: sort,
+        },
+        {
+          $skip: skip,
+        },
+        {
+          $limit: limit,
+        },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return connections.map(toGetUserDto);
+      return connections.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
     } catch (error) {
       handleError(error, 'Failed to retrieve list of connections.');
     }
@@ -329,32 +386,58 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
+    by: number,
+    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const pendingRequests = await this.userConnectionModel
-        .find({
-          receiving_party: new Types.ObjectId(userId),
-          status: ConnectionStatus.Pending,
-        })
-        .sort({ created_at: -1, _id: -1 })
-        .select('sending_party receiving_party created_at')
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      const usersDto = await Promise.all(
-        pendingRequests.map(async (connection) => {
-          const senderUserId = connection.sending_party;
-          const profile = await this.profileModel
-            .findById(senderUserId)
-            .select('_id first_name last_name profile_picture headline')
-            .lean();
-          const userDto = toGetUserDto(profile!);
-          userDto.createdAt = connection.created_at;
-          return userDto;
-        }),
-      );
-      return usersDto;
+      const params = getSortData(by, direction);
+      const field = Object.keys(params)[0];
+      const dir = params[field];
+
+      let sort: Record<string, 1 | -1> = {};
+      if (field === 'created_at') {
+        sort['created_at'] = dir;
+      } else {
+        sort[`profile.${field}`] = dir;
+      }
+
+      const pending = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            receiving_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Pending,
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'sending_party',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return pending.map(toGetUserDto);
+      return pending.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
     } catch (error) {
       handleError(
         error,
@@ -367,33 +450,58 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
+    by: number,
+    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const sentRequests = await this.userConnectionModel
-        .find({
-          sending_party: new Types.ObjectId(userId),
-          status: ConnectionStatus.Pending,
-        })
-        .sort({ created_at: -1, _id: -1 })
-        .select('sending_party receiving_party created_at')
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      const usersDto = await Promise.all(
-        sentRequests.map(async (connection) => {
-          const receiverUserId = connection.receiving_party;
+      const params = getSortData(by, direction);
+      const field = Object.keys(params)[0];
+      const dir = params[field];
 
-          const profile = await this.profileModel
-            .findById(receiverUserId)
-            .select('_id first_name last_name profile_picture headline')
-            .lean();
-          const userDto = toGetUserDto(profile!);
-          userDto.createdAt = connection.created_at;
-          return userDto;
-        }),
-      );
-      return usersDto;
+      let sort: Record<string, 1 | -1> = {};
+      if (field === 'created_at') {
+        sort['created_at'] = dir;
+      } else {
+        sort[`profile.${field}`] = dir;
+      }
+
+      const sent = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            sending_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Pending,
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'receiving_party',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return sent.map(toGetUserDto);
+      return sent.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
     } catch (error) {
       handleError(
         error,
@@ -401,6 +509,87 @@ export class ConnectionsService {
       );
     }
   }
+
+  // async getPendingRequests(
+  //   userId: string,
+  //   page: number,
+  //   limit: number,
+  //   by: number,
+  //   direction: number,
+  // ): Promise<GetUserDto[]> {
+  //   try {
+  //     const skip = (page - 1) * limit;
+  //     const pendingRequests = await this.userConnectionModel
+  //       .find({
+  //         receiving_party: new Types.ObjectId(userId),
+  //         status: ConnectionStatus.Pending,
+  //       })
+  //       .sort({ created_at: -1, _id: -1 })
+  //       .select('sending_party receiving_party created_at')
+  //       .skip(skip)
+  //       .limit(limit)
+  //       .lean();
+  //     const usersDto = await Promise.all(
+  //       pendingRequests.map(async (connection) => {
+  //         const senderUserId = connection.sending_party;
+  //         const profile = await this.profileModel
+  //           .findById(senderUserId)
+  //           .select('_id first_name last_name profile_picture headline')
+  //           .lean();
+  //         const userDto = toGetUserDto(profile!);
+  //         userDto.createdAt = connection.created_at;
+  //         return userDto;
+  //       }),
+  //     );
+  //     return usersDto;
+  //   } catch (error) {
+  //     handleError(
+  //       error,
+  //       'Failed to retrieve list of pending connection requests.',
+  //     );
+  //   }
+  // }
+
+  // async getSentRequests(
+  //   userId: string,
+  //   page: number,
+  //   limit: number,
+  //   by: number,
+  //   direction: number,
+  // ): Promise<GetUserDto[]> {
+  //   try {
+  //     const skip = (page - 1) * limit;
+  //     const sentRequests = await this.userConnectionModel
+  //       .find({
+  //         sending_party: new Types.ObjectId(userId),
+  //         status: ConnectionStatus.Pending,
+  //       })
+  //       .sort({ created_at: -1, _id: -1 })
+  //       .select('sending_party receiving_party created_at')
+  //       .skip(skip)
+  //       .limit(limit)
+  //       .lean();
+  //     const usersDto = await Promise.all(
+  //       sentRequests.map(async (connection) => {
+  //         const receiverUserId = connection.receiving_party;
+
+  //         const profile = await this.profileModel
+  //           .findById(receiverUserId)
+  //           .select('_id first_name last_name profile_picture headline')
+  //           .lean();
+  //         const userDto = toGetUserDto(profile!);
+  //         userDto.createdAt = connection.created_at;
+  //         return userDto;
+  //       }),
+  //     );
+  //     return usersDto;
+  //   } catch (error) {
+  //     handleError(
+  //       error,
+  //       'Failed to retrieve list of sent connection requests.',
+  //     );
+  //   }
+  // }
 
   async getRecommendedUsers(
     userId: string,
@@ -525,33 +714,58 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
+    by: number,
+    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const pendingRequests = await this.userConnectionModel
-        .find({
-          receiving_party: new Types.ObjectId(userId),
-          status: ConnectionStatus.Following,
-        })
-        .sort({ created_at: -1 })
-        .select('sending_party receiving_party created_at')
-        .sort({ created_at: -1, _id: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      const usersDto = await Promise.all(
-        pendingRequests.map(async (connection) => {
-          const senderUserId = connection.sending_party;
-          const profile = await this.profileModel
-            .findById(senderUserId)
-            .select('_id first_name last_name profile_picture headline')
-            .lean();
-          const userDto = toGetUserDto(profile!);
-          userDto.createdAt = connection.created_at;
-          return userDto;
-        }),
-      );
-      return usersDto;
+      const params = getSortData(by, direction);
+      const field = Object.keys(params)[0];
+      const dir = params[field];
+
+      let sort: Record<string, 1 | -1> = {};
+      if (field === 'created_at') {
+        sort['created_at'] = dir;
+      } else {
+        sort[`profile.${field}`] = dir;
+      }
+
+      const followers = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            receiving_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Following,
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'sending_party',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return followers.map(toGetUserDto);
+      return followers.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followers.');
     }
@@ -561,35 +775,60 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
+    by: number,
+    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const sentRequests = await this.userConnectionModel
-        .find({
-          sending_party: new Types.ObjectId(userId),
-          status: ConnectionStatus.Following,
-        })
-        .sort({ created_at: -1, _id: -1 })
-        .select('sending_party receiving_party created_at')
-        .skip(skip)
-        .limit(limit)
-        .lean();
+      const params = getSortData(by, direction);
+      const field = Object.keys(params)[0];
+      const dir = params[field];
 
-      const usersDto = await Promise.all(
-        sentRequests.map(async (connection) => {
-          const receiverUserId = connection.receiving_party;
+      let sort: Record<string, 1 | -1> = {};
+      if (field === 'created_at') {
+        sort['created_at'] = dir;
+      } else {
+        sort[`profile.${field}`] = dir;
+      }
 
-          const profile = await this.profileModel
-            .findById(receiverUserId)
-            .select('_id first_name last_name profile_picture headline')
-            .lean();
-          const userDto = toGetUserDto(profile!);
-          userDto.createdAt = connection.created_at;
-          return userDto;
-        }),
-      );
-      return usersDto;
+      const following = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            sending_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Following,
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'receiving_party',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: sort },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return following.map(toGetUserDto);
+      return following.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
     } catch (error) {
+      handleError(error, 'Failed to retrieve list of followed users.');
       handleError(error, 'Failed to retrieve list of followed users.');
     }
   }
