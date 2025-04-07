@@ -76,7 +76,7 @@ export class ConnectionsController {
   }
 
   @Delete('/:userId/pending')
-  @HttpCode(HttpStatus.OK)
+  @HttpCode(HttpStatus.NO_CONTENT)
   async removeRequest(
     @Param('userId') receivingUserId: string,
     @Req() request: Request,

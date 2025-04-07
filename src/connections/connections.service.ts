@@ -172,13 +172,6 @@ export class ConnectionsService {
         await this.userConnectionModel.findByIdAndDelete(existingIgnored._id);
       }
       await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
-      return this.getPendingRequests(
-        sendingParty,
-        1,
-        ConnectionsService.MAX_LIMIT,
-        1,
-        -1,
-      );
     } catch (error) {
       handleError(error, 'Failed to remove pending request.');
     }
@@ -233,13 +226,6 @@ export class ConnectionsService {
         });
         await newFollow.save();
       }
-      return this.getPendingRequests(
-        receivingParty,
-        1,
-        ConnectionsService.MAX_LIMIT,
-        1,
-        -1,
-      );
     } catch (error) {
       handleError(error, 'Failed to update connection request status.');
     }
