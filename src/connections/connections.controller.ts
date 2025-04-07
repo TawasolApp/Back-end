@@ -16,6 +16,7 @@ import {
   UsePipes,
   Query,
   ParseIntPipe,
+  DefaultValuePipe,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -129,12 +130,21 @@ export class ConnectionsController {
     @Req() request: Request,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('by', new DefaultValuePipe(1), ParseIntPipe) by: number,
+    @Query('direction', new DefaultValuePipe(1), ParseIntPipe)
+    direction: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getConnections(userId, page, limit);
+    return await this.connectionsService.getConnections(
+      userId,
+      page,
+      limit,
+      by,
+      direction,
+    );
   }
 
   @Get('/pending')
@@ -142,6 +152,9 @@ export class ConnectionsController {
     @Req() request: Request,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('by', new DefaultValuePipe(1), ParseIntPipe) by: number,
+    @Query('direction', new DefaultValuePipe(1), ParseIntPipe)
+    direction: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -151,6 +164,8 @@ export class ConnectionsController {
       userId,
       page,
       limit,
+      by,
+      direction,
     );
   }
 
@@ -159,6 +174,9 @@ export class ConnectionsController {
     @Req() request: Request,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('by', new DefaultValuePipe(1), ParseIntPipe) by: number,
+    @Query('direction', new DefaultValuePipe(1), ParseIntPipe)
+    direction: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
@@ -168,6 +186,8 @@ export class ConnectionsController {
       userId,
       page,
       limit,
+      by,
+      direction,
     );
     return sentRequests;
   }
@@ -228,12 +248,21 @@ export class ConnectionsController {
     @Req() request: Request,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('by', new DefaultValuePipe(1), ParseIntPipe) by: number,
+    @Query('direction', new DefaultValuePipe(1), ParseIntPipe)
+    direction: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getFollowers(userId, page, limit);
+    return await this.connectionsService.getFollowers(
+      userId,
+      page,
+      limit,
+      by,
+      direction,
+    );
   }
 
   @Get('/following')
@@ -241,12 +270,21 @@ export class ConnectionsController {
     @Req() request: Request,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
+    @Query('by', new DefaultValuePipe(1), ParseIntPipe) by: number,
+    @Query('direction', new DefaultValuePipe(1), ParseIntPipe)
+    direction: number,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
     const userId = request.user['sub'];
-    return await this.connectionsService.getFollowing(userId, page, limit);
+    return await this.connectionsService.getFollowing(
+      userId,
+      page,
+      limit,
+      by,
+      direction,
+    );
   }
 
   @Post('/:userId/endorse-skill')
