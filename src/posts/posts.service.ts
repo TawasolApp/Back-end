@@ -486,12 +486,14 @@ export class PostsService {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
+              post.markModified('react_count');
               await post.save();
             }
 
             if (comment) {
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
+              comment.markModified('react_count');
               comment.markModified('react_count');
               await comment.save();
             }
@@ -504,6 +506,7 @@ export class PostsService {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
+              post.markModified('react_count');
               await post.save();
             }
 
@@ -512,6 +515,7 @@ export class PostsService {
                 (comment.react_count[existingReaction.react_type] || 1) - 1;
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
+              comment.markModified('react_count');
               comment.markModified('react_count');
               await comment.save();
             }
@@ -551,6 +555,12 @@ export class PostsService {
         }
       }
 
+      if (post) {
+        return post;
+      }
+      if (comment) {
+        return comment;
+      }
       if (post) {
         return post;
       }
@@ -697,11 +707,16 @@ export class PostsService {
     limit: number,
   ): Promise<GetPostDto[]> {
     const offset = (page - 1) * limit;
+  async getSavedPosts(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetPostDto[]> {
+    const offset = (page - 1) * limit;
     try {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
         .skip(offset)
-        .sort({ saved_at: -1 })
         .limit(limit)
         .exec();
 
@@ -906,6 +921,9 @@ export class PostsService {
       const comment = await this.commentModel.findById(
         new Types.ObjectId(commentId),
       );
+      const comment = await this.commentModel.findById(
+        new Types.ObjectId(commentId),
+      );
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
@@ -916,23 +934,6 @@ export class PostsService {
         );
       }
 
-      let post = await this.postModel.findById(comment.post_id).exec();
-      let parentComment = await this.commentModel
-        .findById(comment.post_id)
-        .exec();
-      if (!post && !parentComment) {
-        throw new NotFoundException('Parent not found');
-      }
-      if (post) {
-        post.comment_count--;
-        await post.save();
-      }
-      if (parentComment) {
-        parentComment.replies = parentComment.replies.filter(
-          (reply) => reply.toString() !== commentId,
-        );
-        await parentComment.save();
-      }
       await this.reactModel
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
@@ -1065,7 +1066,10 @@ export class PostsService {
     userId: string,
     page: number,
     limit: number,
+    page: number,
+    limit: number,
   ): Promise<GetPostDto[]> {
+    const offset = (page - 1) * limit;
     const offset = (page - 1) * limit;
     try {
       if (!Types.ObjectId.isValid(postId)) {
@@ -1122,6 +1126,8 @@ export class PostsService {
           ],
         })
         .sort({ posted_at: -1 })
+        .skip(offset)
+        .limit(limit)
         .skip(offset)
         .limit(limit)
         .exec();
