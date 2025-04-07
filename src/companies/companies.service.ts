@@ -418,16 +418,6 @@ export class CompaniesService {
       if (!company) {
         throw new NotFoundException('Company not found.');
       }
-      const followers = await this.companyConnectionModel
-        .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: -1 })
-        .select('user_id')
-        .lean();
-      const followerIds = followers.map((follower) => follower.user_id);
-      const filter: any = { _id: { $in: followerIds } };
-      if (name) {
-        filter.name = { $regex: name, $options: 'i' };
-      }
       const skip = (page - 1) * limit;
       const followers = await this.companyConnectionModel.aggregate([
         {
@@ -993,12 +983,6 @@ export class CompaniesService {
           'Logged in user does not have management access to this company.',
         );
       }
-      const managers = await this.companyManagerModel
-        .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: -1 })
-        .select('manager_id')
-        .lean();
-      const managerIds = managers.map((manager) => manager.manager_id);
       const skip = (page - 1) * limit;
       const managers = await this.companyManagerModel.aggregate([
         {
@@ -1068,12 +1052,6 @@ export class CompaniesService {
           'Logged in user does not have management access to this company.',
         );
       }
-      const employers = await this.companyEmployerModel
-        .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: -1 })
-        .select('employer_id')
-        .lean();
-      const employerIds = employers.map((employer) => employer.employer_id);
       const skip = (page - 1) * limit;
       const employers = await this.companyEmployerModel.aggregate([
         {
