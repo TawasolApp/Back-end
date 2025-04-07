@@ -33,4 +33,11 @@ export class CertificationDto {
   })
   @IsOptional()
   issueDate: Date;
+
+  @ApiProperty({
+    example: '2024-06-15T00:00:00.000Z',
+    description: 'The date when the certification expires.',
+  })
+  @IsOptional()
+  expiryDate: Date;
 }

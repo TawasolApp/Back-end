@@ -153,6 +153,7 @@ export function toUpdateProfileSchema(
         company: cert?.company ?? null,
         certificationPicture: cert?.certification_picture ?? null,
         issueDate: cert?.issue_date ?? null,
+        expiryDate: cert?.expiry_date ?? null,
       })) ?? [],
 
     workExperience:

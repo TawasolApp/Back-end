@@ -487,6 +487,7 @@ export class ProfilesService {
           'certification.$.name': certification.name,
           'certification.$.company': certification.company,
           'certification.$.issue_date': certification.issueDate,
+          'certification.$.expiry_date': certification.expiryDate,
           'certification.$.certification_picture':
             certification.certificationPicture,
         },
