@@ -647,12 +647,15 @@ export class PostsService {
     userId: string,
   ): Promise<{ message: string }> {
     try {
+      console.log('Unsave post:', postId, userId);
       const savedPost = await this.saveModel
         .findOneAndDelete({
-          post_id: postId,
-          user_id: userId,
+          post_id: new Types.ObjectId(postId),
+          user_id: new Types.ObjectId(userId),
         })
         .exec();
+
+      console.log('savedPost:', savedPost);
 
       if (!savedPost) {
         throw new NotFoundException('Saved post not found');
@@ -716,11 +719,12 @@ export class PostsService {
     postId: string,
     createCommentDto: CreateCommentDto,
     userId: string,
-  ): Promise<Comment> {
+  ): Promise<GetCommentDto> {
     try {
       let post: PostDocument | null = null;
       let comment: CommentDocument | null = null;
-      if (!createCommentDto.isReply) {
+      console.log(createCommentDto);
+      if (createCommentDto.isReply === false) {
         post = await this.postModel.findById(new Types.ObjectId(postId)).exec();
         if (!post) {
           throw new NotFoundException('Post not found');
@@ -758,7 +762,14 @@ export class PostsService {
         author_id: new Types.ObjectId(userId),
         content: createCommentDto.content,
         tags: createCommentDto.tagged,
-        react_count: 0,
+        react_count: {
+          Like: 0,
+          Love: 0,
+          Funny: 0,
+          Celebrate: 0,
+          Insightful: 0,
+          Support: 0,
+        },
         replies: [],
       });
 
@@ -771,7 +782,13 @@ export class PostsService {
         await comment?.save();
       }
 
-      return newComment;
+      return getCommentInfo(
+        newComment,
+        userId,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to add comment');
