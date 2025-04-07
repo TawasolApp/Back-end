@@ -191,22 +191,22 @@ export function toCreateEducationSchema(educationDto: Partial<EducationDto>) {
   };
 }
 
-/**
- * Maps Partial<EducationDto> to the education schema for updates.
- */
-export function toUpdateEducationSchema(
-  educationDto: Partial<EducationDto>,
-): Partial<Education> {
-  return {
-    ...(educationDto.school && { school: educationDto.school }),
-    ...(educationDto.degree && { degree: educationDto.degree }),
-    ...(educationDto.field && { field: educationDto.field }),
-    ...(educationDto.startDate && { start_date: educationDto.startDate }),
-    ...(educationDto.endDate && { end_date: educationDto.endDate }),
-    ...(educationDto.grade && { grade: educationDto.grade }),
-    ...(educationDto.description && { description: educationDto.description }),
-  };
-}
+// /**
+//  * Maps Partial<EducationDto> to the education schema for updates.
+//  */
+// export function toUpdateEducationSchema(
+//   educationDto: Partial<EducationDto>,
+// ): Partial<Education> {
+//   return {
+//     ...(educationDto.school && { school: educationDto.school }),
+//     ...(educationDto.degree && { degree: educationDto.degree }),
+//     ...(educationDto.field && { field: educationDto.field }),
+//     ...(educationDto.startDate && { start_date: educationDto.startDate }),
+//     ...(educationDto.endDate && { end_date: educationDto.endDate }),
+//     ...(educationDto.grade && { grade: educationDto.grade }),
+//     ...(educationDto.description && { description: educationDto.description }),
+//   };
+// }
 
 /**
  * Maps the EducationDto to the education schema.
