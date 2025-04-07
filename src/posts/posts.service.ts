@@ -717,6 +717,7 @@ export class PostsService {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
         .skip(offset)
+        .sort({ saved_at: -1 })
         .limit(limit)
         .exec();
 
