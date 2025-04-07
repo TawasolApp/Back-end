@@ -701,6 +701,7 @@ export class PostsService {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
         .skip(offset)
+        .sort({ saved_at: -1 })
         .limit(limit)
         .exec();
 
@@ -837,6 +838,7 @@ export class PostsService {
       const comments = await this.commentModel
         .find({ post_id: new Types.ObjectId(postId) })
         .skip(skip)
+        .sort({ commented_at: -1 })
         .limit(limit)
         .exec();
 
