@@ -164,7 +164,6 @@ export class CompaniesController {
       companyId,
       page,
       limit,
-      name,
     );
     return followersDto;
   }

@@ -160,24 +160,36 @@ export class JobsService {
           'Logged in user does not have management access or employer access to this job posting.',
         );
       }
-      const applicants = await this.applicationModel
-        .find({ job_id: new Types.ObjectId(jobId) })
-        .sort({ applied_at: -1, _id: 1 })
-        .select('user_id')
-        .lean();
-      const applicantIds = applicants.map((applicant) => applicant.user_id);
-      const filter: any = { _id: { $in: applicantIds } };
-      if (name) {
-        filter.name = { $regex: name, $options: 'i' };
-      }
       const skip = (page - 1) * limit;
-      const profiles = await this.profileModel
-        .find(filter)
-        .select('_id first_name last_name profile_picture headline')
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      return profiles.map(toGetUserDto);
+      const applicants = await this.applicationModel.aggregate([
+        {
+          $match: {
+            job_id: new Types.ObjectId(jobId),
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'user_id',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: { crapplied_at: -1, _id: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+          },
+        },
+      ]);
+      return applicants.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
     }
