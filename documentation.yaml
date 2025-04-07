@@ -270,7 +270,7 @@ paths:
             type: string
             enum:
               [
-                'All',
+                'all',
                 'Like',
                 'Love',
                 'Funny',
@@ -278,7 +278,7 @@ paths:
                 'Insightful',
                 'Support',
               ]
-            default: 'All'
+            default: 'all'
       responses:
         '200':
           description: List of reactions
@@ -394,28 +394,7 @@ paths:
 
   /posts/{postId}/reposts:
     get:
-      summary: Get reposts of a specific post
-      parameters:
-        - name: postId
-          in: path
-          required: true
-          description: ID of the post to retrieve reposts for
-          schema:
-            type: string
-        - name: page
-          in: query
-          required: false
-          description: Page number for pagination
-          schema:
-            type: integer
-            default: 1
-        - name: limit
-          in: query
-          required: false
-          description: Number of items per page
-          schema:
-            type: integer
-            default: 10
+      summary: Get reposts for a post
       security:
         - BearerAuth: []
       responses:
@@ -532,25 +511,31 @@ components:
         content:
           type: string
           example: 'This is a sample post content.'
+          example: 'This is a sample post content.'
         media:
           type: array
           items:
             type: string
+            example: 'http://example.com/image.jpg'
             example: 'http://example.com/image.jpg'
         taggedUsers:
           type: array
           items:
             type: string
             example: '507f1f77bcf86cd799439011'
+            example: '507f1f77bcf86cd799439011'
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
           example: 'Public'
+          example: 'Public'
         parentPostId:
           type: string
           example: '507f1f77bcf86cd799439012'
+          example: '507f1f77bcf86cd799439012'
         isSilentRepost:
           type: boolean
+          example: false
           example: false
     GetPostDto:
       type: object
@@ -558,25 +543,32 @@ components:
         id:
           type: string
           example: '507f1f77bcf86cd799439013'
+          example: '507f1f77bcf86cd799439013'
         authorId:
           type: string
+          example: '507f1f77bcf86cd799439014'
           example: '507f1f77bcf86cd799439014'
         authorName:
           type: string
           example: 'John Doe'
+          example: 'John Doe'
         authorPicture:
           type: string
+          example: 'http://example.com/profile.jpg'
           example: 'http://example.com/profile.jpg'
         authorBio:
           type: string
           example: 'Software Engineer at Example Inc.'
+          example: 'Software Engineer at Example Inc.'
         content:
           type: string
+          example: 'This is a sample post content.'
           example: 'This is a sample post content.'
         media:
           type: array
           items:
             type: string
+            example: 'http://example.com/image.jpg'
             example: 'http://example.com/image.jpg'
         reactCounts:
           type: object
@@ -584,53 +576,97 @@ components:
             Like:
               type: integer
               example: 10
+              example: 10
             Love:
               type: integer
+              example: 5
               example: 5
             Funny:
               type: integer
               example: 2
+              example: 2
             Celebrate:
               type: integer
+              example: 3
               example: 3
             Insightful:
               type: integer
               example: 1
+              example: 1
             Support:
               type: integer
+              example: 4
               example: 4
         comments:
           type: integer
           example: 15
+          example: 15
         shares:
           type: integer
+          example: 7
           example: 7
         taggedUsers:
           type: array
           items:
             type: string
             example: '507f1f77bcf86cd799439011'
+            example: '507f1f77bcf86cd799439011'
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
+          example: 'Public'
           example: 'Public'
         authorType:
           type: string
           enum: ['User', 'Company']
           example: 'User'
+          example: 'User'
         reactType:
           type: string
+          enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support']
+          example: 'Like'
           enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support']
           example: 'Like'
         timestamp:
           type: string
           format: date-time
           example: '2023-01-01T12:00:00Z'
+          example: '2023-01-01T12:00:00Z'
         isSaved:
           type: boolean
           example: true
+          example: true
         parentPost:
           $ref: '#/components/schemas/GetPostDto'
+          example:
+            id: '507f1f77bcf86cd799439019'
+            authorId: '507f1f77bcf86cd799439014'
+            authorName: 'Jane Doe'
+            authorPicture: 'http://example.com/profile2.jpg'
+            authorBio: 'Product Manager at Example Inc.'
+            content: 'This is a parent post content.'
+            media:
+              - 'http://example.com/parent-image.jpg'
+            reactCounts:
+              Like: 20
+              Love: 10
+              Funny: 5
+              Celebrate: 2
+              Insightful: 3
+              Support: 8
+            comments: 12
+            shares: 4
+            taggedUsers:
+              - '507f1f77bcf86cd799439011'
+            visibility: 'Public'
+            authorType: 'User'
+            reactType: 'Love'
+            timestamp: '2023-01-01T10:00:00Z'
+            isSaved: false
+            isSilentRepost: false
+        isSilentRepost:
+          type: boolean
+          example: false
           example:
             id: '507f1f77bcf86cd799439019'
             authorId: '507f1f77bcf86cd799439014'
@@ -666,19 +702,23 @@ components:
         content:
           type: string
           example: 'Updated post content.'
+          example: 'Updated post content.'
         media:
           type: array
           items:
             type: string
+            example: 'http://example.com/updated-image.jpg'
             example: 'http://example.com/updated-image.jpg'
         taggedUsers:
           type: array
           items:
             type: string
             example: '507f1f77bcf86cd799439011'
+            example: '507f1f77bcf86cd799439011'
         visibility:
           type: string
           enum: ['Public', 'Connections', 'Private']
+          example: 'Connections'
           example: 'Connections'
     UpdateReactionsDto:
       type: object
@@ -689,24 +729,31 @@ components:
             Like:
               type: boolean
               example: true
+              example: true
             Love:
               type: boolean
+              example: false
               example: false
             Funny:
               type: boolean
               example: false
+              example: false
             Celebrate:
               type: boolean
+              example: true
               example: true
             Insightful:
               type: boolean
               example: false
+              example: false
             Support:
               type: boolean
+              example: true
               example: true
         postType:
           type: string
           enum: ['Post', 'Comment']
+          example: 'Post'
           example: 'Post'
     ReactionDto:
       type: object
@@ -714,28 +761,36 @@ components:
         likeId:
           type: string
           example: '507f1f77bcf86cd799439015'
+          example: '507f1f77bcf86cd799439015'
         postId:
           type: string
           example: '507f1f77bcf86cd799439013'
+          example: '507f1f77bcf86cd799439013'
         authorId:
           type: string
+          example: '507f1f77bcf86cd799439014'
           example: '507f1f77bcf86cd799439014'
         authorType:
           type: string
           enum: ['User', 'Company']
           example: 'User'
+          example: 'User'
         type:
           type: string
           enum: ['Like', 'Love', 'Funny', 'Celebrate', 'Insightful', 'Support']
           example: 'Like'
+          example: 'Like'
         authorName:
           type: string
+          example: 'John Doe'
           example: 'John Doe'
         authorPicture:
           type: string
           example: 'http://example.com/profile.jpg'
+          example: 'http://example.com/profile.jpg'
         authorBio:
           type: string
+          example: 'Software Engineer at Example Inc.'
           example: 'Software Engineer at Example Inc.'
     CreateCommentDto:
       type: object
@@ -743,13 +798,16 @@ components:
         content:
           type: string
           example: 'This is a sample comment.'
+          example: 'This is a sample comment.'
         tagged:
           type: array
           items:
             type: string
             example: '507f1f77bcf86cd799439011'
+            example: '507f1f77bcf86cd799439011'
         isReply:
           type: boolean
+          example: false
           example: false
     GetCommentDto:
       type: object
@@ -757,27 +815,68 @@ components:
         id:
           type: string
           example: '507f1f77bcf86cd799439016'
+          example: '507f1f77bcf86cd799439016'
         postId:
           type: string
+          example: '507f1f77bcf86cd799439013'
           example: '507f1f77bcf86cd799439013'
         authorId:
           type: string
           example: '507f1f77bcf86cd799439014'
+          example: '507f1f77bcf86cd799439014'
         authorName:
           type: string
+          example: 'John Doe'
           example: 'John Doe'
         authorPicture:
           type: string
           example: 'http://example.com/profile.jpg'
+          example: 'http://example.com/profile.jpg'
         authorBio:
           type: string
+          example: 'Software Engineer at Example Inc.'
           example: 'Software Engineer at Example Inc.'
         authorType:
           type: string
           enum: ['User', 'Company']
           example: 'User'
+          example: 'User'
         content:
           type: string
+          example: 'This is a sample comment.'
+        repliesCount:
+          type: integer
+          example: 10
+        reactCounts:
+          type: object
+          properties:
+            Like:
+              type: integer
+              example: 10
+            Love:
+              type: integer
+              example: 5
+            Funny:
+              type: integer
+              example: 2
+            Celebrate:
+              type: integer
+              example: 3
+            Insightful:
+              type: integer
+              example: 1
+            Support:
+              type: integer
+              example: 4
+        timestamp:
+          type: string
+          format: date-time
+          example: '2023-01-01T12:00:00Z'
+        taggedUsers:
+          type: array
+          items:
+            type: string
+            example: '507f1f77bcf86cd799439011'
           example: 'This is a sample comment.'
         repliesCount:
           type: integer
@@ -823,5 +922,7 @@ components:
               'Insightful',
               'Support',
               null,
+              null,
             ]
+          example: 'Like'
           example: 'Like'
