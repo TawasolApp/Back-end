@@ -26,7 +26,7 @@ export enum PlanType {
 }
 
 export enum ProfileStatus {
-  ME = 'OWNER',
+  ME = 'Owner',
   CONNECTION = 'Connection',
   FOLLOWING = 'Following',
   PENDING = 'Pending',
