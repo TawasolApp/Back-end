@@ -935,13 +935,22 @@ export class PostsService {
       }
 
       let post = await this.postModel.findById(comment.post_id).exec();
-
-      if (!post) {
-        throw new NotFoundException('Post not found');
+      let parentComment = await this.commentModel
+        .findById(comment.post_id)
+        .exec();
+      if (!post && !parentComment) {
+        throw new NotFoundException('Parent not found');
       }
-      post.comment_count--;
-      await post.save();
-
+      if (post) {
+        post.comment_count--;
+        await post.save();
+      }
+      if (parentComment) {
+        parentComment.replies = parentComment.replies.filter(
+          (reply) => reply.toString() !== commentId,
+        );
+        await parentComment.save();
+      }
       await this.reactModel
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
