@@ -172,7 +172,6 @@ export class ConnectionsService {
       } else if (existingIgnored) {
         await this.userConnectionModel.findByIdAndDelete(existingIgnored._id);
       }
-      await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
     } catch (error) {
       handleError(error, 'Failed to remove pending request.');
     }
@@ -702,10 +701,20 @@ export class ConnectionsService {
       if (endorserId === userId) {
         throw new BadRequestException('User cannot endorse their own skill.');
       }
-      const connection1 = await getConnection(this.userConnectionModel, endorserId, userId);
-      const connection2 = await getConnection(this.userConnectionModel, userId, endorserId);
+      const connection1 = await getConnection(
+        this.userConnectionModel,
+        endorserId,
+        userId,
+      );
+      const connection2 = await getConnection(
+        this.userConnectionModel,
+        userId,
+        endorserId,
+      );
       if (!connection1 && !connection2) {
-        throw new ForbiddenException("User cannot endorse a non-connection's skill.") 
+        throw new ForbiddenException(
+          "User cannot endorse a non-connection's skill.",
+        );
       }
       const { skillName } = addEndorsementDto;
       const skill = exisitngUser.skills?.find(
