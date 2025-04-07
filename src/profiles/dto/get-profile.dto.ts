@@ -311,8 +311,9 @@ export class GetProfileDto {
     description: 'Profile status',
     example: ProfileStatus.ME,
     enum: ProfileStatus,
+    default: ProfileStatus.ME,
   })
-  @IsOptional()
   @IsEnum(ProfileStatus)
-  status?: ProfileStatus;
+  @IsNotEmpty()
+  status?: ProfileStatus = ProfileStatus.ME;
 }

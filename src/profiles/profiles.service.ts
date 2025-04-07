@@ -109,11 +109,12 @@ export class ProfilesService {
     }
     console.log('getProfile service id : ' + id);
     const profile = await this.profileModel.findById(id).exec();
-    console.log('getProfile service: ' + profile);
+
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
     const profileDto = toGetProfileDto(profile);
+    console.log('getProfile service profileDto status: ' + profileDto.status);
     if (id.toString() === loggedInUser) {
       profileDto.status = ProfileStatus.ME;
     } else if (
