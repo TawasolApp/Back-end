@@ -46,3 +46,18 @@ export async function getPending(
     .lean();
   return pendingRecord || null;
 }
+
+export async function getIgnored(
+  userConnectionModel: Model<UserConnectionDocument>,
+  sendingParty: string,
+  receivingParty: string,
+) {
+  const ignoredRecord = await userConnectionModel
+    .findOne({
+      sending_party: new Types.ObjectId(sendingParty),
+      receiving_party: new Types.ObjectId(receivingParty),
+      status: ConnectionStatus.Ignored,
+    })
+    .lean();
+  return ignoredRecord || null;
+}
