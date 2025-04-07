@@ -5,8 +5,10 @@ import {
   Delete,
   Get,
   Param,
+  ParseIntPipe,
   Patch,
   Post,
+  Query,
   Req,
   UnauthorizedException,
   UseGuards,
@@ -14,6 +16,7 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import { ProfilesService } from './profiles.service';
+import { CompaniesService } from '../companies/companies.service';
 import { Types } from 'mongoose';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
@@ -26,13 +29,14 @@ import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
 import { PostsService } from '../posts/posts.service';
 import { handleError } from '../common/utils/exception-handler';
-import { Request } from 'express';
+
 @UseGuards(JwtAuthGuard)
 @Controller('profile')
 export class ProfilesController {
   constructor(
     private readonly profilesService: ProfilesService,
     private readonly postsService: PostsService,
+    private readonly companiesService: CompaniesService,
   ) {}
 
   /**
@@ -474,15 +478,17 @@ export class ProfilesController {
   }
 
   @Get('/followed-companies/:userId')
-  async getFollowedCompanies(@Param('userId') userId: string, @Req() req) {
+  async getFollowedCompanies(
+    @Param('userId') userId: string,
+    @Req() req,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated.');
       }
-
-      return await this.profilesService.getFollowedCompanies(
-        new Types.ObjectId(userId),
-      );
+      return await this.companiesService.getFollowedCompanies(userId, page, limit);
     } catch (error) {
       handleError(error, `Failed to get followed companies.`);
     }

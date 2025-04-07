@@ -41,7 +41,7 @@ import { JobsModule } from '../jobs/jobs.module';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder, CompanyManagerSeeder],
+  exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder, CompanyManagerSeeder, CompaniesService],
   providers: [
     CompanySeeder,
     CompanyConnectionSeeder,
