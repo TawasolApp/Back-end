@@ -16,6 +16,7 @@ import {
   EmploymentType,
   LocationType,
   PlanType,
+  ProfileStatus,
 } from '../enums/profile-enums';
 
 /**
@@ -168,8 +169,9 @@ export function toUpdateProfileSchema(
         description: work?.description ?? null,
       })) ?? [],
 
-    visibility: profile.visibility as Visibility, // Defaulting to 'public'
-    connectionCount: profile.connection_count ?? 0, // Defaulting to 0
+    visibility: profile.visibility as Visibility,
+    connectionCount: profile.connection_count ?? 0,
+    status: ProfileStatus.ME,
   };
 }
 
