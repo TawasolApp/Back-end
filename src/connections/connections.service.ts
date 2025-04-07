@@ -495,7 +495,7 @@ export class ConnectionsService {
             ),
           },
         })
-        .select('_id first_name last_name profile_picture headline')
+        .select('_id first_name last_name profile_picture cover_photo headline')
         .sort({ _id: 1 })
         .skip(skip)
         .limit(limit)
