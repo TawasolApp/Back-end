@@ -226,7 +226,7 @@ export class AuthService {
    * @returns Success message
    */
   async forgotPassword(dto: ForgotPasswordDto) {
-    const { email } = dto;
+    const { email, isAndroid } = dto;
 
     const user = await this.userModel.findOne({ email });
     if (user?.isVerified) {
@@ -234,7 +234,12 @@ export class AuthService {
         { sub: user._id },
         { expiresIn: '15m' },
       );
-      await this.mailerService.sendPasswordResetEmail(user.email, token);
+
+      await this.mailerService.sendPasswordResetEmail(
+        user.email,
+        token,
+        isAndroid,
+      );
     }
 
     return {

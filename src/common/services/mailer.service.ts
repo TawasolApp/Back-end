@@ -38,8 +38,11 @@ export class MailerService {
     });
   }
 
-  async sendPasswordResetEmail(to: string, token: string) {
-    const resetUrl = `https://tawasolapp.me/api/auth/reset-password?token=${token}`;
+  async sendPasswordResetEmail(to: string, token: string, isAndroid: boolean) {
+
+    const resetUrl = isAndroid
+      ? `https://tawasolapp.me/forgot_password?token=${token}`
+      : `https://frontend.example.com/forgot_password?token=${token}`;
 
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
