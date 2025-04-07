@@ -145,8 +145,7 @@ export class JobsService {
     userId: string,
     jobId: string,
     page: number,
-    limit: number,
-    name?: string,
+    limit: number
   ): Promise<GetUserDto[]> {
     try {
       const job = await this.jobModel
