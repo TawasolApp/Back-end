@@ -578,23 +578,31 @@ export class PostsService {
   ): Promise<ReactionDto[]> {
     try {
       const skip = (page - 1) * limit;
-      console.log(isValidObjectId(postId));
+
       if (!isValidObjectId(postId)) {
         throw new BadRequestException('Invalid post ID format');
       }
+
       const objectIdPostId = new Types.ObjectId(postId);
+
+      // Build the query object
+      const query: any = { post_id: objectIdPostId };
+      if (reactionType !== 'All') {
+        query.react_type = reactionType;
+      }
+
+      // Fetch reactions with pagination
       const reactions = await this.reactModel
-        .find({
-          post_id: objectIdPostId,
-          ...(reactionType !== 'all' && { react_type: reactionType }),
-        })
+        .find(query)
         .skip(skip)
         .limit(limit)
         .exec();
+
       if (!reactions || reactions.length === 0) {
         return [];
       }
 
+      // Map reactions to ReactionDto
       return Promise.all(
         reactions.map((reaction) =>
           getReactionInfo(reaction, this.profileModel, this.companyModel),

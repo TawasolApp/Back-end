@@ -1141,8 +1141,10 @@ describe('PostsService', () => {
 
     const result = await service.getReactions(
       mockPost.id.toString(),
+
       1,
       10,
+      'All',
       mockUserId,
     );
 
@@ -1197,6 +1199,7 @@ describe('PostsService', () => {
       mockPost.id.toString(),
       1,
       10,
+      'All',
       mockUserId,
     );
 
@@ -1239,7 +1242,7 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(mockReaction),
     });
     saveModelMock.exists.mockResolvedValue(true);
-    const result = await service.getSavedPosts(mockUserId);
+    const result = await service.getSavedPosts(mockUserId, 1, 20);
     expect(result).toEqual([
       {
         id: mockPost.id.toString(),
