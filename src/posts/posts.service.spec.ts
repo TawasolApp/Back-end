@@ -175,7 +175,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -228,7 +228,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPostDtoNoMedia.content,
@@ -281,7 +281,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPostDtoPrivate.content,
@@ -476,7 +476,7 @@ describe('PostsService', () => {
       {
         id: mockPost.id.toString(),
         authorId: mockPost.author_id.toString(),
-        authorName: mockProfile.name,
+        authorName: mockProfile.first_name + mockProfile.last_name,
         authorPicture: mockProfile.profile_picture,
         authorBio: mockProfile.bio,
         content: mockPost.text,
@@ -588,7 +588,7 @@ describe('PostsService', () => {
       {
         id: mockPost.id.toString(),
         authorId: mockPost.author_id.toString(),
-        authorName: mockProfile.name,
+        authorName: mockProfile.first_name + mockProfile.last_name,
         authorPicture: mockProfile.profile_picture,
         authorBio: mockProfile.bio,
         content: mockPost.text,
@@ -1141,8 +1141,10 @@ describe('PostsService', () => {
 
     const result = await service.getReactions(
       mockPost.id.toString(),
+
       1,
       10,
+      'All',
       mockUserId,
     );
 
@@ -1153,7 +1155,7 @@ describe('PostsService', () => {
         authorId: mockReaction.user_id.toString(),
         authorType: mockReaction.user_type,
         type: mockReaction.react_type,
-        authorName: mockProfile.name,
+        authorName: mockProfile.first_name + mockProfile.last_name,
         authorPicture: mockProfile.profile_picture,
         authorBio: mockProfile.bio,
       },
@@ -1197,6 +1199,7 @@ describe('PostsService', () => {
       mockPost.id.toString(),
       1,
       10,
+      'All',
       mockUserId,
     );
 
@@ -1239,12 +1242,12 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(mockReaction),
     });
     saveModelMock.exists.mockResolvedValue(true);
-    const result = await service.getSavedPosts(mockUserId);
+    const result = await service.getSavedPosts(mockUserId, 1, 20);
     expect(result).toEqual([
       {
         id: mockPost.id.toString(),
         authorId: mockPost.author_id.toString(),
-        authorName: mockProfile.name,
+        authorName: mockProfile.first_name + mockProfile.last_name,
         authorPicture: mockProfile.profile_picture,
         authorBio: mockProfile.bio,
         content: mockPost.text,
@@ -1293,7 +1296,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -1341,7 +1344,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -1389,7 +1392,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -1437,7 +1440,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -1492,7 +1495,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id,
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -1544,7 +1547,7 @@ describe('PostsService', () => {
     expect(result).toEqual({
       id: mockPost.id.toString(),
       authorId: mockPost.author_id.toString(),
-      authorName: mockProfile.name,
+      authorName: mockProfile.first_name + mockProfile.last_name,
       authorPicture: mockProfile.profile_picture,
       authorBio: mockProfile.bio,
       content: mockPost.text,
@@ -1930,9 +1933,9 @@ describe('PostsService', () => {
   });
 
   it('[44] should throw an error if post ID is invalid in getReactions', async () => {
-    await expect(service.getReactions('1', 1, 10, mockUserId)).rejects.toThrow(
-      'Invalid post ID format',
-    );
+    await expect(
+      service.getReactions('1', 1, 10, 'all', mockUserId),
+    ).rejects.toThrow('Invalid post ID format');
   });
 
   it('[45] should throw an error if no comments are found for the post', async () => {
@@ -2206,7 +2209,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getReactions(mockPost.id.toString(), 1, 10, mockUserId),
+      service.getReactions(mockPost.id.toString(), 1, 10, 'all', mockUserId),
     ).toEqual(Promise.resolve({}));
   });
 

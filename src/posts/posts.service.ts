@@ -485,12 +485,14 @@ export class PostsService {
             if (post) {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
+              post.markModified('react_count');
               await post.save();
             }
 
             if (comment) {
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
+              comment.markModified('react_count');
               await comment.save();
             }
 
@@ -501,6 +503,7 @@ export class PostsService {
                 (post.react_count[existingReaction.react_type] || 1) - 1;
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
+              post.markModified('react_count');
               await post.save();
             }
 
@@ -509,6 +512,7 @@ export class PostsService {
                 (comment.react_count[existingReaction.react_type] || 1) - 1;
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
+              comment.markModified('react_count');
               await comment.save();
             }
 
@@ -533,20 +537,26 @@ export class PostsService {
             if (post) {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 1) - 1;
+              post.markModified('react_count');
               await post.save();
             }
 
             if (comment) {
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 1) - 1;
+              comment.markModified('react_count');
               await comment.save();
             }
           }
         }
       }
 
-      if (post) return post;
-      if (comment) return comment;
+      if (post) {
+        return post;
+      }
+      if (comment) {
+        return comment;
+      }
 
       throw new InternalServerErrorException('Failed to update reaction');
     } catch (error) {
@@ -570,23 +580,31 @@ export class PostsService {
   ): Promise<ReactionDto[]> {
     try {
       const skip = (page - 1) * limit;
-      console.log(isValidObjectId(postId));
+
       if (!isValidObjectId(postId)) {
         throw new BadRequestException('Invalid post ID format');
       }
+
       const objectIdPostId = new Types.ObjectId(postId);
+
+      // Build the query object
+      const query: any = { post_id: objectIdPostId };
+      if (reactionType !== 'All') {
+        query.react_type = reactionType;
+      }
+
+      // Fetch reactions with pagination
       const reactions = await this.reactModel
-        .find({
-          post_id: objectIdPostId,
-          ...(reactionType !== 'all' && { react_type: reactionType }),
-        })
+        .find(query)
         .skip(skip)
         .limit(limit)
         .exec();
+
       if (!reactions || reactions.length === 0) {
         return [];
       }
 
+      // Map reactions to ReactionDto
       return Promise.all(
         reactions.map((reaction) =>
           getReactionInfo(reaction, this.profileModel, this.companyModel),
@@ -647,12 +665,15 @@ export class PostsService {
     userId: string,
   ): Promise<{ message: string }> {
     try {
+      console.log('Unsave post:', postId, userId);
       const savedPost = await this.saveModel
         .findOneAndDelete({
-          post_id: postId,
-          user_id: userId,
+          post_id: new Types.ObjectId(postId),
+          user_id: new Types.ObjectId(userId),
         })
         .exec();
+
+      console.log('savedPost:', savedPost);
 
       if (!savedPost) {
         throw new NotFoundException('Saved post not found');
@@ -670,10 +691,18 @@ export class PostsService {
   // 1. Find all saved posts by user.
   // 2. If none found, throw error.
   // 3. Map and return each post using GetPostDto.
-  async getSavedPosts(userId: string): Promise<GetPostDto[]> {
+  async getSavedPosts(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetPostDto[]> {
+    const offset = (page - 1) * limit;
     try {
       const savedPosts = await this.saveModel
         .find({ user_id: new Types.ObjectId(userId) })
+        .skip(offset)
+        .sort({ saved_at: -1 })
+        .limit(limit)
         .exec();
 
       if (!savedPosts || savedPosts.length === 0) {
@@ -716,11 +745,12 @@ export class PostsService {
     postId: string,
     createCommentDto: CreateCommentDto,
     userId: string,
-  ): Promise<Comment> {
+  ): Promise<GetCommentDto> {
     try {
       let post: PostDocument | null = null;
       let comment: CommentDocument | null = null;
-      if (!createCommentDto.isReply) {
+      console.log(createCommentDto);
+      if (createCommentDto.isReply === false) {
         post = await this.postModel.findById(new Types.ObjectId(postId)).exec();
         if (!post) {
           throw new NotFoundException('Post not found');
@@ -758,7 +788,14 @@ export class PostsService {
         author_id: new Types.ObjectId(userId),
         content: createCommentDto.content,
         tags: createCommentDto.tagged,
-        react_count: 0,
+        react_count: {
+          Like: 0,
+          Love: 0,
+          Funny: 0,
+          Celebrate: 0,
+          Insightful: 0,
+          Support: 0,
+        },
         replies: [],
       });
 
@@ -771,7 +808,13 @@ export class PostsService {
         await comment?.save();
       }
 
-      return newComment;
+      return getCommentInfo(
+        newComment,
+        userId,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to add comment');
@@ -795,6 +838,7 @@ export class PostsService {
       const comments = await this.commentModel
         .find({ post_id: new Types.ObjectId(postId) })
         .skip(skip)
+        .sort({ commented_at: -1 })
         .limit(limit)
         .exec();
 
@@ -859,7 +903,9 @@ export class PostsService {
   // 3. Delete the comment and related reactions.
   async deleteComment(commentId: string, userId: string): Promise<void> {
     try {
-      const comment = await this.commentModel.findById(commentId);
+      const comment = await this.commentModel.findById(
+        new Types.ObjectId(commentId),
+      );
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
@@ -870,9 +916,32 @@ export class PostsService {
         );
       }
 
-      await this.reactModel.deleteMany({ post_id: commentId }).exec();
-      await this.commentModel.deleteOne({ _id: commentId }).exec();
-      await this.commentModel.deleteMany({ post_id: commentId }).exec();
+      let post = await this.postModel.findById(comment.post_id).exec();
+      let parentComment = await this.commentModel
+        .findById(comment.post_id)
+        .exec();
+      if (!post && !parentComment) {
+        throw new NotFoundException('Parent not found');
+      }
+      if (post) {
+        post.comment_count--;
+        await post.save();
+      }
+      if (parentComment) {
+        parentComment.replies = parentComment.replies.filter(
+          (reply) => reply.toString() !== commentId,
+        );
+        await parentComment.save();
+      }
+      await this.reactModel
+        .deleteMany({ post_id: new Types.ObjectId(commentId) })
+        .exec();
+      await this.commentModel
+        .deleteOne({ _id: new Types.ObjectId(commentId) })
+        .exec();
+      await this.commentModel
+        .deleteMany({ post_id: new Types.ObjectId(commentId) })
+        .exec();
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to delete comment');
@@ -994,7 +1063,10 @@ export class PostsService {
   async getRepostsOfPost(
     postId: string,
     userId: string,
+    page: number,
+    limit: number,
   ): Promise<GetPostDto[]> {
+    const offset = (page - 1) * limit;
     try {
       if (!Types.ObjectId.isValid(postId)) {
         throw new BadRequestException('Invalid post ID format');
@@ -1050,6 +1122,8 @@ export class PostsService {
           ],
         })
         .sort({ posted_at: -1 })
+        .skip(offset)
+        .limit(limit)
         .exec();
 
       if (!reposts || reposts.length === 0) {

@@ -67,7 +67,8 @@ export const mockCompanyPost = {
 
 export const mockProfile = {
   _id: '60d0fe4f5311236168a109cc',
-  name: 'Mock User',
+  first_name: 'Mock',
+  last_name: 'User',
   profile_picture: 'http://example.com/profile.jpg',
   bio: 'This is a mock bio',
 };
@@ -121,7 +122,12 @@ export const mockEditCommentDto = {
 // Mock arrays
 export const mockProfiles = [
   mockProfile,
-  { ...mockProfile, _id: '60d0fe4f5311236168a109dd', name: 'Mock User 2' },
+  {
+    ...mockProfile,
+    _id: '60d0fe4f5311236168a109dd',
+    first_name: 'Mock',
+    last_name: 'User 2',
+  },
 ];
 export const mockCompanies = [
   mockCompany,

@@ -65,7 +65,12 @@ export function mapReactionToDto(
       | 'Celebrate'
       | 'Insightful'
       | 'Support',
-    authorName: authorProfile.name,
+    authorName:
+      'first_name' in authorProfile && 'last_name' in authorProfile
+        ? `${authorProfile.first_name} ${authorProfile.last_name}`
+        : 'name' in authorProfile
+          ? authorProfile.name
+          : 'Unknown',
     authorPicture: authorProfilePicture,
     authorBio:
       'bio' in authorProfile ? authorProfile.bio : authorProfile.description,
