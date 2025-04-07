@@ -270,7 +270,7 @@ paths:
             type: string
             enum:
               [
-                'all',
+                'All',
                 'Like',
                 'Love',
                 'Funny',
@@ -278,7 +278,7 @@ paths:
                 'Insightful',
                 'Support',
               ]
-            default: 'all'
+            default: 'All'
       responses:
         '200':
           description: List of reactions
