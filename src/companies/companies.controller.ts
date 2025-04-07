@@ -309,8 +309,7 @@ export class CompaniesController {
       userId,
       jobId,
       page,
-      limit,
-      name,
+      limit
     );
     return applicantsDto;
   }
