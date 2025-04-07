@@ -125,7 +125,7 @@ describe('PostsController', () => {
 
   it('getReactions should throw UnauthorizedException if user is missing', async () => {
     await expect(
-      controller.getReactions('postId', 1, 10, reqWithoutUser),
+      controller.getReactions('postId', 'all', 1, 10, reqWithoutUser),
     ).rejects.toThrow(new UnauthorizedException('User not authenticated'));
   });
 
@@ -142,9 +142,9 @@ describe('PostsController', () => {
   });
 
   it('getSavedPosts should throw UnauthorizedException if user is missing', async () => {
-    await expect(controller.getSavedPosts(reqWithoutUser)).rejects.toThrow(
-      new UnauthorizedException('User not authenticated'),
-    );
+    await expect(
+      controller.getSavedPosts(1, 20, reqWithoutUser),
+    ).rejects.toThrow(new UnauthorizedException('User not authenticated'));
   });
 
   it('addComment should throw UnauthorizedException if user is missing', async () => {
