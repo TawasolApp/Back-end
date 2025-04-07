@@ -32,7 +32,7 @@ import { Request } from 'express';
 export class ProfilesController {
   constructor(
     private readonly profilesService: ProfilesService,
-    private readonly postsService: PostsService, 
+    private readonly postsService: PostsService,
   ) {}
 
   /**
@@ -56,10 +56,6 @@ export class ProfilesController {
     }
   }
 
-  /**
-   * Retrieves a user profile by ID.
-   * @param id - The profile ID
-   */
   @Get(':userId')
   @UsePipes(new ValidationPipe())
   async getProfile(@Req() req, @Param('userId') id: string) {
@@ -72,6 +68,23 @@ export class ProfilesController {
       }
       return await this.profilesService.getProfile(
         new Types.ObjectId(id),
+        req.user.sub,
+      );
+    } catch (error) {
+      handleError(error, 'Failed to retrieve profile.');
+    }
+  }
+
+  @Get()
+  @UsePipes(new ValidationPipe())
+  async getMyProfile(@Req() req) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+
+      return await this.profilesService.getProfile(
+        new Types.ObjectId(req.user.sub),
         req.user.sub,
       );
     } catch (error) {
@@ -279,7 +292,6 @@ export class ProfilesController {
 
   @Post('education')
   @UsePipes(new ValidationPipe())
-
   async addEducation(@Req() req, @Body() education: EducationDto) {
     try {
       if (!req.user) {
@@ -293,7 +305,11 @@ export class ProfilesController {
 
   @Patch('education/:education_id')
   @UsePipes(new ValidationPipe())
-  @ApiBody({ type: EducationDto, description: 'Fields to update', isArray: false })
+  @ApiBody({
+    type: EducationDto,
+    description: 'Fields to update',
+    isArray: false,
+  })
   async editEducation(
     @Req() req,
     @Body() updateEducationDto: Partial<EducationDto>,
@@ -339,12 +355,15 @@ export class ProfilesController {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      return await this.profilesService.addCertification(certification, req.user.sub);
+      return await this.profilesService.addCertification(
+        certification,
+        req.user.sub,
+      );
     } catch (error) {
       handleError(error, 'Failed to add certification.');
     }
   }
-  
+
   @Patch('certification/:certificationId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
