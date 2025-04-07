@@ -55,7 +55,7 @@ class Education {
   @ApiPropertyOptional({ description: 'End date', example: '2019-06-01' })
   @IsOptional()
   @IsString()
-  endDate?: string;
+  endDate: string | null;
 
   @ApiPropertyOptional({ description: 'Grade obtained', example: '3.8/4.0' })
   @IsOptional()
@@ -124,7 +124,7 @@ class WorkExperience {
   @ApiPropertyOptional({ description: 'End date', example: '2022-12-31' })
   @IsOptional()
   @IsString()
-  endDate?: string;
+  endDate: string | null;
 
   @ApiPropertyOptional({
     description: 'Location',
