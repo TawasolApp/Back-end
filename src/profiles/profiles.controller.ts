@@ -348,7 +348,7 @@ export class ProfilesController {
     }
   }
 
-  @Post('certifications')
+  @Post('certification')
   @UsePipes(new ValidationPipe())
   async addCertification(@Req() req, @Body() certification: CertificationDto) {
     try {
