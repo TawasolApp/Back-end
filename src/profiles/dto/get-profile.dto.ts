@@ -92,6 +92,11 @@ class Certification {
   @IsOptional()
   @IsString()
   issueDate?: string;
+
+  @ApiPropertyOptional({ description: 'Issue date', example: '2021-01-15' })
+  @IsOptional()
+  @IsString()
+  expiryDate?: string;
 }
 
 class WorkExperience {

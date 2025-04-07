@@ -77,6 +77,7 @@ export class ProfileSeeder {
           company: faker.company.name(),
           certification_picture: faker.image.url(),
           issue_date: faker.date.past({ years: 3 }),
+          expiry_date: faker.date.future({ years: 1 }),
         },
       ],
       work_experience: [
