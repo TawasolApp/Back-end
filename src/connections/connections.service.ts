@@ -737,4 +737,45 @@ export class ConnectionsService {
       handleError(error, 'Failed to endorse skill.');
     }
   }
+
+  async removeEndorsement(
+    endorserId: string,
+    userId: string,
+    skillName: string
+  ): Promise<GetUserDto[]> {
+    try {
+      const existingUser = await this.profileModel.findById(
+        new Types.ObjectId(userId),
+      );
+      if (!existingUser) {
+        throw new NotFoundException('User profile not found.');
+      }
+      const skill = existingUser.skills?.find(
+        (s) => s.skill_name === skillName,
+      );
+      if (!skill) {
+        throw new NotFoundException("Skill not found in user's profile.");
+      }
+      const endorserObjectId = new Types.ObjectId(endorserId);
+      if (
+        !skill.endorsements?.some((id) => id.equals(endorserObjectId))
+      ) {
+        throw new BadRequestException(
+          'Logged in user has not endorsed this skill.',
+        );
+      }
+      skill.endorsements = skill.endorsements.filter(
+        (id) => !id.equals(endorserObjectId)
+      );
+      await existingUser.save();
+      const endorsers = await this.profileModel
+        .find({ _id: { $in: skill.endorsements } })
+        .select('_id first_name last_name profile_picture')
+        .lean();
+      const endorsersDto = endorsers.map(toGetUserDto);
+      return endorsersDto;
+    } catch (error) {
+      handleError(error, 'Failed to remove endorsement.');
+    }
+  }  
 }

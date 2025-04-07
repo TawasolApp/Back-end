@@ -268,10 +268,29 @@ export class ConnectionsController {
     }
     validateId(endorseeId, 'user');
     const userId = request.user['sub'];
-    return await this.connectionsService.endorseSkill(
+    await this.connectionsService.endorseSkill(
       userId,
       endorseeId,
       addEndorsementDto,
+    );
+  }
+
+  @Delete('/:userId/endorsement/:skillName')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async removeEndorsement(
+    @Param('userId') endorseeId: string,
+    @Param('skillName') skillName: string,
+    @Req() request: Request,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    validateId(endorseeId, 'user');
+    const userId = request.user['sub'];
+    await this.connectionsService.removeEndorsement(
+      userId,
+      endorseeId,
+      skillName,
     );
   }
 }
