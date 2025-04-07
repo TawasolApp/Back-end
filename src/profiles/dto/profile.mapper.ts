@@ -41,6 +41,7 @@ export function toCreateProfileSchema(
 
     skills: createProfileDto.skills?.map((skillDto) => ({
       skill_name: skillDto.skillName,
+      position: skillDto.position,
       endorsements: [] as Types.ObjectId[],
     })),
 
@@ -59,6 +60,7 @@ export function toCreateProfileSchema(
       createProfileDto.certification?.map((cert) => ({
         name: cert?.name ?? null,
         company: cert?.company ?? null,
+        certification_picture: cert?.certificationPicture ?? null,
         issue_date: cert?.issueDate ? new Date(cert.issueDate) : new Date(),
       })) ?? [],
 
@@ -66,6 +68,7 @@ export function toCreateProfileSchema(
       createProfileDto.workExperience?.map((work) => ({
         title: work.title,
         company: work.company,
+        work_experience_picture: work.workExperiencePicture,
         employment_type: work.employmentType as EmploymentType,
         start_date: work.startDate ? new Date(work.startDate) : new Date(),
         end_date: work.endDate ? new Date(work.endDate) : new Date(),
