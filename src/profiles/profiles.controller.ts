@@ -279,6 +279,7 @@ export class ProfilesController {
 
   @Post('education')
   @UsePipes(new ValidationPipe())
+
   async addEducation(@Req() req, @Body() education: EducationDto) {
     try {
       if (!req.user) {
@@ -289,18 +290,14 @@ export class ProfilesController {
       handleError(error, 'Failed to add education.');
     }
   }
-  
-  @Patch('education/:educationId')
+
+  @Patch('education/:education_id')
   @UsePipes(new ValidationPipe())
-  @ApiBody({
-    type: EducationDto,
-    description: 'Fields to update',
-    isArray: false,
-  })
+  @ApiBody({ type: EducationDto, description: 'Fields to update', isArray: false })
   async editEducation(
     @Req() req,
     @Body() updateEducationDto: Partial<EducationDto>,
-    @Param('educationId') educationId: Types.ObjectId,
+    @Param('education_id') educationId: Types.ObjectId,
   ) {
     try {
       if (!req.user) {
@@ -316,9 +313,12 @@ export class ProfilesController {
     }
   }
 
-  @Delete('education/:educationId')
+  @Delete('education/:education_id')
   @UsePipes(new ValidationPipe())
-  async deleteEducation(@Req() req, @Param('educationId') educationId: string) {
+  async deleteEducation(
+    @Req() req,
+    @Param('education_id') educationId: string,
+  ) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
@@ -332,22 +332,19 @@ export class ProfilesController {
     }
   }
 
-  @Post('certification')
+  @Post('certifications')
   @UsePipes(new ValidationPipe())
   async addCertification(@Req() req, @Body() certification: CertificationDto) {
     try {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated');
       }
-      return await this.profilesService.addCertification(
-        certification,
-        req.user.sub,
-      );
+      return await this.profilesService.addCertification(certification, req.user.sub);
     } catch (error) {
       handleError(error, 'Failed to add certification.');
     }
   }
-
+  
   @Patch('certification/:certificationId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
