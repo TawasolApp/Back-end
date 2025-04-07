@@ -17,6 +17,10 @@ export class GetUserDto {
   @IsOptional()
   profilePicture?: string;
 
+  @IsUrl()
+  @IsOptional()
+  coverPhoto?: string;
+
   @IsString()
   @IsOptional()
   headline?: string;
