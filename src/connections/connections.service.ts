@@ -346,22 +346,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const pending = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -378,7 +365,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -410,22 +397,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const sent = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -442,7 +416,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -469,87 +443,6 @@ export class ConnectionsService {
       );
     }
   }
-
-  // async getPendingRequests(
-  //   userId: string,
-  //   page: number,
-  //   limit: number,
-  //   by: number,
-  //   direction: number,
-  // ): Promise<GetUserDto[]> {
-  //   try {
-  //     const skip = (page - 1) * limit;
-  //     const pendingRequests = await this.userConnectionModel
-  //       .find({
-  //         receiving_party: new Types.ObjectId(userId),
-  //         status: ConnectionStatus.Pending,
-  //       })
-  //       .sort({ created_at: -1, _id: -1 })
-  //       .select('sending_party receiving_party created_at')
-  //       .skip(skip)
-  //       .limit(limit)
-  //       .lean();
-  //     const usersDto = await Promise.all(
-  //       pendingRequests.map(async (connection) => {
-  //         const senderUserId = connection.sending_party;
-  //         const profile = await this.profileModel
-  //           .findById(senderUserId)
-  //           .select('_id first_name last_name profile_picture headline')
-  //           .lean();
-  //         const userDto = toGetUserDto(profile!);
-  //         userDto.createdAt = connection.created_at;
-  //         return userDto;
-  //       }),
-  //     );
-  //     return usersDto;
-  //   } catch (error) {
-  //     handleError(
-  //       error,
-  //       'Failed to retrieve list of pending connection requests.',
-  //     );
-  //   }
-  // }
-
-  // async getSentRequests(
-  //   userId: string,
-  //   page: number,
-  //   limit: number,
-  //   by: number,
-  //   direction: number,
-  // ): Promise<GetUserDto[]> {
-  //   try {
-  //     const skip = (page - 1) * limit;
-  //     const sentRequests = await this.userConnectionModel
-  //       .find({
-  //         sending_party: new Types.ObjectId(userId),
-  //         status: ConnectionStatus.Pending,
-  //       })
-  //       .sort({ created_at: -1, _id: -1 })
-  //       .select('sending_party receiving_party created_at')
-  //       .skip(skip)
-  //       .limit(limit)
-  //       .lean();
-  //     const usersDto = await Promise.all(
-  //       sentRequests.map(async (connection) => {
-  //         const receiverUserId = connection.receiving_party;
-
-  //         const profile = await this.profileModel
-  //           .findById(receiverUserId)
-  //           .select('_id first_name last_name profile_picture headline')
-  //           .lean();
-  //         const userDto = toGetUserDto(profile!);
-  //         userDto.createdAt = connection.created_at;
-  //         return userDto;
-  //       }),
-  //     );
-  //     return usersDto;
-  //   } catch (error) {
-  //     handleError(
-  //       error,
-  //       'Failed to retrieve list of sent connection requests.',
-  //     );
-  //   }
-  // }
 
   async getRecommendedUsers(
     userId: string,
@@ -674,22 +567,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const followers = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -706,7 +586,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
@@ -735,22 +615,9 @@ export class ConnectionsService {
     userId: string,
     page: number,
     limit: number,
-    by: number,
-    direction: number,
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const params = getSortData(by, direction);
-      const field = Object.keys(params)[0];
-      const dir = params[field];
-
-      let sort: Record<string, 1 | -1> = {};
-      if (field === 'created_at') {
-        sort['created_at'] = dir;
-      } else {
-        sort[`profile.${field}`] = dir;
-      }
-
       const following = await this.userConnectionModel.aggregate([
         {
           $match: {
@@ -767,7 +634,7 @@ export class ConnectionsService {
           },
         },
         { $unwind: '$profile' },
-        { $sort: sort },
+        { $sort: { created_at: -1, _id: -1 } },
         { $skip: skip },
         { $limit: limit },
         {
