@@ -16,6 +16,7 @@ import {
   EmploymentType,
   LocationType,
   PlanType,
+  ProfileStatus,
 } from '../enums/profile-enums';
 
 /**
@@ -140,7 +141,7 @@ export function toUpdateProfileSchema(
         degree: education?.degree ?? null,
         field: education?.field ?? null,
         startDate: education?.start_date?.toISOString() ?? null,
-        endDate: education?.end_date?.toISOString() ?? undefined,
+        endDate: education?.end_date?.toISOString() ?? null,
         grade: education?.grade ?? null,
         description: education?.description ?? null,
       })) ?? [],
@@ -162,14 +163,15 @@ export function toUpdateProfileSchema(
         company: work?.company ?? null,
         employmentType: work?.employment_type as EmploymentType,
         startDate: work?.start_date?.toISOString() ?? null,
-        endDate: work?.end_date?.toISOString() ?? undefined,
+        endDate: work?.end_date?.toISOString() ?? null,
         location: work?.location ?? null,
         locationType: work?.location_type as LocationType,
         description: work?.description ?? null,
       })) ?? [],
 
-    visibility: profile.visibility as Visibility, // Defaulting to 'public'
-    connectionCount: profile.connection_count ?? 0, // Defaulting to 0
+    visibility: profile.visibility as Visibility,
+    connectionCount: profile.connection_count ?? 0,
+    status: ProfileStatus.ME,
   };
 }
 
@@ -189,22 +191,22 @@ export function toCreateEducationSchema(educationDto: Partial<EducationDto>) {
   };
 }
 
-/**
- * Maps Partial<EducationDto> to the education schema for updates.
- */
-export function toUpdateEducationSchema(
-  educationDto: Partial<EducationDto>,
-): Partial<Education> {
-  return {
-    ...(educationDto.school && { school: educationDto.school }),
-    ...(educationDto.degree && { degree: educationDto.degree }),
-    ...(educationDto.field && { field: educationDto.field }),
-    ...(educationDto.startDate && { start_date: educationDto.startDate }),
-    ...(educationDto.endDate && { end_date: educationDto.endDate }),
-    ...(educationDto.grade && { grade: educationDto.grade }),
-    ...(educationDto.description && { description: educationDto.description }),
-  };
-}
+// /**
+//  * Maps Partial<EducationDto> to the education schema for updates.
+//  */
+// export function toUpdateEducationSchema(
+//   educationDto: Partial<EducationDto>,
+// ): Partial<Education> {
+//   return {
+//     ...(educationDto.school && { school: educationDto.school }),
+//     ...(educationDto.degree && { degree: educationDto.degree }),
+//     ...(educationDto.field && { field: educationDto.field }),
+//     ...(educationDto.startDate && { start_date: educationDto.startDate }),
+//     ...(educationDto.endDate && { end_date: educationDto.endDate }),
+//     ...(educationDto.grade && { grade: educationDto.grade }),
+//     ...(educationDto.description && { description: educationDto.description }),
+//   };
+// }
 
 /**
  * Maps the EducationDto to the education schema.

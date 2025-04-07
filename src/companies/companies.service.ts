@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   HttpException,
@@ -6,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { isValidObjectId, Model, Types } from 'mongoose';
 import {
   Company,
   CompanyDocument,
@@ -418,7 +419,7 @@ export class CompaniesService {
       }
       const followers = await this.companyConnectionModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .select('user_id')
         .lean();
       const followerIds = followers.map((follower) => follower.user_id);
@@ -559,7 +560,7 @@ export class CompaniesService {
           company_size: company.company_size,
         })
         .select('_id name logo industry followers')
-        .sort({ followers: -1, _id: 1 })
+        .sort({ followers: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -652,6 +653,37 @@ export class CompaniesService {
       return profiles.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of common followers.');
+    }
+  }
+
+  async getFollowedCompanies(
+    id: string,
+    page: number,
+    limit: number,
+  ): Promise<GetCompanyDto[]> {
+    try {
+      if (!isValidObjectId(id)) {
+        throw new BadRequestException('Invalid profile ID format');
+      }
+      const skip = (page - 1) * limit;
+      const connections = await this.companyConnectionModel
+        .find({ user_id: new Types.ObjectId(id) })
+        .sort({ created_at: -1 })
+        .select('company_id')
+        .lean();
+      const followedCompanyIds = connections.map(
+        (connection) => connection.company_id,
+      );
+      const companies = await this.companyModel
+        .find({ _id: { $in: followedCompanyIds } })
+        .select('_id name logo industry followers')
+        .sort({ created_at: -1, _id: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+      return companies.map(toGetCompanyDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of followed companies.');
     }
   }
 
@@ -909,7 +941,7 @@ export class CompaniesService {
       }
       const managers = await this.companyManagerModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .select('manager_id')
         .lean();
       const managerIds = managers.map((manager) => manager.manager_id);
@@ -963,7 +995,7 @@ export class CompaniesService {
       }
       const employers = await this.companyEmployerModel
         .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: 1 })
+        .sort({ created_at: -1, _id: -1 })
         .select('employer_id')
         .lean();
       const employerIds = employers.map((employer) => employer.employer_id);
