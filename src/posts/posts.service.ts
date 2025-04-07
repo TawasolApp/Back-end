@@ -537,12 +537,14 @@ export class PostsService {
             if (post) {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 1) - 1;
+              post.markModified('react_count');
               await post.save();
             }
 
             if (comment) {
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 1) - 1;
+              comment.markModified('react_count');
               await comment.save();
             }
           }
