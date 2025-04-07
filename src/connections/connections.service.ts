@@ -24,6 +24,7 @@ import { handleError } from '../common/utils/exception-handler';
 import {
   getConnection,
   getFollow,
+  getIgnored,
   getPending,
 } from './helpers/connection-helpers';
 import { AddEndoresementDto } from './dtos/add-endorsement.dto';
@@ -98,9 +99,19 @@ export class ConnectionsService {
         receivingParty,
         sendingParty,
       );
-      if (request1 || request2) {
+      const ignored1 = await getIgnored(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      const ignored2 = await getIgnored(
+        this.userConnectionModel,
+        receivingParty,
+        sendingParty,
+      );
+      if (request1 || request2 || ignored1 || ignored2) {
         throw new ConflictException(
-          'Connection request already estbalished between users.',
+          'Pending/ignored connection request already estbalished between users.',
         );
       }
       const connection1 = await getConnection(
@@ -138,17 +149,25 @@ export class ConnectionsService {
       if (!exisitngUser) {
         throw new NotFoundException('User not found.');
       }
-      const existingRequest = await getPending(
+      const existingPending = await getPending(
         this.userConnectionModel,
         sendingParty,
         receivingParty,
       );
-      if (!existingRequest) {
+      const existingIgnored = await getIgnored(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      if (!existingPending && !existingIgnored) {
         throw new NotFoundException(
           'Pending connection request was not found.',
         );
+      } else if (existingPending) {
+        await this.userConnectionModel.findByIdAndDelete(existingPending._id);
+      } else if (existingIgnored) {
+        await this.userConnectionModel.findByIdAndDelete(existingIgnored._id);
       }
-      await this.userConnectionModel.findByIdAndDelete(existingRequest._id);
     } catch (error) {
       handleError(error, 'Failed to remove pending request.');
     }
@@ -675,10 +694,20 @@ export class ConnectionsService {
       if (endorserId === userId) {
         throw new BadRequestException('User cannot endorse their own skill.');
       }
-      const connection1 = await getConnection(this.userConnectionModel, endorserId, userId);
-      const connection2 = await getConnection(this.userConnectionModel, userId, endorserId);
+      const connection1 = await getConnection(
+        this.userConnectionModel,
+        endorserId,
+        userId,
+      );
+      const connection2 = await getConnection(
+        this.userConnectionModel,
+        userId,
+        endorserId,
+      );
       if (!connection1 && !connection2) {
-        throw new ForbiddenException("User cannot endorse a non-connection's skill.") 
+        throw new ForbiddenException(
+          "User cannot endorse a non-connection's skill.",
+        );
       }
       const { skillName } = addEndorsementDto;
       const skill = exisitngUser.skills?.find(

@@ -43,6 +43,7 @@ import {
   getConnection,
   getPending,
   getFollow,
+  getIgnored,
 } from '../connections/helpers/connection-helpers';
 import { ProfileStatus } from './enums/profile-enums';
 import {
@@ -134,7 +135,12 @@ export class ProfilesService {
     ) {
       profileDto.status = ProfileStatus.FOLLOWING;
     } else if (
-      await getPending(this.userConnectionModel, loggedInUser, id.toString())
+      (await getPending(
+        this.userConnectionModel,
+        loggedInUser,
+        id.toString(),
+      )) ||
+      (await getIgnored(this.userConnectionModel, loggedInUser, id.toString()))
     ) {
       profileDto.status = ProfileStatus.PENDING;
     } else if (
