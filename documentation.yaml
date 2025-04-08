@@ -707,36 +707,19 @@ components:
             timestamp: '2023-01-01T10:00:00Z'
             isSaved: false
             isSilentRepost: false
+            isEdited: true
+            isFollowing: true
+            isConnected: false
         isSilentRepost:
           type: boolean
           example: false
-          example:
-            id: '507f1f77bcf86cd799439019'
-            authorId: '507f1f77bcf86cd799439014'
-            authorName: 'Jane Doe'
-            authorPicture: 'http://example.com/profile2.jpg'
-            authorBio: 'Product Manager at Example Inc.'
-            content: 'This is a parent post content.'
-            media:
-              - 'http://example.com/parent-image.jpg'
-            reactCounts:
-              Like: 20
-              Love: 10
-              Funny: 5
-              Celebrate: 2
-              Insightful: 3
-              Support: 8
-            comments: 12
-            shares: 4
-            taggedUsers:
-              - '507f1f77bcf86cd799439011'
-            visibility: 'Public'
-            authorType: 'User'
-            reactType: 'Love'
-            timestamp: '2023-01-01T10:00:00Z'
-            isSaved: false
-            isSilentRepost: false
-        isSilentRepost:
+        isEdited:
+          type: boolean
+          example: false
+        isFollowing:
+          type: boolean
+          example: true
+        isConnected:
           type: boolean
           example: false
     EditPostDto:
@@ -968,4 +951,12 @@ components:
               null,
             ]
           example: 'Like'
-          example: 'Like'
+        isEdited:
+          type: boolean
+          example: false
+        isFollowing:
+          type: boolean
+          example: true
+        isConnected:
+          type: boolean
+          example: false
