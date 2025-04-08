@@ -14,6 +14,15 @@ import { GetPostDto } from '../dto/get-post.dto';
 import { ReactionDto } from '../dto/get-reactions.dto';
 import { mapPostToDto, mapReactionToDto } from '../mappers/post.map';
 
+/**
+ * Find a post by its ID with proper error handling
+ *
+ * Process:
+ * 1. Query the database for a post with the given ID
+ * 2. If the post doesn't exist, throw a NotFoundException
+ * 3. Handle invalid ID format with appropriate error message
+ * 4. Return the found post document
+ */
 export async function findPostById(
   postModel,
   id: string,
@@ -32,13 +41,26 @@ export async function findPostById(
   }
 }
 
+/**
+ * Enrich a comment with author information, reaction data, and connection status
+ *
+ * Process:
+ * 1. Determine if the author is a User or Company and fetch profile data
+ * 2. Extract author details (name, picture, bio) based on profile type
+ * 3. Check if the viewing user has reacted to this comment
+ * 4. Determine connection status between viewer and comment author:
+ *    - Are they the same person?
+ *    - Is the viewer following the author?
+ *    - Are they connected?
+ * 5. Map all collected data to a standardized comment DTO
+ */
 export async function getCommentInfo(
   comment: CommentDocument,
   userId: string,
   profileModel,
   companyModel,
   reactModel,
-  userConnectionModel, // Added parameter
+  userConnectionModel,
 ): Promise<GetCommentDto> {
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
@@ -135,6 +157,20 @@ export async function getCommentInfo(
   );
 }
 
+/**
+ * Enrich a post with complete metadata, author info, and user-specific context
+ *
+ * Process:
+ * 1. Fetch author profile data (User or Company)
+ * 2. If this is a repost, recursively fetch and enrich the parent post
+ * 3. Check if the viewing user has reacted to this post and get reaction type
+ * 4. Determine if the viewer has saved this post
+ * 5. Check connection status between viewer and post author:
+ *    - Following status
+ *    - Connection status
+ * 6. Map all collected data to a standardized post DTO
+ * 7. Attach parent post information for reposts
+ */
 export async function getPostInfo(
   post: PostDocument,
   userId: string,
@@ -143,7 +179,7 @@ export async function getPostInfo(
   companyModel,
   reactModel,
   saveModel,
-  userConnectionModel, // Added parameter
+  userConnectionModel,
 ): Promise<GetPostDto> {
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
@@ -258,6 +294,15 @@ export async function getPostInfo(
   return { ...returnedDTo, parentPost: parentPostDto };
 }
 
+/**
+ * Retrieve detailed information about a reaction and its author
+ *
+ * Process:
+ * 1. Determine if the reactor is a User or Company
+ * 2. Fetch the reactor's profile data
+ * 3. Extract the appropriate profile picture (user photo or company logo)
+ * 4. Map reaction data and author information to a standardized DTO
+ */
 export async function getReactionInfo(
   reaction: ReactDocument,
   profileModel,
