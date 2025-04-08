@@ -657,7 +657,19 @@ components:
             timestamp: '2023-01-01T10:00:00Z'
             isSaved: false
             isSilentRepost: false
+            isEdited: true
+            isFollowing: true
+            isConnected: false
         isSilentRepost:
+          type: boolean
+          example: false
+        isEdited:
+          type: boolean
+          example: false
+        isFollowing:
+          type: boolean
+          example: true
+        isConnected:
           type: boolean
           example: false
     EditPostDto:
@@ -825,3 +837,12 @@ components:
               null,
             ]
           example: 'Like'
+        isEdited:
+          type: boolean
+          example: false
+        isFollowing:
+          type: boolean
+          example: true
+        isConnected:
+          type: boolean
+          example: false

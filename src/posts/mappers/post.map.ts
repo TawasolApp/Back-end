@@ -8,6 +8,8 @@ export function mapPostToDto(
   authorProfile: ProfileDocument | CompanyDocument,
   userReactionType: string | null,
   isSaved: boolean,
+  isConnected: boolean,
+  isFollowing: boolean,
 ): GetPostDto {
   return {
     id: post.id.toString(),
@@ -45,6 +47,9 @@ export function mapPostToDto(
     timestamp: post.posted_at,
     isSaved: !!isSaved,
     isSilentRepost: post.is_silent_repost,
+    isConnected: !!isConnected,
+    isFollowing: !!isFollowing,
+    isEdited: post.is_edited,
   };
 }
 
@@ -91,6 +96,8 @@ export function mapCommentToDto(
     | 'Support'
     | null,
   replies: string[],
+  isConnected: boolean,
+  isFollowing: boolean,
 ): GetCommentDto {
   console.log('Comment:', comment);
   return {
@@ -107,5 +114,8 @@ export function mapCommentToDto(
     timestamp: comment.commented_at.toISOString(),
     taggedUsers: [], // Assuming tagged users are handled elsewhere
     reactType: userReactionType,
+    isConnected: !!isConnected,
+    isFollowing: !!isFollowing,
+    isEdited: comment.is_edited,
   };
 }

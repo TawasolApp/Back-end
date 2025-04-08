@@ -38,6 +38,7 @@ export async function getCommentInfo(
   profileModel,
   companyModel,
   reactModel,
+  userConnectionModel, // Added parameter
 ): Promise<GetCommentDto> {
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
@@ -96,6 +97,32 @@ export async function getCommentInfo(
       : null;
   }
 
+  const isFollowed = userId
+    ? comment.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        sending_party: new Types.ObjectId(userId),
+        receiving_party: comment.author_id,
+        status: 'Following',
+      }))
+    : false;
+
+  const isConnected = userId
+    ? comment.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(userId),
+            receiving_party: comment.author_id,
+          },
+          {
+            sending_party: comment.author_id,
+            receiving_party: new Types.ObjectId(userId),
+          },
+        ],
+        status: 'Connected',
+      }))
+    : false;
+
   return mapCommentToDto(
     comment,
     authorName,
@@ -103,6 +130,8 @@ export async function getCommentInfo(
     authorBio,
     userReactionType,
     comment.replies.map((reply) => reply.toString()),
+    isFollowed,
+    isConnected,
   );
 }
 
@@ -114,6 +143,7 @@ export async function getPostInfo(
   companyModel,
   reactModel,
   saveModel,
+  userConnectionModel, // Added parameter
 ): Promise<GetPostDto> {
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
@@ -161,6 +191,7 @@ export async function getPostInfo(
         companyModel,
         reactModel,
         saveModel,
+        userConnectionModel,
       );
     }
   }
@@ -189,11 +220,39 @@ export async function getPostInfo(
     user_id: new Types.ObjectId(userId),
   });
 
+  const isFollowed = userId
+    ? post.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        sending_party: new Types.ObjectId(userId),
+        receiving_party: post.author_id,
+        status: 'Following',
+      }))
+    : false;
+
+  const isConnected = userId
+    ? post.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(userId),
+            receiving_party: post.author_id,
+          },
+          {
+            sending_party: post.author_id,
+            receiving_party: new Types.ObjectId(userId),
+          },
+        ],
+        status: 'Connected',
+      }))
+    : false;
+
   const returnedDTo = mapPostToDto(
     post,
     authorProfile,
     userReactionType,
     !!isSaved,
+    isFollowed,
+    isConnected,
   );
 
   return { ...returnedDTo, parentPost: parentPostDto };

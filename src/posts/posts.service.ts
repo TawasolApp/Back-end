@@ -124,6 +124,7 @@ export class PostsService {
       post.author_type = authorType;
 
       Object.assign(post, editPostDto);
+      post.is_edited = true; // Mark as edited
       await post.save();
       return post;
     } catch (err) {
@@ -205,6 +206,7 @@ export class PostsService {
         this.companyModel,
         this.reactModel,
         this.saveModel,
+        this.userConnectionModel,
       );
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -248,7 +250,7 @@ export class PostsService {
           : conn.sending_party,
       );
 
-      // Step 2: Get following users (you are the sender)
+      // Step 2: Get followed users (you are the sender)
       const following = await this.userConnectionModel
         .find({
           sending_party: objectId,
@@ -259,32 +261,49 @@ export class PostsService {
 
       const followingUserIds = following.map((conn) => conn.receiving_party);
 
-      // Step 3: Merge all unique author_ids: connections + following + myself
-      const allAuthorIds = [
-        ...new Set([
-          ...connectedUserIds.map((id) => id.toString()),
-          ...followingUserIds.map((id) => id.toString()),
-          userId,
-        ]),
-      ].map((id) => new Types.ObjectId(id));
-
-      // Step 4: Fetch posts
-      const posts = await this.postModel
+      // Step 3: Fetch all candidate posts
+      const candidatePosts = await this.postModel
         .find({
-          $or: [{ visibility: 'Public' }, { author_id: { $in: allAuthorIds } }],
+          visibility: { $ne: 'Private' },
         })
         .sort({ posted_at: -1 })
-        .skip(skip)
-        .limit(limit)
         .exec();
 
-      if (!posts || posts.length === 0) {
-        return [];
-      }
+      // Step 4: Filter posts based on the new logic
+      const filteredPosts = candidatePosts.filter((post) => {
+        const authorIdStr = post.author_id.toString();
 
-      // Step 5: Enrich post data
+        if (authorIdStr === userId) return true; // Always include own posts
+
+        if (connectedUserIds.some((id) => id.toString() === authorIdStr)) {
+          return true; // All posts of connected users
+        }
+
+        if (
+          post.visibility === 'Public' &&
+          followingUserIds.some((id) => id.toString() === authorIdStr)
+        ) {
+          return true; // Public posts of followed users
+        }
+
+        if (
+          post.visibility === 'Public' &&
+          !followingUserIds.some((id) => id.toString() === authorIdStr) &&
+          !connectedUserIds.some((id) => id.toString() === authorIdStr)
+        ) {
+          // 50% chance to show public post of unrelated user
+          return Math.random() < 0.5;
+        }
+
+        return false;
+      });
+
+      // Step 5: Paginate after filtering
+      const paginatedPosts = filteredPosts.slice(skip, skip + limit);
+
+      // Step 6: Enrich post data
       return Promise.all(
-        posts.map((post) =>
+        paginatedPosts.map((post) =>
           getPostInfo(
             post,
             userId,
@@ -293,6 +312,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -324,6 +344,7 @@ export class PostsService {
         this.companyModel,
         this.reactModel,
         this.saveModel,
+        this.userConnectionModel,
       ); // Use mapToGetPostDto method
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -360,6 +381,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -725,6 +747,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           );
         }),
       );
@@ -814,6 +837,7 @@ export class PostsService {
         this.profileModel,
         this.companyModel,
         this.reactModel,
+        this.userConnectionModel,
       );
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -854,6 +878,7 @@ export class PostsService {
             this.profileModel,
             this.companyModel,
             this.reactModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -889,6 +914,7 @@ export class PostsService {
       }
 
       Object.assign(comment, editCommentDto);
+      comment.is_edited = true;
       return await comment.save();
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -1046,6 +1072,7 @@ export class PostsService {
           this.companyModel,
           this.reactModel,
           this.saveModel,
+          this.userConnectionModel,
         ),
       ),
     );
@@ -1140,6 +1167,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -1193,6 +1221,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
