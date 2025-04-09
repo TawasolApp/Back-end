@@ -63,6 +63,9 @@ export class Post {
 
   @Prop({ default: false })
   is_silent_repost: boolean;
+
+  @Prop({ default: false })
+  is_edited: boolean;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

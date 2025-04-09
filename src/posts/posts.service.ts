@@ -67,15 +67,18 @@ export class PostsService {
     private userConnectionModel: Model<UserConnectionDocument>,
   ) {}
 
-  // Edit an existing post by checking the author's validity and updating the fields.
-  // Description:
-  // 1. Validate post and user ID formats.
-  // 2. Find the post by ID.
-  // 3. Check if the user is authorized to edit the post.
-  // 4. Determine the author's type (User or Company).
-  // 5. Update post fields and save.
-  // 6. Return the updated post.
-
+  /**
+   * Edit an existing post by validating permissions and updating content
+   *
+   * Process:
+   * 1. Validate both post and user ID formats using MongoDB ObjectId
+   * 2. Retrieve the post by ID and verify it exists
+   * 3. Ensure the requesting user is the original author of the post
+   * 4. Determine if the author is a User or Company profile
+   * 5. Update post fields with the provided data
+   * 6. Mark the post as edited and save changes
+   * 7. Return the updated post or handle any errors
+   */
   async editPost(
     id: string,
     editPostDto: EditPostDto,
@@ -124,6 +127,7 @@ export class PostsService {
       post.author_type = authorType;
 
       Object.assign(post, editPostDto);
+      post.is_edited = true; // Mark as edited
       await post.save();
       return post;
     } catch (err) {
@@ -132,14 +136,17 @@ export class PostsService {
     }
   }
 
-  // Create and save a new post with content, media, and visibility.
-  // Description:
-  // 1. Validate the author ID format.
-  // 2. Check if the author is a User or Company.
-  // 3. Create a new post instance with author and content details.
-  // 4. Save the post to the database.
-  // 5. Return the formatted post DTO.
-
+  /**
+   * Create and save a new post with content, media, and visibility settings
+   *
+   * Process:
+   * 1. Validate the author ID format using MongoDB ObjectId
+   * 2. Determine if the author is a User or Company by checking profile databases
+   * 3. If this is a repost, validate and update the parent post's share count
+   * 4. Create a new post document with author info, content, and metadata
+   * 5. Save the post to the database
+   * 6. Return the fully formatted post DTO with enriched information
+   */
   async addPost(
     createPostDto: CreatePostDto,
     author_id: string,
@@ -205,6 +212,7 @@ export class PostsService {
         this.companyModel,
         this.reactModel,
         this.saveModel,
+        this.userConnectionModel,
       );
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -213,12 +221,22 @@ export class PostsService {
     }
   }
 
-  // Retrieve a paginated list of all posts for the user.
-  // Description:
-  // 1. Calculate the skip value for pagination.
-  // 2. Retrieve a paginated list of posts.
-  // 3. If no posts found, throw an error.
-  // 4. Map each post to GetPostDto and return.
+  /**
+   * Retrieve a personalized, paginated feed of posts for the user
+   *
+   * Process:
+   * 1. Calculate pagination parameters for efficient data retrieval
+   * 2. Identify the user's connections network (connected and following users)
+   * 3. Fetch candidate posts, filtering by visibility
+   * 4. Apply smart filtering rules:
+   *    - Always show user's own posts
+   *    - Show all posts from connected users
+   *    - Show public posts from followed users
+   *    - Show a random selection of public posts from the wider network
+   * 5. Apply pagination to the filtered results
+   * 6. Enrich posts with author, reaction, and connection data
+   * 7. Return the personalized feed as DTO objects
+   */
   async getAllPosts(
     page: number,
     limit: number,
@@ -248,7 +266,7 @@ export class PostsService {
           : conn.sending_party,
       );
 
-      // Step 2: Get following users (you are the sender)
+      // Step 2: Get followed users (you are the sender)
       const following = await this.userConnectionModel
         .find({
           sending_party: objectId,
@@ -259,32 +277,49 @@ export class PostsService {
 
       const followingUserIds = following.map((conn) => conn.receiving_party);
 
-      // Step 3: Merge all unique author_ids: connections + following + myself
-      const allAuthorIds = [
-        ...new Set([
-          ...connectedUserIds.map((id) => id.toString()),
-          ...followingUserIds.map((id) => id.toString()),
-          userId,
-        ]),
-      ].map((id) => new Types.ObjectId(id));
-
-      // Step 4: Fetch posts
-      const posts = await this.postModel
+      // Step 3: Fetch all candidate posts
+      const candidatePosts = await this.postModel
         .find({
-          $or: [{ visibility: 'Public' }, { author_id: { $in: allAuthorIds } }],
+          visibility: { $ne: 'Private' },
         })
         .sort({ posted_at: -1 })
-        .skip(skip)
-        .limit(limit)
         .exec();
 
-      if (!posts || posts.length === 0) {
-        return [];
-      }
+      // Step 4: Filter posts based on the new logic
+      const filteredPosts = candidatePosts.filter((post) => {
+        const authorIdStr = post.author_id.toString();
 
-      // Step 5: Enrich post data
+        if (authorIdStr === userId) return true; // Always include own posts
+
+        if (connectedUserIds.some((id) => id.toString() === authorIdStr)) {
+          return true; // All posts of connected users
+        }
+
+        if (
+          post.visibility === 'Public' &&
+          followingUserIds.some((id) => id.toString() === authorIdStr)
+        ) {
+          return true; // Public posts of followed users
+        }
+
+        if (
+          post.visibility === 'Public' &&
+          !followingUserIds.some((id) => id.toString() === authorIdStr) &&
+          !connectedUserIds.some((id) => id.toString() === authorIdStr)
+        ) {
+          // 50% chance to show public post of unrelated user
+          return Math.random() < 0.5;
+        }
+
+        return false;
+      });
+
+      // Step 5: Paginate after filtering
+      const paginatedPosts = filteredPosts.slice(skip, skip + limit);
+
+      // Step 6: Enrich post data
       return Promise.all(
-        posts.map((post) =>
+        paginatedPosts.map((post) =>
           getPostInfo(
             post,
             userId,
@@ -293,6 +328,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -302,11 +338,16 @@ export class PostsService {
     }
   }
 
-  // Retrieve a specific post by its ID.
-  // Steps:
-  // 1. Find the post by ID.
-  // 2. If not found, throw an error.
-  // 3. Map the post to GetPostDto and return.
+  /**
+   * Retrieve details for a specific post by its identifier
+   *
+   * Process:
+   * 1. Validate the post ID format
+   * 2. Find the post in the database by its MongoDB ObjectId
+   * 3. If post doesn't exist, throw a NotFoundException
+   * 4. Enrich the post with author info, reaction data, and connection status
+   * 5. Return the fully formatted post DTO with all metadata
+   */
   async getPost(id: string, userId: string): Promise<GetPostDto> {
     try {
       if (!isValidObjectId(id)) {
@@ -324,6 +365,7 @@ export class PostsService {
         this.companyModel,
         this.reactModel,
         this.saveModel,
+        this.userConnectionModel,
       ); // Use mapToGetPostDto method
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -331,12 +373,19 @@ export class PostsService {
     throw new InternalServerErrorException('Failed to fetch post');
   }
 
-  // Retrieve all posts created by a specific user.
-  // Description:
-  // 1. Find posts authored by the specific user.
-  // 2. If none found, throw an error.
-  // 3. Map each post to GetPostDto and return.
-
+  /**
+   * Retrieve all posts created by a specific user profile
+   *
+   * Process:
+   * 1. Query posts with matching author_id
+   * 2. If no posts found, return an empty array
+   * 3. For each post, enrich with complete information including:
+   *    - Author profile details
+   *    - Reaction counts and user's reactions
+   *    - Save status
+   *    - Parent post info for reposts
+   * 4. Return array of fully formatted post DTOs
+   */
   async getUserPosts(
     searchedUserId: string,
     userId: string,
@@ -360,6 +409,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -369,11 +419,20 @@ export class PostsService {
     }
   }
 
-  // Delete a post and all associated reactions, comments, and saves.
-  // Steps:
-  // 1. Find the post by ID.
-  // 2. Verify that the requesting user is the author.
-  // 3. Delete the post, related reactions, comments, and saves.
+  /**
+   * Delete a post and all associated data (reactions, comments, saves)
+   *
+   * Process:
+   * 1. Find the post by its ID
+   * 2. Verify the requesting user is the original author
+   * 3. If this is a repost, update the parent post's share count
+   * 4. Delete the post document from the database
+   * 5. Perform cascade deletion of all associated data:
+   *    - Reactions on the post
+   *    - Comments on the post
+   *    - Saved references to the post
+   * 6. Handle potential errors during deletion process
+   */
   async deletePost(postId: string, userId: string): Promise<void> {
     try {
       const post = await this.postModel.findById(postId).exec();
@@ -408,15 +467,20 @@ export class PostsService {
     }
   }
 
-  // Add, update, or remove a user reaction on a post or comment.
-  // Description:
-  // 1. Validate user ID format.
-  // 2. Ensure only one reaction is set to true.
-  // 3. Depending on postType, find the post or comment.
-  // 4. Update or create/delete the reaction.
-  // 5. Update reaction counts accordingly.
-  // 6. Return the updated post or comment.
-
+  /**
+   * Add, update, or remove a user's reaction to a post or comment
+   *
+   * Process:
+   * 1. Validate user and post/comment ID formats
+   * 2. Ensure only one reaction type is set to true (like, love, etc.)
+   * 3. Determine if the target is a post or comment
+   * 4. Check if the user already has a reaction, then:
+   *    - If no reaction exists and adding new one: Create new reaction
+   *    - If changing reaction type: Update existing reaction type
+   *    - If removing reaction: Delete the reaction document
+   * 5. Update reaction counts on the target post or comment
+   * 6. Return the updated post or comment with new reaction counts
+   */
   async updateReactions(
     postId: string,
     userId: string,
@@ -565,18 +629,23 @@ export class PostsService {
     }
   }
 
-  // Retrieve paginated list of all reactions for a specific post.
-  // Description:
-  // 1. Validate post ID and pagination.
-  // 2. Find all reactions for the post.
-  // 3. Map each reaction to ReactionDto and return.
-
+  /**
+   * Retrieve a paginated list of reactions for a specific post
+   *
+   * Process:
+   * 1. Calculate pagination parameters (skip, limit)
+   * 2. Validate the post ID format
+   * 3. Build a query to filter reactions by post and optionally by reaction type
+   * 4. Execute the query with pagination applied
+   * 5. For each reaction, enrich with reactor information (profile/company details)
+   * 6. Return the array of reaction DTOs with complete user information
+   */
   async getReactions(
     postId: string,
     page: number,
     limit: number,
     reactionType: string,
-    userId: string, // For user-specific reactions later.
+    userId: string,
   ): Promise<ReactionDto[]> {
     try {
       const skip = (page - 1) * limit;
@@ -616,12 +685,15 @@ export class PostsService {
     }
   }
 
-  // Save a post for later reference by a specific user.
-  // Steps:
-  // 1. Validate the post existence.
-  // 2. Check if already saved by user.
-  // 3. Create a new Save document.
-  // 4. Save and return success message.
+  /**
+   * Save a post to the user's personal collection for later reference
+   *
+   * Process:
+   * 1. Verify the post exists in the database
+   * 2. Check if the user has already saved this post
+   * 3. Create a new Save document linking the user to the post
+   * 4. Return a success message upon completion
+   */
   async savePost(postId: string, userId: string): Promise<{ message: string }> {
     try {
       const post = await this.postModel
@@ -654,12 +726,14 @@ export class PostsService {
     }
   }
 
-  // Remove a saved post from the user's saved list.
-  // Description:
-  // 1. Find and delete the saved post document.
-  // 2. If not found, throw error.
-  // 3. Return success message.
-
+  /**
+   * Remove a previously saved post from the user's collection
+   *
+   * Process:
+   * 1. Find and delete the saved post record matching both post and user IDs
+   * 2. Verify the save record existed before attempting deletion
+   * 3. Return a success message upon completion
+   */
   async unsavePost(
     postId: string,
     userId: string,
@@ -686,11 +760,17 @@ export class PostsService {
     }
   }
 
-  // Retrieve all posts saved by a specific user.
-  // Steps:
-  // 1. Find all saved posts by user.
-  // 2. If none found, throw error.
-  // 3. Map and return each post using GetPostDto.
+  /**
+   * Retrieve all posts saved by a specific user with pagination
+   *
+   * Process:
+   * 1. Calculate the offset based on page number and limit
+   * 2. Find all save records for the specified user ID
+   * 3. Apply pagination and sort by most recently saved
+   * 4. For each saved post reference, retrieve the full post data
+   * 5. Enrich each post with author, reaction, and metadata information
+   * 6. Return array of fully formatted post DTOs
+   */
   async getSavedPosts(
     userId: string,
     page: number,
@@ -725,6 +805,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           );
         }),
       );
@@ -734,13 +815,19 @@ export class PostsService {
     }
   }
 
-  // Add a comment to a specific post by a user.
-  // Description:
-  // 1. Validate the post existence.
-  // 2. Check if the author is User or Company.
-  // 3. Create and save a new comment.
-  // 4. Increment the post's comment count.
-
+  /**
+   * Add a comment to a post or reply to another comment
+   *
+   * Process:
+   * 1. Determine if this is a post comment or a reply to another comment
+   * 2. Verify the parent post/comment exists
+   * 3. Determine if the author is a User or Company profile
+   * 4. Create a new comment document with author info and content
+   * 5. Update reference counts:
+   *    - Increment comment count if commenting on a post
+   *    - Add to replies array if replying to another comment
+   * 6. Return the newly created comment with author information
+   */
   async addComment(
     postId: string,
     createCommentDto: CreateCommentDto,
@@ -814,6 +901,7 @@ export class PostsService {
         this.profileModel,
         this.companyModel,
         this.reactModel,
+        this.userConnectionModel,
       );
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -821,12 +909,19 @@ export class PostsService {
     }
   }
 
-  // Retrieve paginated comments for a given post.
-  // Description:
-  // 1. Paginate and fetch comments for the post.
-  // 2. If none found, throw error.
-  // 3. Map each comment to GetCommentDto and return.
-
+  /**
+   * Retrieve paginated comments for a specific post
+   *
+   * Process:
+   * 1. Calculate pagination parameters (skip, limit)
+   * 2. Query the database for comments on the specified post
+   * 3. Apply sorting (newest first) and pagination
+   * 4. For each comment, enrich with:
+   *    - Author profile details
+   *    - Reaction data
+   *    - User connection status
+   * 5. Return array of fully formatted comment DTOs
+   */
   async getComments(
     postId: string,
     page: number,
@@ -854,6 +949,7 @@ export class PostsService {
             this.profileModel,
             this.companyModel,
             this.reactModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -863,12 +959,16 @@ export class PostsService {
     }
   }
 
-  // Edit a specific comment if the requesting user is the author.
-  // Description:
-  // 1. Find the comment by ID.
-  // 2. Verify that the user is the author.
-  // 3. Update the comment and save.
-
+  /**
+   * Edit an existing comment's content and tags
+   *
+   * Process:
+   * 1. Find the comment by its ID
+   * 2. Verify the requesting user is the original author
+   * 3. Update comment fields with provided data
+   * 4. Mark the comment as edited
+   * 5. Save and return the updated comment
+   */
   async editComment(
     commentId: string,
     editCommentDto: EditCommentDto,
@@ -889,6 +989,7 @@ export class PostsService {
       }
 
       Object.assign(comment, editCommentDto);
+      comment.is_edited = true;
       return await comment.save();
     } catch (err) {
       if (err instanceof HttpException) throw err;
@@ -896,11 +997,18 @@ export class PostsService {
     }
   }
 
-  // Delete a comment if the requesting user is the author.
-  // Steps:
-  // 1. Find the comment by ID.
-  // 2. Verify user authorization.
-  // 3. Delete the comment and related reactions.
+  /**
+   * Delete a comment and its associated data
+   *
+   * Process:
+   * 1. Find the comment by its ID
+   * 2. Verify the requesting user is the original author
+   * 3. Locate the parent (post or comment) and update reference counts
+   * 4. Perform cascade deletion of:
+   *    - Reactions on the comment
+   *    - The comment itself
+   *    - Any replies to the comment
+   */
   async deleteComment(commentId: string, userId: string): Promise<void> {
     try {
       const comment = await this.commentModel.findById(
@@ -947,6 +1055,20 @@ export class PostsService {
       throw new InternalServerErrorException('Failed to delete comment');
     }
   }
+
+  /**
+   * Search for posts matching specific criteria with advanced filtering
+   *
+   * Process:
+   * 1. Parse and validate search parameters
+   * 2. Build search query based on keywords, splitting into individual words
+   * 3. Apply time-based filtering (24h, week, all time)
+   * 4. Apply network-based filtering (network-only or all users)
+   * 5. If network-only, identify connected and followed users
+   * 6. Execute search with pagination
+   * 7. Enrich results with complete post information
+   * 8. Return array of matching posts as DTOs
+   */
   async searchPosts(
     userId: string,
     query: string,
@@ -1046,20 +1168,27 @@ export class PostsService {
           this.companyModel,
           this.reactModel,
           this.saveModel,
+          this.userConnectionModel,
         ),
       ),
     );
   }
 
-  // Retrieve all reposts of a given post (with visibility filtering).
-  // Description:
-  // 1. Validate the post ID and user ID formats.
-  // 2. Get list of user’s connections and following.
-  // 3. Include reposts that are:
-  //    - Public
-  //    - From connections/followed
-  //    - Authored by the user themselves
-  // 4. Return enriched repost DTOs.
+  /**
+   * Retrieve all reposts (shares) of a specific post with visibility filtering
+   *
+   * Process:
+   * 1. Calculate pagination parameters
+   * 2. Determine the user's network (connections and following)
+   * 3. Build a visibility filter to show:
+   *    - Public reposts
+   *    - Reposts by users in the viewer's network
+   *    - Reposts by the viewer themselves
+   * 4. Query reposts with parent_post_id matching the specified post
+   * 5. Apply sorting (newest first) and pagination
+   * 6. Enrich each repost with complete information
+   * 7. Return array of repost DTOs
+   */
   async getRepostsOfPost(
     postId: string,
     userId: string,
@@ -1140,6 +1269,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
@@ -1148,14 +1278,23 @@ export class PostsService {
       throw new InternalServerErrorException('Failed to fetch reposts');
     }
   }
-  // Retrieve all reposts created by a specific user (paginated).
-  // Description:
-  // 1. Validate the user ID format.
-  // 2. Query the database for posts where the user is the author AND has a parent_post_id (indicating it's a repost).
-  // 3. Apply pagination (skip + limit).
-  // 4. If no reposts found, return an empty array.
-  // 5. Enrich each repost with full post info (author, reactions, saves, parent post, etc.)
-  // 6. Return the array of enriched GetPostDto objects.
+
+  /**
+   * Retrieve all reposts created by a specific user with pagination
+   *
+   * Process:
+   * 1. Calculate pagination parameters
+   * 2. Query posts where:
+   *    - Author matches the specified user
+   *    - Post has a parent_post_id (indicating it's a repost)
+   * 3. Apply sorting (newest first) and pagination
+   * 4. Enrich each repost with:
+   *    - Author information
+   *    - Reaction data
+   *    - Parent post details
+   *    - Connection status relative to viewer
+   * 5. Return array of fully formatted repost DTOs
+   */
   async getRepostsByUser(
     userId: string,
     page: number,
@@ -1193,6 +1332,7 @@ export class PostsService {
             this.companyModel,
             this.reactModel,
             this.saveModel,
+            this.userConnectionModel,
           ),
         ),
       );
