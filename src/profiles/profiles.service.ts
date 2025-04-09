@@ -494,8 +494,8 @@ export class ProfilesService {
           'certification.$.company': certification.company,
           'certification.$.issue_date': certification.issueDate,
           'certification.$.expiry_date': certification.expiryDate,
-          'certification.$.certification_picture':
-            certification.certificationPicture,
+          'certification.$.company_logo': certification.companyLogo,
+          'certification.$.company_id': certification.companyId,
         },
       },
       { new: true, runValidators: true },
@@ -583,8 +583,7 @@ export class ProfilesService {
     }
 
     console.log(
-      'editWorkExperience service title: ' +
-        workExperience.workExperiencePicture,
+      'editWorkExperience service title: ' + workExperience.companyLogo,
     );
     // const updateData = toUpdateWorkExperienceSchema(workExperience);
 
@@ -603,8 +602,8 @@ export class ProfilesService {
           'work_experience.$.location': workExperience.location,
           'work_experience.$.location_type': workExperience.locationType,
           'work_experience.$.description': workExperience.description,
-          'work_experience.$.work_experience_picture':
-            workExperience.workExperiencePicture,
+          'work_experience.$.company_logo': workExperience.companyLogo,
+          'work_experience.$.company_id': workExperience.companyId,
         },
       },
       { new: true, runValidators: true },
