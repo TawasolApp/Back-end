@@ -14,13 +14,14 @@ import { N } from '@faker-js/faker/dist/airline-CBNP41sR';
 class Education {
   _id: Types.ObjectId;
 
+
   school: string;
 
   degree?: string;
 
   field?: string;
 
-  startDate: string | null;
+  startDate?: string;
 
   endDate: string | null;
 
@@ -31,9 +32,15 @@ class Education {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
+
+  companyId?: Types.ObjectId;
+
+  companyLogo?: string;
 }
 
 class Certification {
+  _id: Types.ObjectId;
+
   _id: Types.ObjectId;
 
   name: string;
@@ -44,9 +51,9 @@ class Certification {
 
   companyLogo?: string;
 
-  issueDate: string | null;
+  issueDate?: string;
 
-  expiryDate: string | null;
+  expiryDate?: string;
 }
 
 class WorkExperience {
@@ -67,6 +74,10 @@ class WorkExperience {
   locationType?: LocationType;
 
   description?: string;
+
+  companyId?: Types.ObjectId;
+
+  companyLogo?: string;
 
   companyId?: Types.ObjectId;
 
@@ -116,6 +127,7 @@ export class GetProfileDto {
 
   education?: Education[];
 
+  certification?: Certification[];
   certification?: Certification[];
 
   workExperience?: WorkExperience[];
