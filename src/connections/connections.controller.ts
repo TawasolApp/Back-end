@@ -122,25 +122,29 @@ export class ConnectionsController {
     await this.connectionsService.removeConnection(userId, requestUserId);
   }
 
-  @Get('/list')
+  @Get('/:userId/list')
   async getConnections(
     @Req() request: Request,
+    @Param('userId') userId: string,
     @Query('page', ParseIntPipe) page: number,
     @Query('limit', ParseIntPipe) limit: number,
     @Query('by', new DefaultValuePipe(1), ParseIntPipe) by: number,
     @Query('direction', new DefaultValuePipe(1), ParseIntPipe)
     direction: number,
+    @Query('name') name?: string,
   ) {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    const userId = request.user['sub'];
+    const id = request.user['sub'];
     return await this.connectionsService.getConnections(
+      id,
       userId,
       page,
       limit,
       by,
       direction,
+      name,
     );
   }
 
