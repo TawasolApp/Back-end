@@ -162,7 +162,7 @@ export function toUpdateProfileSchema(
         grade: education?.grade ?? null,
         description: education?.description ?? null,
         companyId: education?.company_id ?? null,
-        educationPicture: education?.company_logo ?? null,
+        companyLogo: education?.company_logo ?? null,
       })) ?? [],
 
     certification:
@@ -181,7 +181,7 @@ export function toUpdateProfileSchema(
         _id: work?._id ?? null,
         title: work?.title ?? null,
         companyId: work?.company_id ?? null,
-        workExperiencePicture: work?.company_logo ?? null,
+        companyLogo: work?.company_logo ?? null,
         company: work?.company ?? null,
         employmentType: work?.employment_type as EmploymentType,
         startDate: work?.start_date?.toISOString() ?? null,
