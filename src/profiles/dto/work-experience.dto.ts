@@ -7,6 +7,7 @@ import {
   IsEnum,
   IsDate,
 } from 'class-validator';
+import { Types } from 'mongoose';
 
 export enum EmploymentType {
   FULL_TIME = 'full_time',
@@ -58,12 +59,18 @@ export class WorkExperienceDto {
   endDate?: Date;
 
   @ApiProperty({
+    example: '60d5f484b3a8c8a3f4e5f4e5',
+    description: 'The ID of the company that you had this experience at.',
+  })
+  @IsOptional()
+  companyId?: Types.ObjectId;
+  @ApiProperty({
     example: 'https://example.com/certification.jpg',
     description: 'The URL of the work experience picture.',
   })
   @IsOptional()
   @IsString()
-  workExperiencePicture?: string;
+  companyLogo?: string;
 
   @ApiProperty({
     example: 'San Francisco, CA',

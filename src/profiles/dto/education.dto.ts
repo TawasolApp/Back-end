@@ -1,6 +1,7 @@
 import { Prop } from '@nestjs/mongoose';
 import { ApiProperty } from '@nestjs/swagger';
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { Types } from 'mongoose';
 
 export class EducationDto {
   @ApiProperty({
@@ -54,4 +55,19 @@ export class EducationDto {
   @IsOptional()
   @IsString()
   description: string;
+
+  @ApiProperty({
+    example: '60d5f484b3a8c8a3f4e5f4e5',
+    description: 'The ID of the company that you had this education at.',
+  })
+  @IsOptional()
+  companyId?: Types.ObjectId;
+
+  @ApiProperty({
+    example: 'https://example.com/certification.jpg',
+    description: 'The URL of the company logo.',
+  })
+  @IsOptional()
+  @IsString()
+  companyLogo?: string;
 }
