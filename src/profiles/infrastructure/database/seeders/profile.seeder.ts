@@ -18,6 +18,10 @@ import {
   PlanType,
   Visibility,
 } from '../../../enums/profile-enums';
+import {
+  Company,
+  CompanyDocument,
+} from '../../../../companies/infrastructure/database/schemas/company.schema';
 
 @Injectable()
 export class ProfileSeeder {
@@ -26,6 +30,7 @@ export class ProfileSeeder {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(UserConnection.name)
     private userConnectionModel: Model<UserConnectionDocument>,
+    @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
   ) {}
 
   async seedProfiles(): Promise<void> {
@@ -38,80 +43,94 @@ export class ProfileSeeder {
       return;
     }
 
-    const profiles: Partial<ProfileDocument>[] = users.map((user) => ({
-      _id: user._id,
-      first_name: user.first_name,
-      last_name: user.last_name,
-      profile_picture: faker.image.avatar(),
-      cover_photo: faker.image.url(),
-      resume: faker.internet.url(),
-      headline: faker.person.jobTitle(),
-      bio: faker.lorem.sentence(),
-      location: faker.location.city(),
-      industry: faker.commerce.department(),
-      skills: [
-        {
-          skill_name: faker.word.adverb(),
-          position: faker.company.name(),
-          endorsements: [faker.helpers.arrayElement(users)._id],
-        },
-      ],
-      education: [
-        {
-          _id: new this.profileModel()._id, // Generate a unique ObjectId
-          school: faker.company.name(),
-          degree: faker.person.jobTitle(),
-          field: faker.commerce.department(),
-          start_date: faker.date.past({ years: 10 }),
-          end_date: faker.datatype.boolean()
-            ? faker.date.past({ years: 5 })
-            : undefined,
-          grade: faker.helpers.arrayElement(['A', 'B', 'C']),
-          description: faker.lorem.sentence(),
-        },
-      ],
-      certification: [
-        {
-          _id: new this.profileModel()._id, // Generate a unique ObjectId
-          name: faker.person.jobTitle(),
-          company: faker.company.name(),
-          certification_picture: faker.image.url(),
-          issue_date: faker.date.past({ years: 3 }),
+    const companies = await this.companyModel.find().lean();
+    if (companies.length === 0) {
+      console.log('No companies found. Seeding aborted.');
+      return;
+    }
+
+    const profiles: Partial<ProfileDocument>[] = users.map((user) => {
+      const randomCompany = faker.helpers.arrayElement(companies); // Select a random company
+
+      return {
+        _id: user._id,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        profile_picture: faker.image.avatar(),
+        cover_photo: faker.image.url(),
+        resume: faker.internet.url(),
+        headline: faker.person.jobTitle(),
+        bio: faker.lorem.sentence(),
+        location: faker.location.city(),
+        industry: faker.commerce.department(),
+        skills: [
+          {
+            skill_name: faker.word.adverb(),
+            position: faker.company.name(),
+            endorsements: [faker.helpers.arrayElement(users)._id],
+          },
+        ],
+        education: [
+          {
+            _id: new this.profileModel()._id, // Generate a unique ObjectId
+            school: faker.company.name(),
+            degree: faker.person.jobTitle(),
+            field: faker.commerce.department(),
+            start_date: faker.date.past({ years: 10 }),
+            end_date: faker.datatype.boolean()
+              ? faker.date.past({ years: 5 })
+              : undefined,
+            grade: faker.helpers.arrayElement(['A', 'B', 'C']),
+            description: faker.lorem.sentence(),
+            company_id: randomCompany._id, // Assign a random company_id
+            company_logo: randomCompany.logo,
+          },
+        ],
+        certification: [
+          {
+            _id: new this.profileModel()._id, // Generate a unique ObjectId
+            name: faker.person.jobTitle(),
+            company: faker.company.name(),
+            company_id: randomCompany._id, // Assign a random company_id
+            company_logo: randomCompany.logo,
+            issue_date: faker.date.past({ years: 3 }),
+            expiry_date: faker.date.future({ years: 1 }),
+          },
+        ],
+        work_experience: [
+          {
+            _id: new this.profileModel()._id, // Generate a unique ObjectId
+            title: faker.person.jobTitle(),
+            company_id: randomCompany._id, // Assign a random company_id
+            company_logo: randomCompany.logo,
+            employment_type: faker.helpers.enumValue(EmploymentType),
+            company: faker.company.name(),
+            start_date: faker.date.past({ years: 5 }),
+            end_date: faker.datatype.boolean()
+              ? faker.date.past({ years: 2 })
+              : undefined,
+            location: faker.location.city(),
+            location_type: faker.helpers.enumValue(LocationType),
+            description: faker.lorem.sentence(),
+          },
+        ],
+        visibility: faker.helpers.enumValue(Visibility),
+        connection_count: 0,
+        plan_details: {
+          plan_type: faker.helpers.enumValue(PlanType),
+          start_date: faker.date.past({ years: 1 }),
           expiry_date: faker.date.future({ years: 1 }),
-        },
-      ],
-      work_experience: [
-        {
-          _id: new this.profileModel()._id, // Generate a unique ObjectId
-          title: faker.person.jobTitle(),
-          work_experience_picture: faker.image.url(),
-          employment_type: faker.helpers.enumValue(EmploymentType),
-          company: faker.company.name(),
-          start_date: faker.date.past({ years: 5 }),
-          end_date: faker.datatype.boolean()
-            ? faker.date.past({ years: 2 })
+          auto_renewal: faker.datatype.boolean(),
+          cancel_date: faker.datatype.boolean()
+            ? faker.date.past({ years: 1 })
             : undefined,
-          location: faker.location.city(),
-          location_type: faker.helpers.enumValue(LocationType),
-          description: faker.lorem.sentence(),
         },
-      ],
-      visibility: faker.helpers.enumValue(Visibility),
-      connection_count: 0,
-      plan_details: {
-        plan_type: faker.helpers.enumValue(PlanType),
-        start_date: faker.date.past({ years: 1 }),
-        expiry_date: faker.date.future({ years: 1 }),
-        auto_renewal: faker.datatype.boolean(),
-        cancel_date: faker.datatype.boolean()
-          ? faker.date.past({ years: 1 })
-          : undefined,
-      },
-      plan_statistics: {
-        message_count: faker.number.int({ min: 0, max: 1000 }),
-        application_count: faker.number.int({ min: 0, max: 100 }),
-      },
-    }));
+        plan_statistics: {
+          message_count: faker.number.int({ min: 0, max: 1000 }),
+          application_count: faker.number.int({ min: 0, max: 100 }),
+        },
+      };
+    });
 
     await this.profileModel.insertMany(profiles, { ordered: false });
     console.log(`${profiles.length} profiles seeded successfully!`);
