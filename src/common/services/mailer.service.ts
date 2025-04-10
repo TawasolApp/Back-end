@@ -95,5 +95,3 @@ export class MailerService {
     console.log(`📨 ${type} email sent to ${email}`);
   }
 }
-
-
