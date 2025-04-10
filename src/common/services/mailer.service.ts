@@ -16,7 +16,7 @@ export class MailerService {
   }
 
   async sendVerificationEmail(email: string, token: string) {
-    const verificationUrl = `https://tawasolapp.me/api/auth/verify-email?token=${token}`;
+    const verificationUrl = `https://tawasolapp.me/auth/verify-email?token=${token}`;
 
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
@@ -29,7 +29,7 @@ export class MailerService {
   }
 
   async sendEmailChangeConfirmation(email: string, token: string) {
-    const link = `https://tawasolapp.me/api/users/confirm-email-change?token=${token}`;
+    const link = `https://tawasolapp.me/users/confirm-email-change?token=${token}`;
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
       to: email,
@@ -68,7 +68,7 @@ export class MailerService {
     switch (type) {
       case 'verifyEmail':
         subject = 'Verify Your Email';
-        url = `https://tawasolapp.me/api/auth/verify-email?token=${token}`;
+        url = `https://tawasolapp.me/auth/verify-email?token=${token}`;
         break;
 
       case 'forgotPassword':
@@ -78,7 +78,7 @@ export class MailerService {
 
       case 'emailUpdate':
         subject = 'Confirm Your Email Change';
-        url = `https://tawasolapp.me/api/users/confirm-email-change?token=${token}`;
+        url = `https://tawasolapp.me/users/confirm-email-change?token=${token}`;
         break;
 
       default:
