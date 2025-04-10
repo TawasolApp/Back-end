@@ -57,16 +57,19 @@ export class UsersService {
   ) {}
 
   async requestEmailUpdate(userId: string, dto: UpdateEmailRequestDto) {
+    const { newEmail, password } = dto;
+
     try {
-      const { newEmail, password } = dto;
       const user = await this.userModel.findById(userId);
       if (!user) throw new NotFoundException('User not found');
 
-      if (!(await bcrypt.compare(password, user.password))) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
         throw new BadRequestException('Incorrect password');
       }
 
-      if (await this.userModel.findOne({ email: newEmail })) {
+      const emailExists = await this.userModel.findOne({ email: newEmail });
+      if (emailExists) {
         throw new ConflictException('Email already exists');
       }
 
@@ -78,6 +81,14 @@ export class UsersService {
 
       return { message: 'Please check your new email to confirm the change.' };
     } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException ||
+        error instanceof ConflictException
+      ) {
+        throw error;
+      }
+      console.error('Error in requestEmailUpdate:', error);
       throw new InternalServerErrorException(
         'Failed to process email update request',
       );
@@ -100,16 +111,22 @@ export class UsersService {
   }
 
   async updatePassword(userId: string, updatePasswordDto: UpdatePasswordDto) {
+    const { currentPassword, newPassword } = updatePasswordDto;
+
     try {
-      const { currentPassword, newPassword } = updatePasswordDto;
       const user = await this.userModel.findById(new Types.ObjectId(userId));
       if (!user) throw new NotFoundException('User not found');
 
-      if (!(await bcrypt.compare(currentPassword, user.password))) {
+      const isPasswordValid = await bcrypt.compare(
+        currentPassword,
+        user.password,
+      );
+      if (!isPasswordValid) {
         throw new BadRequestException('Incorrect current password');
       }
 
-      if (await bcrypt.compare(newPassword, user.password)) {
+      const isSamePassword = await bcrypt.compare(newPassword, user.password);
+      if (isSamePassword) {
         throw new BadRequestException(
           'New password must be different from the current password',
         );
@@ -120,6 +137,13 @@ export class UsersService {
 
       return { message: 'Password updated successfully' };
     } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error; // Re-throw known exceptions
+      }
+      console.error('Error in updatePassword:', error); // Log unexpected errors
       throw new InternalServerErrorException('Failed to update password');
     }
   }
@@ -137,11 +161,11 @@ export class UsersService {
       const objectId = new Types.ObjectId(userId);
       const user = await this.userModel.findById(objectId);
       if (!user) throw new NotFoundException('User not found');
-  
+
       await this.profileModel.deleteOne({ _id: objectId });
       await this.postModel.deleteMany({ author_id: objectId });
       await this.saveModel.deleteMany({ user_id: objectId });
-  
+
       const userReacts = await this.reactModel.find({ user_id: objectId });
       for (const react of userReacts) {
         if (react.post_type === 'Post') {
@@ -157,8 +181,10 @@ export class UsersService {
         }
       }
       await this.reactModel.deleteMany({ user_id: objectId });
-  
-      const userComments = await this.commentModel.find({ author_id: objectId });
+
+      const userComments = await this.commentModel.find({
+        author_id: objectId,
+      });
       for (const comment of userComments) {
         await this.postModel.updateOne(
           { _id: comment.post_id },
@@ -166,7 +192,7 @@ export class UsersService {
         );
       }
       await this.commentModel.deleteMany({ author_id: objectId });
-  
+
       const userReposts = await this.postModel.find({
         author_id: objectId,
         parent_post_id: { $ne: null },
@@ -181,18 +207,20 @@ export class UsersService {
         author_id: objectId,
         parent_post_id: { $ne: null },
       });
-  
+
       await this.shareModel.deleteMany({ user: objectId });
-  
+
       await this.userConnectionModel.deleteMany({
         $or: [{ sending_party: objectId }, { receiving_party: objectId }],
       });
-  
+
       await this.companyConnectionModel.deleteMany({ user_id: objectId });
       await this.companyEmployerModel.deleteMany({ employer_id: objectId });
       await this.companyManagerModel.deleteMany({ manager_id: objectId });
-  
-      const userApplications = await this.applicationModel.find({ user_id: objectId });
+
+      const userApplications = await this.applicationModel.find({
+        user_id: objectId,
+      });
       for (const application of userApplications) {
         await this.jobModel.updateOne(
           { _id: application.job_id },
@@ -200,9 +228,9 @@ export class UsersService {
         );
       }
       await this.applicationModel.deleteMany({ user_id: objectId });
-  
+
       await this.userModel.deleteOne({ _id: objectId });
-  
+
       return { message: 'Account and all related data deleted successfully.' };
     } catch (error) {
       console.error('Error during account deletion:', error);
@@ -211,5 +239,4 @@ export class UsersService {
       );
     }
   }
-  
 }
