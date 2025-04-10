@@ -6,6 +6,7 @@ import {
   ValidateNested,
   IsEnum,
   IsObject,
+  IsBoolean,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -64,4 +65,13 @@ export class GetCommentDto {
     | 'Insightful'
     | 'Support'
     | null;
+
+  @IsBoolean()
+  isConnected: boolean;
+
+  @IsBoolean()
+  isFollowing: boolean;
+
+  @IsBoolean()
+  isEdited: boolean; // Indicates if the comment has been edited
 }
