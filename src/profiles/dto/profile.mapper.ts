@@ -193,7 +193,8 @@ export function toUpdateProfileSchema(
 
     visibility: profile.visibility as Visibility,
     connectionCount: profile.connection_count ?? 0,
-    status: ProfileStatus.ME,
+    connectStatus: ProfileStatus.ME,
+    followStatus: ProfileStatus.ME,
   };
 }
 
