@@ -53,6 +53,7 @@ import {
   UserConnectionDocument,
 } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
+import { P } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 @Injectable()
 export class PostsService {
@@ -83,7 +84,7 @@ export class PostsService {
     id: string,
     editPostDto: EditPostDto,
     userId: string,
-  ): Promise<Post> {
+  ): Promise<GetPostDto> {
     try {
       if (!isValidObjectId(id)) {
         throw new BadRequestException('Invalid post ID format');
@@ -129,7 +130,16 @@ export class PostsService {
       Object.assign(post, editPostDto);
       post.is_edited = true; // Mark as edited
       await post.save();
-      return post;
+      return getPostInfo(
+        post,
+        userId,
+        this.postModel,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+        this.saveModel,
+        this.userConnectionModel,
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to edit post');
@@ -182,7 +192,7 @@ export class PostsService {
           .findById({ _id: createPostDto.parentPostId })
           .exec();
         if (!parentPost) {
-          console.log();
+          // console.log();
         } else {
           parentPost.share_count++;
           await parentPost.save();
@@ -739,7 +749,7 @@ export class PostsService {
     userId: string,
   ): Promise<{ message: string }> {
     try {
-      console.log('Unsave post:', postId, userId);
+      // console.log('Unsave post:', postId, userId);
       const savedPost = await this.saveModel
         .findOneAndDelete({
           post_id: new Types.ObjectId(postId),
@@ -747,7 +757,7 @@ export class PostsService {
         })
         .exec();
 
-      console.log('savedPost:', savedPost);
+      // console.log('savedPost:', savedPost);
 
       if (!savedPost) {
         throw new NotFoundException('Saved post not found');
@@ -836,7 +846,7 @@ export class PostsService {
     try {
       let post: PostDocument | null = null;
       let comment: CommentDocument | null = null;
-      console.log(createCommentDto);
+      // console.log(createCommentDto);
       if (createCommentDto.isReply === false) {
         post = await this.postModel.findById(new Types.ObjectId(postId)).exec();
         if (!post) {
@@ -883,7 +893,7 @@ export class PostsService {
           Insightful: 0,
           Support: 0,
         },
-        replies: [],
+        replies: 0,
       });
 
       await newComment.save();
@@ -973,7 +983,7 @@ export class PostsService {
     commentId: string,
     editCommentDto: EditCommentDto,
     userId: string,
-  ): Promise<Comment> {
+  ): Promise<GetCommentDto> {
     try {
       const comment = await this.commentModel
         .findById(new Types.ObjectId(commentId))
@@ -990,7 +1000,15 @@ export class PostsService {
 
       Object.assign(comment, editCommentDto);
       comment.is_edited = true;
-      return await comment.save();
+      await comment.save();
+      return await getCommentInfo(
+        comment,
+        userId,
+        this.profileModel,
+        this.companyModel,
+        this.reactModel,
+        this.userConnectionModel,
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to edit comment');
@@ -1017,6 +1035,7 @@ export class PostsService {
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
+      // console.log(comment);
       const authorId = comment.author_id.toString();
       if (authorId !== userId) {
         throw new UnauthorizedException(
@@ -1051,6 +1070,7 @@ export class PostsService {
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
     } catch (err) {
+      console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to delete comment');
     }
@@ -1079,15 +1099,15 @@ export class PostsService {
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
 
-    console.log(
-      'searchPosts',
-      userId,
-      query,
-      networkOnly,
-      timeframe,
-      page,
-      limit,
-    );
+    // console.log(
+    //   'searchPosts',
+    //   userId,
+    //   query,
+    //   networkOnly,
+    //   timeframe,
+    //   page,
+    //   limit,
+    // );
 
     if (!Types.ObjectId.isValid(userId)) {
       throw new BadRequestException('Invalid user ID format');
@@ -1156,7 +1176,7 @@ export class PostsService {
       .limit(limit)
       .exec();
 
-    console.log(posts);
+    // console.log(posts);
 
     return Promise.all(
       posts.map((post) =>

@@ -42,6 +42,9 @@ export const mockPost = {
   visibility: 'Public',
   author_type: 'User',
   posted_at: new Date(),
+  is_edited: false,
+  is_silent_repost: false,
+  parent_post_id: null,
 };
 
 export const mockCompanyPost = {
@@ -63,6 +66,9 @@ export const mockCompanyPost = {
   visibility: 'Public',
   author_type: 'Company',
   posted_at: new Date(),
+  is_edited: false,
+  is_silent_repost: false,
+  parent_post_id: null,
 };
 
 export const mockProfile = {
@@ -78,6 +84,7 @@ export const mockCompany = {
   name: 'Mock Company',
   logo: 'http://example.com/logo.jpg',
   description: 'This is a mock company',
+  followers: 100,
 };
 
 export const mockComment = {
@@ -85,14 +92,21 @@ export const mockComment = {
   author_id: '60d0fe4f5311236168a109ca',
   post_id: '60d0fe4f5311236168a109cb',
   content: 'This is a mock comment',
-  react_count: 5,
-  replies: [],
+  react_count: {
+    Like: 0,
+    Love: 0,
+    Funny: 0,
+    Celebrate: 0,
+    Insightful: 0,
+    Support: 0,
+  },
+  replies: 0,
   commented_at: new Date(),
   tags: [],
-};
-
-export const mockCommentDto = {
-  content: 'This is an edited comment',
+  is_edited: false,
+  is_following: false,
+  is_connected: false,
+  author_type: 'User',
 };
 
 export const mockReaction = {
@@ -101,6 +115,15 @@ export const mockReaction = {
   user_id: '60d0fe4f5311236168a109ca',
   react_type: 'Like',
   user_type: 'User',
+  post_type: 'Post',
+};
+
+export const mockCompanyReaction = {
+  _id: '60d0fe4f5311236168a109cf',
+  post_id: '60d0fe4f5311236168a109cb',
+  user_id: '60d0fe4f5311236168a109ca',
+  react_type: 'Like',
+  user_type: 'Company',
   post_type: 'Post',
 };
 
@@ -116,10 +139,9 @@ export const mockEditPostDto = {
 
 export const mockEditCommentDto = {
   content: 'Updated mock comment content',
-  tagged: ['507f1f77bcf86cd799439011'], // Example tagged user IDs
+  tagged: ['507f1f77bcf86cd799439011'],
 };
 
-// Mock arrays
 export const mockProfiles = [
   mockProfile,
   {
@@ -135,7 +157,7 @@ export const mockCompanies = [
 ];
 export const mockReacts = [
   mockReaction,
-  { ...mockReaction, _id: new Types.ObjectId(), type: 'Love' },
+  { ...mockReaction, _id: new Types.ObjectId(), react_type: 'Love' },
 ];
 export const mockSaves = [
   mockSave,
@@ -154,7 +176,6 @@ export const mockComments = [
   },
 ];
 
-// Mock data for new tests
 export const mockPostWithMedia = {
   ...mockPost,
   media: ['media1.jpg', 'media2.jpg'],
@@ -177,14 +198,35 @@ export const mockPostWithComments = {
 
 export const mockPostWithReacts = {
   ...mockPost,
-  react_count: 20,
+  react_count: {
+    Like: 5,
+    Love: 3,
+    Funny: 2,
+    Celebrate: 1,
+    Insightful: 4,
+    Support: 0,
+  },
 };
 
 export const mockCommentWithReacts = {
   ...mockComment,
-  react_count: 5,
+  react_count: {
+    Like: 2,
+    Love: 1,
+    Funny: 0,
+    Celebrate: 0,
+    Insightful: 0,
+    Support: 0,
+  },
 };
 
 export const mockInvalidPostId = 'invalidPostId';
 export const mockInvalidUserId = 'invalidUserId';
 export const mockInvalidCommentId = 'invalidCommentId';
+
+export const mockCommentDto = {
+  content: 'This is a mock comment',
+  media: ['http://example.com/comment-image.jpg'],
+  tagged: ['60d0fe4f5311236168a109ca'],
+  isReply: false,
+};

@@ -69,6 +69,8 @@ export async function getCommentInfo(
 
   if (comment.author_type === 'User') {
     authorProfile = await profileModel.findById(comment.author_id).exec();
+
+    console.log('authorProfile', authorProfile);
     if (authorProfile) {
       authorProfilePicture =
         'profile_picture' in authorProfile
@@ -82,6 +84,7 @@ export async function getCommentInfo(
     }
   } else if (comment.author_type === 'Company') {
     authorProfile = await companyModel.findById(comment.author_id).exec();
+    console.log('authorProfile', authorProfile);
     if (authorProfile) {
       if ('logo' in authorProfile) {
         authorProfilePicture =
