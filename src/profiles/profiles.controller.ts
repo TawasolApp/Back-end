@@ -364,6 +364,7 @@ export class ProfilesController {
         req.user.sub,
       );
     } catch (error) {
+      console.log('Error in addCertification:', error);
       handleError(error, 'Failed to add certification.');
     }
   }
@@ -390,6 +391,7 @@ export class ProfilesController {
         certificationId,
       );
     } catch (error) {
+      console.log('Error in addCertification:', error);
       handleError(error, `Failed to edit certification.`);
     }
   }
@@ -488,7 +490,11 @@ export class ProfilesController {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated.');
       }
-      return await this.companiesService.getFollowedCompanies(userId, page, limit);
+      return await this.companiesService.getFollowedCompanies(
+        userId,
+        page,
+        limit,
+      );
     } catch (error) {
       handleError(error, `Failed to get followed companies.`);
     }

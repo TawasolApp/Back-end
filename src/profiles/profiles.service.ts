@@ -400,6 +400,8 @@ export class ProfilesService {
           'education.$.end_date': education.endDate,
           'education.$.grade': education.grade,
           'education.$.description': education.description,
+          'education.$.company_logo': education.companyLogo,
+          'education.$.company_id': education.companyId,
         },
       },
       { new: true, runValidators: true },
@@ -440,8 +442,16 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-
+    console.log('addCertification service profile: ' + certification.name);
     const newCertification = toCreateCertificationSchema(certification);
+    console.log(
+      'addCertification service newCertification: ' + newCertification.name,
+      newCertification._id,
+      newCertification.company_id,
+      newCertification.company_logo,
+      newCertification.issue_date,
+      newCertification.expiry_date,
+    );
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id) },
       {
@@ -451,6 +461,7 @@ export class ProfilesService {
       },
       { new: true, runValidators: true },
     );
+    console.log('addCertification service profile: ' + certification.name);
     if (!updatedProfile) {
       throw new NotFoundException('Updated Profile not found');
     }
