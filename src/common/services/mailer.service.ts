@@ -45,7 +45,7 @@ export class MailerService {
   ) {
     const resetUrl = isAndroid
       ? `https://tawasolapp.me/forgot_password?token=${token}`
-      : `https://tawasolapp.me/forgot_password?token=${token}`;
+      : `https://tawasolapp.me/auth/reset-password?token=${token}`;
 
     await this.transporter.sendMail({
       from: '"TawasolApp" <noreply@tawasolapp.com>',
