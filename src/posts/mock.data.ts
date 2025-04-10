@@ -77,6 +77,7 @@ export const mockProfile = {
   last_name: 'User',
   profile_picture: 'http://example.com/profile.jpg',
   bio: 'This is a mock bio',
+  headline: 'This is a mock bio',
 };
 
 export const mockCompany = {

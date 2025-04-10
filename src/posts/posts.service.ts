@@ -199,6 +199,7 @@ export class PostsService {
         }
       }
 
+      console.log(createPostDto);
       const createdPost = new this.postModel({
         _id: new Types.ObjectId(),
         text: createPostDto.content,
@@ -212,6 +213,8 @@ export class PostsService {
           : null,
         is_silent_repost: createPostDto.isSilentRepost,
       });
+
+      console.log('Created post:', createdPost);
 
       await createdPost.save();
       return getPostInfo(
