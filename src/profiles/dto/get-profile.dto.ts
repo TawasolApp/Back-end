@@ -20,7 +20,7 @@ class Education {
 
   field?: string;
 
-  startDate?: string;
+  startDate: string | null;
 
   endDate: string | null;
 
@@ -44,9 +44,9 @@ class Certification {
 
   companyLogo?: string;
 
-  issueDate?: string;
+  issueDate: string | null;
 
-  expiryDate?: string;
+  expiryDate: string | null;
 }
 
 class WorkExperience {
