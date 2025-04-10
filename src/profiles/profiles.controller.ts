@@ -347,7 +347,7 @@ export class ProfilesController {
         req.user.sub,
       );
     } catch (error) {
-      handleError(error, `Failed to delete education.`);
+      return handleError(error, `Failed to delete education.`);
     }
   }
 
@@ -363,7 +363,6 @@ export class ProfilesController {
         req.user.sub,
       );
     } catch (error) {
-      console.log('Error in addCertification:', error);
       handleError(error, 'Failed to add certification.');
     }
   }

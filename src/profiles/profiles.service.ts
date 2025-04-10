@@ -155,12 +155,7 @@ export class ProfilesService {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
-    if (updateProfileDto.firstName != undefined) {
-      await this.updateUserFirstName(updateProfileDto.firstName, id);
-    }
-    if (updateProfileDto.lastName != undefined) {
-      await this.updateUserLastName(updateProfileDto.lastName, id);
-    }
+
     console.log('updateProfile service id: ' + id);
     console.log('updateProfile service name: ' + updateProfileDto.headline);
     const updateData = toUpdateProfileSchema(updateProfileDto);
@@ -175,6 +170,12 @@ export class ProfilesService {
 
     if (!updatedProfile) {
       throw new NotFoundException(`Profile not found`);
+    }
+    if (updateProfileDto.firstName != undefined) {
+      await this.updateUserFirstName(updateProfileDto.firstName, id);
+    }
+    if (updateProfileDto.lastName != undefined) {
+      await this.updateUserLastName(updateProfileDto.lastName, id);
     }
 
     return toGetProfileDto(updatedProfile);

@@ -29,7 +29,6 @@ import { PostsModule } from '../posts/posts.module';
     UsersModule,
     ConnectionsModule,
 
-    UsersModule,
     forwardRef(() => CompaniesModule),
     JwtModule.register({
       secret:
