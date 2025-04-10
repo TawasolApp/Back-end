@@ -709,4 +709,35 @@ export class ProfilesService {
       handleError(error, 'Failed to update user last name');
     }
   }
+
+  async getSkillEndorsements(skillName: string, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const skill = profile.skills?.find(
+      (s) => s.skill_name?.toLowerCase() === skillName.toLowerCase(),
+    );
+    if (!skill) {
+      throw new NotFoundException(`Skill '${skillName}' not found`);
+    }
+    console.log('skill endorsements: ' + skill.endorsements);
+
+    // Now fetch users from the endorsements list
+    const endorsers = await this.profileModel
+      .find({ _id: { $in: skill.endorsements } })
+      .select('_id profile_picture first_name last_name');
+
+    return endorsers.map((user) => ({
+      _id: user._id,
+      profilePicture: user.profile_picture,
+      firstName: user.first_name,
+      lastName: user.last_name,
+    }));
+  }
 }
