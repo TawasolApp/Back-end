@@ -9,6 +9,7 @@ import {
   PlanType,
   ProfileStatus,
 } from '../enums/profile-enums';
+import { N } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 class Education {
   _id: Types.ObjectId;
@@ -19,7 +20,7 @@ class Education {
 
   field?: string;
 
-  startDate?: string;
+  startDate: string | null;
 
   endDate: string | null;
 
@@ -43,9 +44,9 @@ class Certification {
 
   companyLogo?: string;
 
-  issueDate?: string;
+  issueDate: string | null;
 
-  expiryDate?: string;
+  expiryDate: string | null;
 }
 
 class WorkExperience {
