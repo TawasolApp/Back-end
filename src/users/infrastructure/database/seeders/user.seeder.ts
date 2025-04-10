@@ -21,13 +21,18 @@ export class UserSeeder {
         last_name: faker.person.lastName(),
         email: faker.internet.email().toLowerCase(),
         password: hashedPassword,
-        role: faker.helpers.arrayElement(['customer', 'employer', 'manager', 'admin']),
+        role: faker.helpers.arrayElement([
+          'customer',
+          'employer',
+          'manager',
+          'admin',
+        ]),
         isVerified: true,
+        isSocialLogin: false, 
       });
     }
 
     const inserted = await this.userModel.insertMany(users);
-  
 
     inserted.forEach((user) => {
       console.log(`🆔 User ID: ${user._id} | 📧 Email: ${user.email}`);
