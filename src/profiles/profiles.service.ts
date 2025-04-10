@@ -54,20 +54,14 @@ import {
   Post,
   PostDocument,
 } from '../posts/infrastructure/database/schemas/post.schema';
-import { use } from 'passport';
 
 @Injectable()
 export class ProfilesService {
   constructor(
     @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
-    @InjectModel(CompanyConnection.name)
-    private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
   /**
    * Creates a new profile for a user.

@@ -35,7 +35,6 @@ import { handleError } from '../common/utils/exception-handler';
 export class ProfilesController {
   constructor(
     private readonly profilesService: ProfilesService,
-    private readonly postsService: PostsService,
     private readonly companiesService: CompaniesService,
   ) {}
 
