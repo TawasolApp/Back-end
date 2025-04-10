@@ -172,8 +172,8 @@ export function toUpdateProfileSchema(
         company: cert?.company ?? null,
         companyId: cert?.company_id ?? null,
         companyLogo: cert?.company_logo ?? null,
-        issueDate: cert?.issue_date.toISOString() ?? null,
-        expiryDate: cert?.expiry_date.toISOString() ?? null,
+        issueDate: cert?.issue_date?.toISOString(),
+        expiryDate: cert?.expiry_date?.toISOString(),
       })) ?? [],
 
     workExperience:
