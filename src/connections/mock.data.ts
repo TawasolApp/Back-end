@@ -67,8 +67,8 @@ export const mockConnections = [
   },
   {
     _id: new Types.ObjectId(),
-    sending_party: profileId2,
-    receiving_party: profileId3,
+    sending_party: profileId3,
+    receiving_party: profileId2,
     status: ConnectionStatus.Connected,
     created_at: '2025-03-28T22:17:17.618Z',
   },
