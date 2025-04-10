@@ -54,20 +54,14 @@ import {
   Post,
   PostDocument,
 } from '../posts/infrastructure/database/schemas/post.schema';
-import { use } from 'passport';
 
 @Injectable()
 export class ProfilesService {
   constructor(
     @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
-    @InjectModel(CompanyConnection.name)
-    private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -161,12 +155,7 @@ export class ProfilesService {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
-    if (updateProfileDto.firstName != undefined) {
-      await this.updateUserFirstName(updateProfileDto.firstName, id);
-    }
-    if (updateProfileDto.lastName != undefined) {
-      await this.updateUserLastName(updateProfileDto.lastName, id);
-    }
+
     console.log('updateProfile service id: ' + id);
     console.log('updateProfile service name: ' + updateProfileDto.headline);
     const updateData = toUpdateProfileSchema(updateProfileDto);
@@ -181,6 +170,12 @@ export class ProfilesService {
 
     if (!updatedProfile) {
       throw new NotFoundException(`Profile not found`);
+    }
+    if (updateProfileDto.firstName != undefined) {
+      await this.updateUserFirstName(updateProfileDto.firstName, id);
+    }
+    if (updateProfileDto.lastName != undefined) {
+      await this.updateUserLastName(updateProfileDto.lastName, id);
     }
 
     return toGetProfileDto(updatedProfile);
