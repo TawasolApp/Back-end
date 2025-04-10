@@ -550,14 +550,12 @@ export class PostsService {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
-              post.markModified('react_count');
               await post.save();
             }
 
             if (comment) {
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
-              comment.markModified('react_count');
               comment.markModified('react_count');
               await comment.save();
             }
@@ -570,7 +568,6 @@ export class PostsService {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
-              post.markModified('react_count');
               await post.save();
             }
 
@@ -579,7 +576,6 @@ export class PostsService {
                 (comment.react_count[existingReaction.react_type] || 1) - 1;
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
-              comment.markModified('react_count');
               comment.markModified('react_count');
               await comment.save();
             }
@@ -619,12 +615,6 @@ export class PostsService {
         }
       }
 
-      if (post) {
-        return post;
-      }
-      if (comment) {
-        return comment;
-      }
       if (post) {
         return post;
       }
@@ -781,12 +771,6 @@ export class PostsService {
    * 5. Enrich each post with author, reaction, and metadata information
    * 6. Return array of fully formatted post DTOs
    */
-  async getSavedPosts(
-    userId: string,
-    page: number,
-    limit: number,
-  ): Promise<GetPostDto[]> {
-    const offset = (page - 1) * limit;
   async getSavedPosts(
     userId: string,
     page: number,
@@ -1030,9 +1014,6 @@ export class PostsService {
       const comment = await this.commentModel.findById(
         new Types.ObjectId(commentId),
       );
-      const comment = await this.commentModel.findById(
-        new Types.ObjectId(commentId),
-      );
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
@@ -1213,10 +1194,7 @@ export class PostsService {
     userId: string,
     page: number,
     limit: number,
-    page: number,
-    limit: number,
   ): Promise<GetPostDto[]> {
-    const offset = (page - 1) * limit;
     const offset = (page - 1) * limit;
     try {
       if (!Types.ObjectId.isValid(postId)) {
@@ -1273,8 +1251,6 @@ export class PostsService {
           ],
         })
         .sort({ posted_at: -1 })
-        .skip(offset)
-        .limit(limit)
         .skip(offset)
         .limit(limit)
         .exec();

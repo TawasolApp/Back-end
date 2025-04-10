@@ -2,7 +2,6 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
-  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -930,7 +929,6 @@ export class ConnectionsService {
         return dto;
       });
     } catch (error) {
-      handleError(error, 'Failed to retrieve list of followed users.');
       handleError(error, 'Failed to retrieve list of followed users.');
     }
   }
