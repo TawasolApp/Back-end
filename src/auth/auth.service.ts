@@ -48,7 +48,10 @@ export class AuthService {
       const { firstName, lastName, email, password, captchaToken } = dto;
 
       const isCaptchaValid = await this.verifyCaptcha(captchaToken);
-      if (!isCaptchaValid) throw new BadRequestException('Invalid CAPTCHA');
+      if (!isCaptchaValid) {
+        console.log('❌ Invalid CAPTCHA for email:', email);
+        throw new BadRequestException('Invalid CAPTCHA');
+      }
 
       const existingUser = await this.userModel.findOne({ email });
       if (existingUser) throw new ConflictException('Email is already in use');
@@ -149,6 +152,7 @@ export class AuthService {
         (!response.data.score || response.data.score > 0.5)
       );
     } catch (error) {
+      console.error('Error verifying CAPTCHA:', error);
       console.error('Error verifying CAPTCHA:', error.message);
       return false;
     }
