@@ -80,7 +80,7 @@ export async function getCommentInfo(
         'first_name' in authorProfile && 'last_name' in authorProfile
           ? `${authorProfile.first_name} ${authorProfile.last_name}`
           : 'Unknown';
-      authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
+      authorBio = 'headline' in authorProfile ? authorProfile.headline : '';
     }
   } else if (comment.author_type === 'Company') {
     authorProfile = await companyModel.findById(comment.author_id).exec();

@@ -44,8 +44,8 @@ export function mapPostToDto(
         ? authorProfile.profile_picture
         : authorProfile.logo,
     authorBio:
-      'bio' in authorProfile
-        ? authorProfile.bio
+      'headline' in authorProfile
+        ? authorProfile.headline
         : 'followers' in authorProfile
           ? `${authorProfile.followers.toLocaleString()} followers`
           : '',
