@@ -44,7 +44,7 @@ export class MailerService {
     isAndroid: boolean,
   ) {
     const resetUrl = isAndroid
-      ? `https://tawasolapp.me/forgot_password?token=${token}`
+      ? `https://inspiring-chaja-7a9be5.netlify.app/?token=${token}`
       : `https://tawasolapp.me/auth/reset-password?token=${token}`;
 
     await this.transporter.sendMail({
@@ -73,7 +73,7 @@ export class MailerService {
 
       case 'forgotPassword':
         subject = 'Reset Your Password';
-        url = `https://tawasolapp.me/forgot_password?token=${token}`;
+        url = `https://tawasolapp.me/auth/reset-password?token=${token}`;
         break;
 
       case 'emailUpdate':
@@ -95,5 +95,3 @@ export class MailerService {
     console.log(`📨 ${type} email sent to ${email}`);
   }
 }
-
-
