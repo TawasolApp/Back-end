@@ -577,7 +577,133 @@ describe('ConnectionsService', () => {
     );
   });
 
-  
+  describe('ConnectionsService - getConnections', () => {
+    const subId = mockProfiles[4]._id.toString();
+    const page = 1;
+    const limit = 5;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    const mockAggregate = (result: any[]) => {
+      userConnectionModel.aggregate = jest.fn().mockReturnValueOnce(result);
+    };
+
+    const mockFindConnected = (ids: string[]) => {
+      userConnectionModel.find = jest.fn().mockResolvedValueOnce([]);
+    };
+
+    const expectResultOrder = async (
+      userId: string,
+      expected: string[],
+      by: number,
+      direction: number,
+      name?: string,
+    ) => {
+      const dtoMock = (profile: any) => ({
+        ...profile,
+        createdAt: profile.created_at,
+        isConnected: false,
+      });
+
+      const aggregateResult = expected.map((id) => {
+        const profile = mockProfiles.find((p) => p._id.toString() === id);
+        return {
+          ...profile,
+          _id: profile!._id,
+          created_at: mockConnections.find(
+            (c) =>
+              (c.sending_party.equals(userId) &&
+                c.receiving_party.equals(profile!._id)) ||
+              (c.receiving_party.equals(userId) &&
+                c.sending_party.equals(profile!._id)),
+          )?.created_at,
+        };
+      });
+
+      mockAggregate(aggregateResult);
+      mockFindConnected(expected);
+
+      const result = await service.getConnections(
+        subId,
+        userId,
+        page,
+        limit,
+        by,
+        direction,
+        name,
+      );
+      expect(result.map((r) => r.userId)).toEqual(expected);
+      for (const r of result) {
+        expect(r.isConnected).toBe(false);
+      }
+    };
+
+    it('should return profiles sorted by created_at ascending (id1 → id2)', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[1]._id.toString(), mockProfiles[3]._id.toString()],
+        1,
+        1,
+      );
+    });
+
+    it('should return profiles sorted by created_at descending', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[3]._id.toString(), mockProfiles[1]._id.toString()],
+        1,
+        -1,
+      );
+    });
+
+    it('should return filtered profile with name = "testing"', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[1]._id.toString()],
+        1,
+        1,
+        'testing',
+      );
+    });
+
+    it('should return profiles sorted by first_name ascending', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[1]._id.toString(), mockProfiles[3]._id.toString()],
+        2,
+        1,
+      );
+    });
+
+    it('should return profiles sorted by first_name descending', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[3]._id.toString(), mockProfiles[1]._id.toString()],
+        2,
+        -1,
+      );
+    });
+
+    it('should return profiles sorted by last_name ascending', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[3]._id.toString(), mockProfiles[1]._id.toString()],
+        3,
+        1,
+      );
+    });
+
+    it('should return profiles sorted by last_name descending', async () => {
+      await expectResultOrder(
+        mockProfiles[0]._id.toString(),
+        [mockProfiles[1]._id.toString(), mockProfiles[3]._id.toString()],
+        3,
+        -1,
+      );
+    });
+  });
 });
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
