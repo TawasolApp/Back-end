@@ -61,3 +61,18 @@ export async function getIgnored(
     .lean();
   return ignoredRecord || null;
 }
+
+export async function getBlocked(
+  userConnectionModel: Model<UserConnectionDocument>,
+  sendingParty: string,
+  receivingParty: string,
+) {
+  const blockedRecord = await userConnectionModel
+    .findOne({
+      sending_party: new Types.ObjectId(sendingParty),
+      receiving_party: new Types.ObjectId(receivingParty),
+      status: ConnectionStatus.Blocked,
+    })
+    .lean();
+  return blockedRecord || null;
+}

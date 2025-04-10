@@ -30,6 +30,9 @@ export class User {
 
   @Prop({ default: false })
   isVerified: boolean;
+
+  @Prop({ default: false }) 
+  isSocialLogin: boolean;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

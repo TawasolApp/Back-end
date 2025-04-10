@@ -124,6 +124,7 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
+      isSocialLogin: user.isSocialLogin,
     };
   }
 
@@ -178,21 +179,33 @@ export class AuthService {
   }
 
   /**
-   * Resends a confirmation email to the user.
-   * @param dto - Email data
+   * Resends a confirmation email for different purposes (verify email, forgot password, or email update).
+   * @param dto - Resend confirmation data
    * @returns Success message
    */
   async resendConfirmationEmail(dto: ResendConfirmationDto) {
-    const { email } = dto;
+    const { email, type } = dto;
 
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('Email not found');
-    if (user.isVerified) return { message: 'Email is already verified' };
 
-    const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
-    await this.mailerService.sendVerificationEmail(email, token);
+    if (type === 'verifyEmail' && user.isVerified) {
+      return { message: 'Email is already verified' };
+    }
 
-    return { message: 'Confirmation email resent' };
+    const tokenPayload =
+      type === 'forgotPassword'
+        ? { sub: user._id }
+        : type === 'emailUpdate'
+          ? { userId: user._id, newEmail: email }
+          : { email };
+
+    const token = this.jwtService.sign(tokenPayload, {
+      expiresIn: type === 'forgotPassword' ? '15m' : '1h',
+    });
+
+    await this.mailerService.resendConfirmationEmail(email, type, token);
+    return { message: `${type} email resent successfully` };
   }
 
   /**
@@ -287,6 +300,7 @@ export class AuthService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
+      user.isSocialLogin = false;
       await user.save();
 
       return { message: 'Password reset successfully' };
@@ -320,12 +334,16 @@ export class AuthService {
       const isNewUser = !user;
 
       if (!user) {
+        const randomPassword = 'TestPassword123';
+        const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
         user = new this.userModel({
           first_name: profile.given_name || '',
           last_name: profile.family_name || '',
           email: profile.email,
-          password: '12345678',
+          password: hashedPassword,
           isVerified: true,
+          isSocialLogin: true,
         });
         await user.save();
       }
@@ -337,6 +355,8 @@ export class AuthService {
       return {
         token: token,
         refreshToken,
+        email: user.email,
+        isSocialLogin: user.isSocialLogin, // Include isSocialLogin in the response
         isNewUser,
         message: 'Login successful',
       };

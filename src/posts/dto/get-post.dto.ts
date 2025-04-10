@@ -84,4 +84,13 @@ export class GetPostDto {
   @IsOptional()
   @IsBoolean()
   isSilentRepost?: boolean; // Optional field for silent repost
+
+  @IsBoolean()
+  isConnected: boolean; // Indicates if the post is from a connection
+
+  @IsBoolean()
+  isFollowing: boolean; // Indicates if the user is following the author
+
+  @IsBoolean()
+  isEdited: boolean; // Indicates if the post has been edited
 }
