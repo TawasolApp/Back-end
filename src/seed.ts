@@ -33,16 +33,18 @@ async function bootstrap() {
   const companyEmployerSeeder = app.get(CompanyEmployerSeeder);
 
   await userSeeder.clearUsers();
-  await userSeeder.seedUsers(20);
+  await userSeeder.seedUsers(30);
+
+  await companySeeder.clearCompanies();
+  await companySeeder.seedCompanies(10);
+
   await profileSeeder.clearProfiles();
   await profileSeeder.seedProfiles();
 
   await userConnectionSeeder.clearUserConnections();
-  await userConnectionSeeder.seedUserConnections(30);
+  await userConnectionSeeder.seedUserConnections(100);
   await profileSeeder.updateConnectionCounts();
 
-  await companySeeder.clearCompanies();
-  await companySeeder.seedCompanies(10);
   await companyConnectionSeeder.clearCompanyConnections();
   await companyConnectionSeeder.seedCompanyConnections(30);
   await companySeeder.updateFollowerCounts();

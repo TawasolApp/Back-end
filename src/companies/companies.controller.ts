@@ -164,7 +164,6 @@ export class CompaniesController {
       companyId,
       page,
       limit,
-      name,
     );
     return followersDto;
   }
@@ -310,8 +309,7 @@ export class CompaniesController {
       userId,
       jobId,
       page,
-      limit,
-      name,
+      limit
     );
     return applicantsDto;
   }

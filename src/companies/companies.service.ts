@@ -408,7 +408,6 @@ export class CompaniesService {
     companyId: string,
     page: number,
     limit: number,
-    name?: string,
   ): Promise<GetUserDto[]> {
     try {
       const company = await this.companyModel
@@ -417,25 +416,36 @@ export class CompaniesService {
       if (!company) {
         throw new NotFoundException('Company not found.');
       }
-      const followers = await this.companyConnectionModel
-        .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: -1 })
-        .select('user_id')
-        .lean();
-      const followerIds = followers.map((follower) => follower.user_id);
-      const filter: any = { _id: { $in: followerIds } };
-      if (name) {
-        filter.name = { $regex: name, $options: 'i' };
-      }
       const skip = (page - 1) * limit;
-      const profiles = await this.profileModel
-        .find(filter)
-        .select('_id first_name last_name profile_picture headline')
-        .sort({ _id: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      return profiles.map(toGetUserDto);
+      const followers = await this.companyConnectionModel.aggregate([
+        {
+          $match: {
+            company_id: new Types.ObjectId(companyId),
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'user_id',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: { created_at: -1, _id: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+          },
+        },
+      ]);
+      return followers.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followers.');
     }
@@ -939,21 +949,36 @@ export class CompaniesService {
           'Logged in user does not have management access to this company.',
         );
       }
-      const managers = await this.companyManagerModel
-        .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: -1 })
-        .select('manager_id')
-        .lean();
-      const managerIds = managers.map((manager) => manager.manager_id);
       const skip = (page - 1) * limit;
-      const profiles = await this.profileModel
-        .find({ _id: { $in: managerIds } })
-        .select('_id first_name last_name profile_picture headline')
-        .sort({ _id: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      return profiles.map(toGetUserDto);
+      const managers = await this.companyManagerModel.aggregate([
+        {
+          $match: {
+            company_id: new Types.ObjectId(companyId),
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'manager_id',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: { created_at: -1, _id: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+          },
+        },
+      ]);
+      return managers.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of managers.');
     }
@@ -993,21 +1018,36 @@ export class CompaniesService {
           'Logged in user does not have management access to this company.',
         );
       }
-      const employers = await this.companyEmployerModel
-        .find({ company_id: new Types.ObjectId(companyId) })
-        .sort({ created_at: -1, _id: -1 })
-        .select('employer_id')
-        .lean();
-      const employerIds = employers.map((employer) => employer.employer_id);
       const skip = (page - 1) * limit;
-      const profiles = await this.profileModel
-        .find({ _id: { $in: employerIds } })
-        .select('_id first_name last_name profile_picture headline')
-        .sort({ _id: 1 })
-        .skip(skip)
-        .limit(limit)
-        .lean();
-      return profiles.map(toGetUserDto);
+      const employers = await this.companyEmployerModel.aggregate([
+        {
+          $match: {
+            company_id: new Types.ObjectId(companyId),
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'employer_id',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: { created_at: -1, _id: 1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+          },
+        },
+      ]);
+      return employers.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of employers.');
     }

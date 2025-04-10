@@ -46,6 +46,12 @@ export class Education {
 
   @Prop()
   description: string;
+
+  @Prop()
+  company_id: Types.ObjectId;
+
+  @Prop()
+  company_logo: string;
 }
 
 @Schema({ _id: false })
@@ -60,10 +66,16 @@ export class Certification {
   company: string;
 
   @Prop()
-  certification_picture: string;
+  company_id: Types.ObjectId;
+
+  @Prop()
+  company_logo: string;
 
   @Prop()
   issue_date: Date;
+
+  @Prop()
+  expiry_date: Date;
 }
 
 @Schema({ _id: false })
@@ -75,7 +87,10 @@ export class WorkExperience {
   title: string;
 
   @Prop()
-  work_experience_picture: string;
+  company_id: Types.ObjectId;
+
+  @Prop()
+  company_logo: string;
 
   @Prop({
     enum: [EmploymentType],

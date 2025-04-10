@@ -43,6 +43,7 @@ import {
   getConnection,
   getPending,
   getFollow,
+  getIgnored,
 } from '../connections/helpers/connection-helpers';
 import { ProfileStatus } from './enums/profile-enums';
 import {
@@ -134,7 +135,12 @@ export class ProfilesService {
     ) {
       profileDto.status = ProfileStatus.FOLLOWING;
     } else if (
-      await getPending(this.userConnectionModel, loggedInUser, id.toString())
+      (await getPending(
+        this.userConnectionModel,
+        loggedInUser,
+        id.toString(),
+      )) ||
+      (await getIgnored(this.userConnectionModel, loggedInUser, id.toString()))
     ) {
       profileDto.status = ProfileStatus.PENDING;
     } else if (
@@ -394,6 +400,8 @@ export class ProfilesService {
           'education.$.end_date': education.endDate,
           'education.$.grade': education.grade,
           'education.$.description': education.description,
+          'education.$.company_logo': education.companyLogo,
+          'education.$.company_id': education.companyId,
         },
       },
       { new: true, runValidators: true },
@@ -434,8 +442,16 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
-
+    console.log('addCertification service profile: ' + certification.name);
     const newCertification = toCreateCertificationSchema(certification);
+    console.log(
+      'addCertification service newCertification: ' + newCertification.name,
+      newCertification._id,
+      newCertification.company_id,
+      newCertification.company_logo,
+      newCertification.issue_date,
+      newCertification.expiry_date,
+    );
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       { _id: new Types.ObjectId(id) },
       {
@@ -445,6 +461,7 @@ export class ProfilesService {
       },
       { new: true, runValidators: true },
     );
+    console.log('addCertification service profile: ' + certification.name);
     if (!updatedProfile) {
       throw new NotFoundException('Updated Profile not found');
     }
@@ -487,8 +504,9 @@ export class ProfilesService {
           'certification.$.name': certification.name,
           'certification.$.company': certification.company,
           'certification.$.issue_date': certification.issueDate,
-          'certification.$.certification_picture':
-            certification.certificationPicture,
+          'certification.$.expiry_date': certification.expiryDate,
+          'certification.$.company_logo': certification.companyLogo,
+          'certification.$.company_id': certification.companyId,
         },
       },
       { new: true, runValidators: true },
@@ -576,8 +594,7 @@ export class ProfilesService {
     }
 
     console.log(
-      'editWorkExperience service title: ' +
-        workExperience.workExperiencePicture,
+      'editWorkExperience service title: ' + workExperience.companyLogo,
     );
     // const updateData = toUpdateWorkExperienceSchema(workExperience);
 
@@ -596,8 +613,8 @@ export class ProfilesService {
           'work_experience.$.location': workExperience.location,
           'work_experience.$.location_type': workExperience.locationType,
           'work_experience.$.description': workExperience.description,
-          'work_experience.$.work_experience_picture':
-            workExperience.workExperiencePicture,
+          'work_experience.$.company_logo': workExperience.companyLogo,
+          'work_experience.$.company_id': workExperience.companyId,
         },
       },
       { new: true, runValidators: true },
@@ -691,5 +708,36 @@ export class ProfilesService {
     } catch (error) {
       handleError(error, 'Failed to update user last name');
     }
+  }
+
+  async getSkillEndorsements(skillName: string, id: Types.ObjectId) {
+    if (!isValidObjectId(id)) {
+      throw new BadRequestException('Invalid profile ID format');
+    }
+
+    const profile = await this.profileModel.findById(new Types.ObjectId(id));
+    if (!profile) {
+      throw new NotFoundException('Profile not found');
+    }
+
+    const skill = profile.skills?.find(
+      (s) => s.skill_name?.toLowerCase() === skillName.toLowerCase(),
+    );
+    if (!skill) {
+      throw new NotFoundException(`Skill '${skillName}' not found`);
+    }
+    console.log('skill endorsements: ' + skill.endorsements);
+
+    // Now fetch users from the endorsements list
+    const endorsers = await this.profileModel
+      .find({ _id: { $in: skill.endorsements } })
+      .select('_id profile_picture first_name last_name');
+
+    return endorsers.map((user) => ({
+      _id: user._id,
+      profilePicture: user.profile_picture,
+      firstName: user.first_name,
+      lastName: user.last_name,
+    }));
   }
 }
