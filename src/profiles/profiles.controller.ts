@@ -479,6 +479,22 @@ export class ProfilesController {
     }
   }
 
+  @Get('skill-endorsements/:id')
+  async getSkillEndorsements(
+    @Req() req,
+    @Param('id') id: Types.ObjectId,
+    @Query('skill') skillName: string,
+  ) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.getSkillEndorsements(skillName, id);
+    } catch (error) {
+      handleError(error, `Failed to get endorsements for skill: ${skillName}`);
+    }
+  }
+
   @Get('/followed-companies/:userId')
   async getFollowedCompanies(
     @Param('userId') userId: string,
