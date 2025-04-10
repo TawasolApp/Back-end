@@ -5,7 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Profile } from './infrastructure/database/schemas/profile.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from './infrastructure/database/schemas/profile.schema';
+import {
+  UserConnection,
+  UserConnectionDocument,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -23,38 +30,11 @@ import {
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
-import {
-  CompanyConnection,
-  CompanyConnectionDocument,
-} from '../companies/infrastructure/database/schemas/company-connection.schema';
-import {
-  Company,
-  CompanyDocument,
-} from '../companies/infrastructure/database/schemas/company.schema';
-
-import { toGetCompanyDto } from '../companies/mappers/company.mapper';
 import { handleError } from '../common/utils/exception-handler';
-import { GetCompanyDto } from '../companies/dtos/get-company.dto';
 import {
   User,
   UserDocument,
 } from '../users/infrastructure/database/schemas/user.schema';
-import {
-  getConnection,
-  getPending,
-  getFollow,
-  getIgnored,
-} from '../connections/helpers/connection-helpers';
-import { ProfileStatus } from './enums/profile-enums';
-import {
-  UserConnection,
-  UserConnectionDocument,
-} from '../connections/infrastructure/database/schemas/user-connection.schema';
-import {
-  Post,
-  PostDocument,
-} from '../posts/infrastructure/database/schemas/post.schema';
-import { use } from 'passport';
 import {
   setConnectionStatus,
   setFollowStatus,
@@ -63,7 +43,8 @@ import {
 @Injectable()
 export class ProfilesService {
   constructor(
-    @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
+    @InjectModel(Profile.name)
+    private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
