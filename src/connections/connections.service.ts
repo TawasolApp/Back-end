@@ -71,9 +71,12 @@ export class ConnectionsService {
           { last_name: { $regex: name, $options: 'i' } },
         ];
       }
-      // if (company) {
-      //   filter.industry = { $regex: company, $options: 'i' };
-      // }
+      if (company) {
+        filter['work_experience.company'] = {
+          $regex: company,
+          $options: 'i',
+        };
+      }
       const skip = (page - 1) * limit;
       const users = await this.profileModel
         .find(filter)
