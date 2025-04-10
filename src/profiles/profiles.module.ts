@@ -28,7 +28,7 @@ import { PostsModule } from '../posts/posts.module';
     AuthModule,
     UsersModule,
     ConnectionsModule,
-    PostsModule,
+
     UsersModule,
     forwardRef(() => CompaniesModule),
     JwtModule.register({
@@ -36,9 +36,7 @@ import { PostsModule } from '../posts/posts.module';
         process.env.JWT_SECRET ||
         '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
       signOptions: { expiresIn: '1h' },
-      
-    },
-  ),
+    }),
   ],
   providers: [ProfileSeeder, ProfilesService],
   exports: [ProfileSeeder, MongooseModule],
