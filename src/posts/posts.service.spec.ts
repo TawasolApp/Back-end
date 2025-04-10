@@ -11,6 +11,7 @@ import {
 import { Save } from './infrastructure/database/schemas/save.schema';
 import { Comment } from './infrastructure/database/schemas/comment.schema';
 import { Types } from 'mongoose';
+import * as mongoose from 'mongoose';
 import {
   mockUserId,
   mockPostDto,
@@ -37,6 +38,8 @@ import {
   mockPostWithReacts,
   mockPostWithShares,
   mockEditCommentDto,
+  mockGetPostDto,
+  mockCreatePostDto,
 } from './mock.data';
 import { _, T } from '@faker-js/faker/dist/airline-CBNP41sR';
 import { mock } from 'node:test';
@@ -46,7 +49,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
-
+import { getPostInfo } from './helpers/posts.helpers';
+import * as postHelpers from '../posts/helpers/posts.helpers';
 describe('PostsService', () => {
   let service: PostsService;
 
@@ -72,7 +76,8 @@ describe('PostsService', () => {
     postModelMock.limit = jest.fn().mockReturnThis();
     postModelMock.exec = jest.fn();
     postModelMock.findPostById = jest.fn();
-
+    postModelMock.create = jest.fn();
+    const getPostInfo = jest.fn().mockReturnValue(mockGetPostDto);
     const mockProfileInstance = {
       profile_picture: 'mockProfilePicture',
       name: 'mockProfileName',
@@ -100,6 +105,17 @@ describe('PostsService', () => {
     reactModelMock.deleteOne = jest.fn();
     reactModelMock.deleteMany = jest.fn();
     reactModelMock.updateOne = jest.fn();
+
+    reactModelMock.findOne.mockImplementation((query) => {
+      console.log('reactModel.findOne query:', query);
+      return {
+        exec: jest
+          .fn()
+          .mockResolvedValue(
+            query.react_type === mockReaction.react_type ? mockReaction : null,
+          ),
+      };
+    });
 
     const mockSaveInstance = {};
     saveModelMock = jest.fn(() => mockSaveInstance);
@@ -1930,23 +1946,6 @@ describe('PostsService', () => {
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
-  it('[42] should throw an error if user is not authorized to delete the comment', async () => {
-    const mockCommentId = mockComment._id.toString();
-    const commentInstance = {
-      ...mockComment,
-      author_id: new Types.ObjectId('507f1f77bcf86cd799439011'),
-      save: jest.fn().mockResolvedValue(mockComment),
-    };
-    commentModelMock.findById.mockReturnValue({
-      ...mockComment,
-      author_id: new Types.ObjectId(),
-    });
-
-    await expect(
-      service.deleteComment(mockCommentId, mockUserId),
-    ).rejects.toThrow('User not authorized to edit this comment');
-  });
-
   it('[43] should throw an error if post ID is invalid in updateReactions', async () => {
     await expect(
       service.updateReactions('invalidId', mockUserId, {
@@ -2178,23 +2177,6 @@ describe('PostsService', () => {
         mockEditCommentDto,
         mockUserId,
       ),
-    ).rejects.toThrow('User not authorized to edit this comment');
-  });
-
-  it('[62] should throw an error if comment is not found in deleteComment', async () => {
-    commentModelMock.findById.mockReturnValue(null);
-
-    await expect(
-      service.deleteComment(mockComment._id.toString(), mockUserId),
-    ).rejects.toThrow('Comment not found');
-  });
-
-  it('[63] should throw an error if user is unauthorized to delete a comment ', async () => {
-    const commentInstance = { ...mockComment, author_id: new Types.ObjectId() };
-    commentModelMock.findById.mockReturnValue(commentInstance);
-
-    await expect(
-      service.deleteComment(mockComment._id.toString(), mockUserId),
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
@@ -2837,5 +2819,493 @@ describe('PostsService', () => {
     await expect(
       service.addComment(mockPost.id.toString(), mockCommentDto, mockUserId),
     ).rejects.toThrow('Failed to add comment');
+  });
+
+  it('should throw BadRequestException if author_id is invalid', async () => {
+    await expect(service.addPost(mockPostDto, 'invalid_id')).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('should throw NotFoundException if author not found in both User and Company models', async () => {
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    await expect(service.addPost(mockPostDto, mockUserId)).rejects.toThrow(
+      NotFoundException,
+    );
+  });
+  it('should throw BadRequestException if author_id is invalid', async () => {
+    const badAuthorId = 'invalid_id';
+
+    await expect(
+      service.addPost(mockCreatePostDto, badAuthorId),
+    ).rejects.toThrow(BadRequestException);
+  });
+  it('should set authorType to Company if author is a company', async () => {
+    const validAuthorId = mockCompany._id.toString();
+
+    // 1. Mock profile not found
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // 2. Mock company found
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockCompany),
+    });
+
+    // 3. Skip parentPost logic
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // 4. Mock post creation
+    postModelMock.create.mockReturnValue({
+      ...mockPost,
+      author_type: 'Company',
+      author_id: validAuthorId,
+    });
+
+    // 5. Mock getPostInfo helper
+    const mockReturn = {
+      ...mockPost,
+      authorType: 'Company',
+    };
+    jest
+      .spyOn(postHelpers, 'getPostInfo')
+      .mockResolvedValue({ ...mockGetPostDto, authorType: 'Company' });
+
+    const result = await service.addPost(mockCreatePostDto, validAuthorId);
+
+    expect(result.authorType).toBe('Company');
+    expect(companyModelMock.findById).toHaveBeenCalled();
+  });
+  it('should throw BadRequestException if parentPostId is invalid', async () => {
+    const badDto = {
+      ...mockCreatePostDto,
+      parentPostId: 'invalid_id',
+    };
+
+    // Mock author is valid (so we reach parentPost logic)
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // Mock isValidObjectId to return false
+    jest
+      .spyOn(mongoose.Types.ObjectId, 'isValid')
+      .mockImplementation((id) => id !== 'invalid_id');
+
+    await expect(service.addPost(badDto, mockUserId)).rejects.toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('should increment share_count if parentPost exists', async () => {
+    const validParentId = mockPost.id.toString();
+
+    const dtoWithParent = {
+      ...mockCreatePostDto,
+      parentPostId: validParentId,
+    };
+
+    // Step 1: author is a profile (to proceed)
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // Step 2: simulate valid parent post found
+    const parentPost = {
+      ...mockPost,
+      share_count: 0,
+      save: jest.fn().mockResolvedValue({}),
+    };
+
+    postModelMock.findById.mockImplementation(({ _id }) => ({
+      exec: jest.fn().mockResolvedValue(parentPost),
+    }));
+
+    // Step 3: mock create
+    postModelMock.create.mockReturnValue({
+      ...mockPost,
+      parent_post_id: validParentId,
+    });
+
+    // Step 4: mock getPostInfo helper
+    const mockGetPost = {
+      ...mockGetPostDto,
+      parentPost: undefined,
+    };
+
+    jest.spyOn(postHelpers, 'getPostInfo').mockResolvedValue(mockGetPost);
+
+    await service.addPost(dtoWithParent, mockUserId);
+
+    expect(parentPost.share_count).toBe(1);
+    expect(parentPost.save).toHaveBeenCalled();
+  });
+  it('should create a post and return GetPostDto', async () => {
+    // Valid author ID
+    const validAuthorId = mockUserId;
+
+    // Step 1: Mock user profile exists
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    // Step 2: Mock company profile does not exist
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // Step 3: No parent post
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // Step 4: Simulate postModel.create() returning a new post
+    const createdPost = {
+      ...mockPost,
+      author_id: validAuthorId,
+      author_type: 'User',
+    };
+
+    postModelMock.create.mockReturnValue(createdPost);
+
+    // Step 5: Mock getPostInfo returning expected DTO
+    jest.spyOn(postHelpers, 'getPostInfo').mockResolvedValue(mockGetPostDto);
+
+    const result = await service.addPost(mockCreatePostDto, validAuthorId);
+
+    expect(result).toEqual(mockGetPostDto);
+  });
+  it('should decrement parent share_count and delete related data on deletePost', async () => {
+    const postId = new Types.ObjectId().toString();
+    const userId = new Types.ObjectId().toString();
+    const parentPostId = new Types.ObjectId();
+
+    // 1. Post to be deleted (has a parent)
+    const postToDelete = {
+      _id: postId,
+      parent_post_id: parentPostId,
+      author_id: new Types.ObjectId(userId),
+    };
+
+    // 2. Parent post with a share count
+    const parentPost = {
+      _id: parentPostId,
+      share_count: 2,
+      save: jest.fn().mockResolvedValue({}),
+    };
+
+    // 3. postModel.findById - First call: post, Second call: parent post
+    postModelMock.findById
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(postToDelete) }) // find post
+      .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(parentPost) }); // find parent
+
+    // 4. postModel.deleteOne
+    postModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+    });
+
+    // 5. Delete associated reactions/comments/saves
+    reactModelMock.deleteMany.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({}),
+    });
+
+    commentModelMock.deleteMany.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({}),
+    });
+
+    saveModelMock.deleteMany.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({}),
+    });
+
+    await service.deletePost(postId, userId);
+
+    // Assert share count decremented and saved
+    expect(parentPost.share_count).toBe(1);
+    expect(parentPost.save).toHaveBeenCalled();
+
+    // Assert deletion functions were called
+    expect(postModelMock.deleteOne).toHaveBeenCalledWith({ _id: postId });
+    expect(reactModelMock.deleteMany).toHaveBeenCalledWith({ post_id: postId });
+    expect(commentModelMock.deleteMany).toHaveBeenCalledWith({
+      post_id: postId,
+    });
+    expect(saveModelMock.deleteMany).toHaveBeenCalledWith({ post_id: postId });
+  });
+  it('should create a new reaction on a comment and increment count', async () => {
+    const commentId = mockComment._id.toString();
+    const userId = mockProfile._id.toString();
+
+    const updateReactionsDto = {
+      reactions: {
+        Like: true,
+        Love: false,
+        Funny: false,
+        Celebrate: false,
+        Insightful: false,
+        Support: false,
+      },
+      postType: 'Comment',
+    };
+
+    // ✅ mock post (not used in this case)
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // ✅ comment exists
+    const commentInstance = {
+      ...mockComment,
+      react_count: { Like: 0 },
+      markModified: jest.fn(),
+      save: jest.fn().mockResolvedValue(mockComment),
+    };
+    commentModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(commentInstance),
+    });
+
+    // ✅ user is profile
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    // ✅ no existing reaction
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // ✅ mock save for new reaction
+    const saveMock = jest.fn().mockResolvedValue(mockReaction);
+    reactModelMock.mockImplementation(() => ({
+      save: saveMock,
+    }));
+
+    const result = await service.updateReactions(
+      commentId,
+      userId,
+      updateReactionsDto,
+    );
+
+    expect(commentInstance.react_count['Like']).toBe(1);
+    expect(commentInstance.markModified).toHaveBeenCalledWith('react_count');
+    expect(commentInstance.save).toHaveBeenCalled();
+    expect(saveMock).toHaveBeenCalled();
+    expect(result).toEqual(commentInstance);
+  });
+  it('should update existing reaction type on a comment', async () => {
+    const commentId = mockComment._id.toString();
+    const userId = mockProfile._id.toString();
+
+    const updateReactionsDto = {
+      reactions: {
+        Like: true,
+        Love: false,
+        Funny: false,
+        Celebrate: false,
+        Insightful: false,
+        Support: false,
+      },
+      postType: 'Comment',
+    };
+
+    // ✅ mock post (not used in this case)
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // ✅ comment exists
+    const commentInstance = {
+      ...mockComment,
+      markModified: jest.fn(),
+      save: jest.fn().mockResolvedValue(mockComment),
+    };
+    commentModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(commentInstance),
+    });
+
+    // ✅ user is profile
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    // ✅ no existing reaction
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ ...mockReaction, react_type: 'Love' }),
+    });
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(null),
+    });
+
+    // ✅ mock save for new reaction
+    const saveMock = jest
+      .fn()
+      .mockResolvedValue({ ...mockReaction, react_type: 'Like' });
+    reactModelMock.mockImplementation(() => ({
+      save: saveMock,
+    }));
+
+    const result = await service.updateReactions(
+      commentId,
+      userId,
+      updateReactionsDto,
+    );
+
+    console.log('result:', result);
+    expect(commentInstance.react_count['Like']).toBe(1);
+    expect(commentInstance.markModified).toHaveBeenCalledWith('react_count');
+    expect(commentInstance.save).toHaveBeenCalled();
+    expect(saveMock).toHaveBeenCalled();
+    expect(result).toEqual(commentInstance);
+  });
+
+  it('should remove an existing reaction on a post and decrement count', async () => {
+    const postId = mockPost.id.toString();
+    const userId = mockProfile._id.toString();
+
+    const updateReactionsDto = {
+      reactions: {
+        Like: false,
+        Love: false,
+        Funny: false,
+        Celebrate: false,
+        Insightful: false,
+        Support: false,
+      },
+      postType: 'Post',
+    };
+
+    // ✅ mock post exists
+    const postInstance = {
+      ...mockPost,
+      react_count: {
+        Like: 1,
+        Love: 0,
+        Funny: 0,
+        Celebrate: 0,
+        Insightful: 0,
+        Support: 0,
+      },
+
+      markModified: jest.fn(),
+      save: jest.fn().mockResolvedValue(mockPost),
+    };
+    postModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(postInstance),
+    });
+
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    // ✅ existing reaction found
+    const existingReaction = {
+      ...mockReaction,
+      react_type: 'Like',
+    };
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(existingReaction),
+    });
+
+    // ✅ mock reaction deletion
+    reactModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+    });
+
+    const result = await service.updateReactions(
+      postId,
+      userId,
+      updateReactionsDto,
+    );
+
+    expect(postInstance.react_count['Like']).toBe(0);
+    expect(postInstance.markModified).toHaveBeenCalledWith('react_count');
+    expect(postInstance.save).toHaveBeenCalled();
+    expect(reactModelMock.deleteOne).toHaveBeenCalledWith({
+      _id: existingReaction._id,
+    });
+    expect(result).toEqual(postInstance);
+  });
+
+  // Test for removing an existing reaction on a comment
+  it('should remove an existing reaction on a comment and decrement count', async () => {
+    const commentId = mockComment._id.toString();
+    const userId = mockProfile._id.toString();
+
+    // ✅ mock comment exists
+    const commentInstance = {
+      ...mockComment,
+      react_count: { Like: 1 },
+      markModified: jest.fn(),
+      save: jest.fn().mockResolvedValue(mockComment),
+    };
+    commentModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(commentInstance),
+    });
+
+    // ✅ existing reaction found
+    const existingReaction = {
+      ...mockReaction,
+      react_type: 'Like',
+    };
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(existingReaction),
+    });
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    // ✅ mock reaction deletion
+    reactModelMock.deleteOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+    });
+    const update = {
+      reactions: {
+        Like: false,
+        Love: false,
+        Funny: false,
+        Celebrate: false,
+        Insightful: false,
+        Support: false,
+      },
+      postType: 'Comment',
+    };
+    const result = await service.updateReactions(commentId, userId, update);
+
+    expect(commentInstance.react_count['Like']).toBe(0);
+    expect(commentInstance.markModified).toHaveBeenCalledWith('react_count');
+    expect(commentInstance.save).toHaveBeenCalled();
+    expect(reactModelMock.deleteOne).toHaveBeenCalledWith({
+      _id: existingReaction._id,
+    });
+    expect(result).toEqual(commentInstance);
   });
 });

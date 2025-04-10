@@ -104,10 +104,6 @@ export class PostsService {
         );
       }
 
-      if (!Types.ObjectId.isValid(userId)) {
-        throw new BadRequestException('Invalid user ID format');
-      }
-
       let authorType: 'User' | 'Company';
       const authorProfile = await this.profileModel
         .findById(new Types.ObjectId(userId))
@@ -177,6 +173,7 @@ export class PostsService {
         authorCompany = await this.companyModel
           .findById(new Types.ObjectId(author_id))
           .exec();
+        console.log(authorCompany);
         if (authorCompany) {
           authorType = 'Company';
         } else {
@@ -199,7 +196,6 @@ export class PostsService {
         }
       }
 
-      console.log(createPostDto);
       const createdPost = new this.postModel({
         _id: new Types.ObjectId(),
         text: createPostDto.content,
@@ -213,8 +209,6 @@ export class PostsService {
           : null,
         is_silent_repost: createPostDto.isSilentRepost,
       });
-
-      console.log('Created post:', createdPost);
 
       await createdPost.save();
       return getPostInfo(
@@ -427,7 +421,6 @@ export class PostsService {
         ),
       );
     } catch (error) {
-      if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Failed to fetch user posts');
     }
   }
@@ -475,6 +468,7 @@ export class PostsService {
       await this.commentModel.deleteMany({ post_id: postId }).exec();
       await this.saveModel.deleteMany({ post_id: postId }).exec();
     } catch (err) {
+      console.log(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to delete post');
     }
@@ -500,6 +494,7 @@ export class PostsService {
     updateReactionsDto: UpdateReactionsDto,
   ): Promise<Post | Comment> {
     try {
+      console.log('updateReactionsDto:', updateReactionsDto);
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid user ID format');
       }
@@ -539,7 +534,10 @@ export class PostsService {
         .exec();
       const reactorType = reactorProfile ? 'User' : 'Company';
 
+      console.log(updateReactionsDto);
       for (const [reactionType, value] of Object.entries(reactions)) {
+        console.log("'reactionType':", reactionType);
+        console.log("'value':", value);
         if (value) {
           const existingReaction = await this.reactModel
             .findOne({
@@ -549,7 +547,14 @@ export class PostsService {
             })
             .exec();
 
+          // console.log('existingReaction:', existingReaction);
+          // console.log('existing reaction type:', existingReaction?.react_type);
+          // console.log('reactionType:', reactionType);
+          // console.log('post:', post);
+          // console.log('comment:', comment);
+
           if (!existingReaction) {
+            // console.log('Creating new reaction');
             const newReaction = new this.reactModel({
               _id: new Types.ObjectId(),
               post_id: objectIdPostId,
@@ -567,6 +572,7 @@ export class PostsService {
             }
 
             if (comment) {
+              console.log('Comment react count:', comment.react_count);
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
@@ -575,6 +581,7 @@ export class PostsService {
 
             await newReaction.save();
           } else if (existingReaction.react_type !== reactionType) {
+            console.log('got here');
             if (post) {
               post.react_count[existingReaction.react_type] =
                 (post.react_count[existingReaction.react_type] || 1) - 1;
@@ -585,15 +592,18 @@ export class PostsService {
             }
 
             if (comment) {
+              console.log('Comment react count:', comment.react_count);
               comment.react_count[existingReaction.react_type] =
                 (comment.react_count[existingReaction.react_type] || 1) - 1;
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
+              console.log('Comment react count after :', comment.react_count);
               await comment.save();
             }
 
             existingReaction.react_type = reactionType;
+
             await existingReaction.save();
           }
         } else {
@@ -637,6 +647,7 @@ export class PostsService {
 
       throw new InternalServerErrorException('Failed to update reaction');
     } catch (error) {
+      console.log(error);
       if (error instanceof HttpException) throw error;
       throw new InternalServerErrorException('Failed to update reaction');
     }
@@ -917,6 +928,7 @@ export class PostsService {
         this.userConnectionModel,
       );
     } catch (err) {
+      console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to add comment');
     }
@@ -1032,9 +1044,10 @@ export class PostsService {
    */
   async deleteComment(commentId: string, userId: string): Promise<void> {
     try {
-      const comment = await this.commentModel.findById(
-        new Types.ObjectId(commentId),
-      );
+      const comment = await this.commentModel
+        .findById(new Types.ObjectId(commentId))
+        .exec();
+      console.log(comment);
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
@@ -1073,7 +1086,7 @@ export class PostsService {
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
     } catch (err) {
-      console.error(err);
+      //console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to delete comment');
     }
@@ -1111,90 +1124,95 @@ export class PostsService {
     //   page,
     //   limit,
     // );
+    try {
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
 
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid user ID format');
-    }
+      const objectId = new Types.ObjectId(userId);
 
-    const objectId = new Types.ObjectId(userId);
+      const searchWords = query.trim().split(/\s+/);
 
-    const searchWords = query.trim().split(/\s+/);
-
-    const postQuery: any = {
-      $or: searchWords.map((word) => ({
-        text: { $regex: new RegExp(word, 'i') }, // ✅ CORRECT regex usage
-      })),
-    };
-
-    // ⏰ Time filter
-    if (timeframe === '24h') {
-      postQuery.posted_at = {
-        $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+      const postQuery: any = {
+        $or: searchWords.map((word) => ({
+          text: { $regex: new RegExp(word, 'i') }, // ✅ CORRECT regex usage
+        })),
       };
-    } else if (timeframe === 'week') {
-      postQuery.posted_at = {
-        $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      };
-    }
 
-    // 👥 Network filter
-    if (networkOnly) {
-      const [connections, following] = await Promise.all([
-        this.userConnectionModel
-          .find({
-            $or: [{ sending_party: objectId }, { receiving_party: objectId }],
-            status: ConnectionStatus.Connected,
-          })
-          .lean(),
+      // ⏰ Time filter
+      if (timeframe === '24h') {
+        postQuery.posted_at = {
+          $gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+        };
+      } else if (timeframe === 'week') {
+        postQuery.posted_at = {
+          $gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
+        };
+      }
 
-        this.userConnectionModel
-          .find({
-            sending_party: objectId,
-            status: ConnectionStatus.Following,
-          })
-          .lean(),
-      ]);
+      // 👥 Network filter
+      if (networkOnly) {
+        const [connections, following] = await Promise.all([
+          this.userConnectionModel
+            .find({
+              $or: [{ sending_party: objectId }, { receiving_party: objectId }],
+              status: ConnectionStatus.Connected,
+            })
+            .lean(),
 
-      const networkIds = new Set<string>([
-        ...connections.map((conn) =>
-          conn.sending_party.equals(objectId)
-            ? conn.receiving_party.toString()
-            : conn.sending_party.toString(),
+          this.userConnectionModel
+            .find({
+              sending_party: objectId,
+              status: ConnectionStatus.Following,
+            })
+            .lean(),
+        ]);
+
+        const networkIds = new Set<string>([
+          ...connections.map((conn) =>
+            conn.sending_party.equals(objectId)
+              ? conn.receiving_party.toString()
+              : conn.sending_party.toString(),
+          ),
+          ...following.map((conn) => conn.receiving_party.toString()),
+          userId, // include self
+        ]);
+
+        // 🔁 Convert all IDs to ObjectId before querying
+        postQuery.author_id = {
+          $in: Array.from(networkIds).map((id) => new Types.ObjectId(id)),
+        };
+      }
+
+      // 🔎 Search and enrich results
+      const posts = await this.postModel
+        .find(postQuery)
+        .sort({ posted_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .exec();
+
+      // console.log(posts);
+
+      return Promise.all(
+        posts.map((post) =>
+          getPostInfo(
+            post,
+            userId,
+            this.postModel,
+            this.profileModel,
+            this.companyModel,
+            this.reactModel,
+            this.saveModel,
+            this.userConnectionModel,
+          ),
         ),
-        ...following.map((conn) => conn.receiving_party.toString()),
-        userId, // include self
-      ]);
-
-      // 🔁 Convert all IDs to ObjectId before querying
-      postQuery.author_id = {
-        $in: Array.from(networkIds).map((id) => new Types.ObjectId(id)),
-      };
+      );
+    } catch (err) {
+      //console.error(err);
+      if (err instanceof HttpException) throw err;
+      throw new InternalServerErrorException('Failed to search posts');
     }
-
-    // 🔎 Search and enrich results
-    const posts = await this.postModel
-      .find(postQuery)
-      .sort({ posted_at: -1 })
-      .skip(skip)
-      .limit(limit)
-      .exec();
-
-    // console.log(posts);
-
-    return Promise.all(
-      posts.map((post) =>
-        getPostInfo(
-          post,
-          userId,
-          this.postModel,
-          this.profileModel,
-          this.companyModel,
-          this.reactModel,
-          this.saveModel,
-          this.userConnectionModel,
-        ),
-      ),
-    );
   }
 
   /**
@@ -1297,6 +1315,7 @@ export class PostsService {
         ),
       );
     } catch (err) {
+      // console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch reposts');
     }
@@ -1360,6 +1379,7 @@ export class PostsService {
         ),
       );
     } catch (err) {
+      // console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch user reposts');
     }

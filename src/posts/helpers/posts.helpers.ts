@@ -187,7 +187,7 @@ export async function getPostInfo(
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
   let authorBio: string | undefined;
-
+  console.log('post', post);
   //   console.log(post);
   if (post.author_type === 'User') {
     authorProfile = await profileModel
@@ -204,6 +204,7 @@ export async function getPostInfo(
     authorProfile = await companyModel
       .findById(new Types.ObjectId(post.author_id))
       .exec();
+    console.log('authorProfile', authorProfile);
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
     }
