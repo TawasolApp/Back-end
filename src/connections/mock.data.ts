@@ -23,6 +23,13 @@ export const mockProfiles = [
     profile_picture: 'https://example.com/pfp2.jpg',
     cover_photo: 'https://example.com/pfp2.jpg',
     headline: 'Product Manager',
+    skills: [
+      {
+        skill_name: 'Skill1',
+        position: 'Developer',
+        endorsements: [profileId3],
+      },
+    ],
   },
   {
     _id: profileId3,
