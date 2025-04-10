@@ -23,7 +23,9 @@ import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
-import { CompanyModule } from '@faker-js/faker/.';
+import { get } from 'http';
+import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -88,9 +90,11 @@ describe('ProfilesService', () => {
   let service: ProfilesService;
   let profileModel: Model<Profile>;
 
+  const mockUserConnectionModel = {};
+  const mockUserModel = {};
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [forwardRef(() => CompanyModule)],
+      imports: [],
       controllers: [ProfilesController],
       providers: [
         JwtService,
@@ -105,6 +109,11 @@ describe('ProfilesService', () => {
             save: jest.fn(),
           },
         },
+        {
+          provide: getModelToken(UserConnection.name),
+          useValue: mockUserConnectionModel,
+        }, // Mock User model if needed
+        { provide: getModelToken(User.name), useValue: mockUserModel },
       ],
     }).compile();
 
