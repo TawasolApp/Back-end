@@ -92,7 +92,7 @@ describe('ConnectionsService', () => {
     expect(profileModel.find).toHaveBeenCalledWith({});
   });
 
-  it('should return only 2 profiles when filtering by name = "testing"', async () => {
+  it('should return only 2 profiles (profiles 1 & 2) when filtering by name = "testing"', async () => {
     const filtered = mockProfiles.filter(
       (profile) =>
         profile.first_name.toLowerCase().includes('testing') ||
@@ -111,7 +111,7 @@ describe('ConnectionsService', () => {
     expect(result).toHaveLength(2);
     expect(
       result.map((profile) => profile.firstName + ' ' + profile.lastName),
-    ).toEqual(['Testing User1', 'Testing User2']);
+    ).toEqual(['Testing User1', 'Testing User3']);
     expect(profileModel.find).toHaveBeenCalledWith({
       $or: [
         { first_name: { $regex: 'testing', $options: 'i' } },
@@ -120,9 +120,9 @@ describe('ConnectionsService', () => {
     });
   });
 
-  it('should call handleError if searchUsers throws', async () => {
+  it('should call handleError if searchUsers throws an error', async () => {
     profileModel.find.mockImplementationOnce(() => {
-      throw new Error('Database Failure');
+      throw new Error('Unexpected Error.');
     });
     try {
       await service.searchUsers(1, 5, 'user');
@@ -133,22 +133,7 @@ describe('ConnectionsService', () => {
     );
   });
 
-  // it('should call handleError if requestConnection throws unexpectedly', async () => {
-  //   profileModel.findById.mockImplementationOnce(() => {
-  //     throw new Error('Unexpected');
-  //   });
-  //   try {
-  //     await service.requestConnection(mockProfiles[0]._id.toString(), {
-  //       userId: mockProfiles[4]._id.toString(),
-  //     });
-  //   } catch (_) {}
-  //   expect(handleError).toHaveBeenCalledWith(
-  //     expect.any(Error),
-  //     'Failed to request connection.',
-  //   );
-  // });
-
-  it('should create a pending request from user1 to user5', async () => {
+  it('should create a pending request (id1 → id5)', async () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
     });
@@ -181,7 +166,7 @@ describe('ConnectionsService', () => {
     );
   });
 
-  it('should throw BadRequestException if sending and receiving party are the same', async () => {
+  it('should throw BadRequestException if sending and receiving party are the same (id1 → id1)', async () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
     });
@@ -194,12 +179,28 @@ describe('ConnectionsService', () => {
     );
   });
 
-  it('should throw ConflictException if pending/ignored connection already exists', async () => {
+  it('should throw ForbiddenException if users are blocked (id2 → id5)', async () => {
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
+    });
+    (getBlocked as jest.Mock).mockResolvedValueOnce(mockConnections[8]);
+    await service.requestConnection(mockProfiles[1]._id.toString(), {
+      userId: mockProfiles[4]._id.toString(),
+    });
+    expect(handleError).toHaveBeenCalledWith(
+      new ForbiddenException(
+        'Cannot place a connection request between blocked users.',
+      ),
+      'Failed to request connection.',
+    );
+  });
+
+  it('should throw ConflictException if pending/ignored connection already exists (id1 → id2)', async () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
     });
     (getBlocked as jest.Mock).mockResolvedValue(false);
-    (getPending as jest.Mock).mockResolvedValueOnce(true);
+    (getPending as jest.Mock).mockResolvedValueOnce(mockConnections[0]);
     await service.requestConnection(mockProfiles[0]._id.toString(), {
       userId: mockProfiles[1]._id.toString(),
     });
@@ -211,16 +212,14 @@ describe('ConnectionsService', () => {
     );
   });
 
-  it('should throw ConflictException if connection already exists', async () => {
+  it('should throw ConflictException if connection already exists (id3 → id2)', async () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[2]),
     });
     (getBlocked as jest.Mock).mockResolvedValue(null);
     (getPending as jest.Mock).mockResolvedValue(null);
     (getIgnored as jest.Mock).mockResolvedValue(null);
-    (getConnection as jest.Mock).mockReturnValueOnce({
-      lean: jest.fn().mockResolvedValueOnce(mockConnections[2]),
-    });
+    (getConnection as jest.Mock).mockReturnValueOnce(mockConnections[2]);
     await service.requestConnection(mockProfiles[1]._id.toString(), {
       userId: mockProfiles[2]._id.toString(),
     });
@@ -239,14 +238,28 @@ describe('ConnectionsService', () => {
     (getPending as jest.Mock).mockResolvedValueOnce(mockConnections[0]);
     (getIgnored as jest.Mock).mockResolvedValueOnce(null);
     userConnectionModel.findByIdAndDelete = jest.fn().mockResolvedValueOnce({});
-
     await service.removeRequest(
       mockProfiles[0]._id.toString(),
       mockProfiles[1]._id.toString(),
     );
-
     expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
       mockConnections[0]._id,
+    );
+  });
+
+  it('should successfully remove an ignored connection request (id3 → id1)', async () => {
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
+    });
+    (getPending as jest.Mock).mockResolvedValueOnce(null);
+    (getIgnored as jest.Mock).mockResolvedValueOnce(mockConnections[1]);
+    userConnectionModel.findByIdAndDelete = jest.fn().mockResolvedValueOnce({});
+    await service.removeRequest(
+      mockProfiles[2]._id.toString(),
+      mockProfiles[0]._id.toString(),
+    );
+    expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
+      mockConnections[1]._id,
     );
   });
 
@@ -254,12 +267,10 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(null),
     });
-
     await service.removeRequest(
       mockProfiles[0]._id.toString(),
       new Types.ObjectId().toString(),
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('User not found.'),
       'Failed to remove pending request.',
@@ -272,19 +283,17 @@ describe('ConnectionsService', () => {
     });
     (getPending as jest.Mock).mockResolvedValueOnce(null);
     (getIgnored as jest.Mock).mockResolvedValueOnce(null);
-
     await service.removeRequest(
       mockProfiles[0]._id.toString(),
       mockProfiles[4]._id.toString(),
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('Pending connection request was not found.'),
       'Failed to remove pending request.',
     );
   });
 
-  it('should successfully accept connection request and increment count and follow', async () => {
+  it('should successfully accept connection request (id1 → id2) and increment count and follow ', async () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
     });
@@ -311,21 +320,21 @@ describe('ConnectionsService', () => {
     expect(saveMock).toHaveBeenCalled();
   });
 
-  it('should successfully ignore connection request', async () => {
+  it('should successfully ignore connection request (id1 → id2)', async () => {
     profileModel.findById.mockReturnValueOnce({
-      lean: jest.fn().mockResolvedValueOnce(mockProfiles[2]),
+      lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
     });
-    (getPending as jest.Mock).mockResolvedValueOnce(mockConnections[1]);
+    (getPending as jest.Mock).mockResolvedValueOnce(mockConnections[0]);
     userConnectionModel.findByIdAndUpdate = jest
       .fn()
-      .mockResolvedValueOnce(mockConnections[1]);
+      .mockResolvedValueOnce(mockConnections[0]);
     await service.updateConnection(
-      mockProfiles[2]._id.toString(),
       mockProfiles[0]._id.toString(),
+      mockProfiles[1]._id.toString(),
       { isAccept: false },
     );
     expect(userConnectionModel.findByIdAndUpdate).toHaveBeenCalledWith(
-      mockConnections[1]._id,
+      mockConnections[0]._id,
       expect.objectContaining({ status: ConnectionStatus.Ignored }),
       { new: true },
     );
@@ -346,7 +355,7 @@ describe('ConnectionsService', () => {
     );
   });
 
-  it('should throw NotFoundException when connection request does not exist', async () => {
+  it('should throw NotFoundException when connection request does not exist (id1 → id5)', async () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
     });
@@ -367,28 +376,58 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[3]),
     });
-
-    (getConnection as jest.Mock).mockResolvedValueOnce(mockConnections[3]); // connection1
-    (getConnection as jest.Mock).mockResolvedValueOnce(null); // connection2
+    (getConnection as jest.Mock).mockResolvedValueOnce(mockConnections[3]);
+    (getConnection as jest.Mock).mockResolvedValueOnce(null);
     (getFollow as jest.Mock).mockResolvedValueOnce(null);
-
-    // simulate return of the deleted connection
     userConnectionModel.findByIdAndDelete = jest
       .fn()
       .mockImplementation((id) => {
         return Promise.resolve(
-          mockConnections.find((conn) => conn._id.equals(id)),
+          mockConnections.find((connection) => connection._id.equals(id)),
         );
       });
-
     const findByIdAndUpdateMock = jest.fn().mockResolvedValue({});
     profileModel.findByIdAndUpdate = findByIdAndUpdateMock;
-
     await service.removeConnection(
       mockProfiles[1]._id.toString(),
       mockProfiles[3]._id.toString(),
     );
+    expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
+      mockConnections[3]._id,
+    );
+    expect(profileModel.findByIdAndUpdate).toHaveBeenCalledTimes(2);
+    expect(profileModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      mockConnections[3].sending_party,
+      { $inc: { connection_count: -1 } },
+      { new: true },
+    );
+    expect(profileModel.findByIdAndUpdate).toHaveBeenCalledWith(
+      mockConnections[3].receiving_party,
+      { $inc: { connection_count: -1 } },
+      { new: true },
+    );
+  });
 
+  it('should successfully remove a connection in other direction and decrement connection count (id4 → id2)', async () => {
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(mockProfiles[3]),
+    });
+    (getConnection as jest.Mock).mockResolvedValueOnce(null);
+    (getConnection as jest.Mock).mockResolvedValueOnce(mockConnections[3]);
+    (getFollow as jest.Mock).mockResolvedValueOnce(null);
+    userConnectionModel.findByIdAndDelete = jest
+      .fn()
+      .mockImplementation((id) => {
+        return Promise.resolve(
+          mockConnections.find((connection) => connection._id.equals(id)),
+        );
+      });
+    const findByIdAndUpdateMock = jest.fn().mockResolvedValue({});
+    profileModel.findByIdAndUpdate = findByIdAndUpdateMock;
+    await service.removeConnection(
+      mockProfiles[3]._id.toString(),
+      mockProfiles[1]._id.toString(),
+    );
     expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
       mockConnections[3]._id,
     );
@@ -409,12 +448,10 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(null),
     });
-
     await service.removeConnection(
       mockProfiles[0]._id.toString(),
       new Types.ObjectId().toString(),
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('User not found.'),
       'Failed to remove connection.',
@@ -425,14 +462,12 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
     });
-
     (getConnection as jest.Mock).mockResolvedValueOnce(null);
     (getConnection as jest.Mock).mockResolvedValueOnce(null);
     await service.removeConnection(
       mockProfiles[0]._id.toString(),
       mockProfiles[4]._id.toString(),
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('Connection instance not found.'),
       'Failed to remove connection.',
@@ -443,20 +478,16 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
     });
-
     (getBlocked as jest.Mock).mockResolvedValueOnce(null);
     (getBlocked as jest.Mock).mockResolvedValueOnce(null);
     (getFollow as jest.Mock).mockResolvedValueOnce(null);
-
     const saveMock = jest.fn();
     const followInstance = { save: saveMock };
     const constructorMock = jest.fn().mockImplementation(() => followInstance);
     (service as any).userConnectionModel = constructorMock;
-
     await service.follow(mockProfiles[0]._id.toString(), {
       userId: mockProfiles[4]._id.toString(),
     });
-
     expect(saveMock).toHaveBeenCalled();
   });
 
@@ -464,15 +495,12 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
     });
-
     (getBlocked as jest.Mock).mockResolvedValue(null);
     (getBlocked as jest.Mock).mockResolvedValue(null);
-    (getFollow as jest.Mock).mockResolvedValueOnce(mockConnections[7]); // id4 → id1
-
+    (getFollow as jest.Mock).mockResolvedValueOnce(mockConnections[6]);
     await service.follow(mockProfiles[3]._id.toString(), {
       userId: mockProfiles[0]._id.toString(),
     });
-
     expect(handleError).toHaveBeenCalledWith(
       new ConflictException('Follow instance already exists.'),
       'Failed to follow user.',
@@ -483,13 +511,24 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(null),
     });
-
     await service.follow(mockProfiles[0]._id.toString(), {
       userId: new Types.ObjectId().toString(),
     });
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('User not found.'),
+      'Failed to follow user.',
+    );
+  });
+
+  it('should throw BadRequestException if sending and receiving party are the same (id1 → id1)', async () => {
+    profileModel.findById.mockReturnValueOnce({
+      lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
+    });
+    await service.follow(mockProfiles[0]._id.toString(), {
+      userId: mockProfiles[0]._id.toString(),
+    });
+    expect(handleError).toHaveBeenCalledWith(
+      new BadRequestException('Cannot follow yourself.'),
       'Failed to follow user.',
     );
   });
@@ -498,20 +537,10 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
     });
-
-    (getBlocked as jest.Mock).mockResolvedValueOnce(
-      mockConnections.find(
-        (conn) =>
-          conn.sending_party.equals(mockProfiles[1]._id) &&
-          conn.receiving_party.equals(mockProfiles[4]._id) &&
-          conn.status === ConnectionStatus.Blocked,
-      ),
-    );
-
+    (getBlocked as jest.Mock).mockResolvedValueOnce(mockConnections[8]);
     await service.follow(mockProfiles[1]._id.toString(), {
       userId: mockProfiles[4]._id.toString(),
     });
-
     expect(handleError).toHaveBeenCalledWith(
       new ForbiddenException(
         'Cannot place a follow instance between blocked users.',
@@ -524,20 +553,16 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
     });
-
-    (getFollow as jest.Mock).mockResolvedValueOnce(mockConnections[7]); // id4 → id1
-
+    (getFollow as jest.Mock).mockResolvedValueOnce(mockConnections[6]);
     userConnectionModel.findByIdAndDelete = jest
       .fn()
-      .mockResolvedValueOnce(mockConnections[7]);
-
+      .mockResolvedValueOnce(mockConnections[6]);
     await service.unfollow(
       mockProfiles[3]._id.toString(),
       mockProfiles[0]._id.toString(),
     );
-
     expect(userConnectionModel.findByIdAndDelete).toHaveBeenCalledWith(
-      mockConnections[7]._id,
+      mockConnections[6]._id,
     );
   });
 
@@ -545,12 +570,10 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(null),
     });
-
     await service.unfollow(
       mockProfiles[2]._id.toString(),
       new Types.ObjectId().toString(),
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('User not found.'),
       'Failed to unfollow user.',
@@ -561,37 +584,30 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockReturnValueOnce({
       lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
     });
-
     (getFollow as jest.Mock).mockResolvedValueOnce(null);
-
     await service.unfollow(
       mockProfiles[0]._id.toString(),
       mockProfiles[4]._id.toString(),
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('Follow instance not found.'),
       'Failed to unfollow user.',
     );
   });
 
-  describe('ConnectionsService - getConnections', () => {
+  describe('getConnections', () => {
     const subId = mockProfiles[4]._id.toString();
     const page = 1;
     const limit = 5;
-
     beforeEach(() => {
       jest.clearAllMocks();
     });
-
     const mockAggregate = (result: any[]) => {
       userConnectionModel.aggregate = jest.fn().mockReturnValueOnce(result);
     };
-
     const mockFindConnected = (ids: string[]) => {
       userConnectionModel.find = jest.fn().mockResolvedValueOnce([]);
     };
-
     const expectResultOrder = async (
       userId: string,
       expected: string[],
@@ -604,26 +620,25 @@ describe('ConnectionsService', () => {
         createdAt: profile.created_at,
         isConnected: false,
       });
-
       const aggregateResult = expected.map((id) => {
-        const profile = mockProfiles.find((p) => p._id.toString() === id);
+        const profile = mockProfiles.find(
+          (profile) => profile._id.toString() === id,
+        );
         return {
           ...profile,
           _id: profile!._id,
           created_at: mockConnections.find(
-            (c) =>
-              (c.sending_party.equals(userId) &&
-                c.receiving_party.equals(profile!._id)) ||
-              (c.receiving_party.equals(userId) &&
-                c.sending_party.equals(profile!._id)),
+            (connection) =>
+              (connection.sending_party.equals(userId) &&
+                connection.receiving_party.equals(profile!._id)) ||
+              (connection.receiving_party.equals(userId) &&
+                connection.sending_party.equals(profile!._id)),
           )?.created_at,
         };
       });
-
       mockAggregate(aggregateResult);
       mockFindConnected(expected);
-
-      const result = await service.getConnections(
+      const results = await service.getConnections(
         subId,
         userId,
         page,
@@ -632,25 +647,45 @@ describe('ConnectionsService', () => {
         direction,
         name,
       );
-      expect(result.map((r) => r.userId)).toEqual(expected);
-      for (const r of result) {
-        expect(r.isConnected).toBe(false);
+      expect(results.map((profile) => profile.userId)).toEqual(expected);
+      for (const result of results) {
+        expect(result.isConnected).toBe(false);
       }
     };
 
-    it('should return profiles sorted by created_at ascending (id1 → id2)', async () => {
+    it('should call handleError if getConnections throws an error', async () => {
+      profileModel.find.mockImplementationOnce(() => {
+        throw new Error('Unexpected Error.');
+      });
+      try {
+        await service.getConnections(
+          mockProfiles[4]._id.toString(),
+          mockProfiles[1]._id.toString(),
+          1,
+          5,
+          1,
+          -1,
+        );
+      } catch (_) {}
+      expect(handleError).toHaveBeenCalledWith(
+        expect.any(Error),
+        'Failed to retrieve list of connections.',
+      );
+    });
+
+    it('should return profiles sorted by created_at ascendingnly', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[1]._id.toString(), mockProfiles[3]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[3]._id.toString(), mockProfiles[2]._id.toString()],
         1,
         1,
       );
     });
 
-    it('should return profiles sorted by created_at descending', async () => {
+    it('should return profiles sorted by created_at descendingly ', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[3]._id.toString(), mockProfiles[1]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[2]._id.toString(), mockProfiles[3]._id.toString()],
         1,
         -1,
       );
@@ -658,186 +693,66 @@ describe('ConnectionsService', () => {
 
     it('should return filtered profile with name = "testing"', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[1]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[2]._id.toString()],
         1,
         1,
         'testing',
       );
     });
 
-    it('should return profiles sorted by first_name ascending', async () => {
+    it('should return profiles sorted by first_name ascendingly', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[1]._id.toString(), mockProfiles[3]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[3]._id.toString(), mockProfiles[2]._id.toString()],
         2,
         1,
       );
     });
 
-    it('should return profiles sorted by first_name descending', async () => {
+    it('should return profiles sorted by first_name descendingly', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[3]._id.toString(), mockProfiles[1]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[2]._id.toString(), mockProfiles[3]._id.toString()],
         2,
         -1,
       );
     });
 
-    it('should return profiles sorted by last_name ascending', async () => {
+    it('should return profiles sorted by last_name ascendingnly', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[3]._id.toString(), mockProfiles[1]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[2]._id.toString(), mockProfiles[3]._id.toString()],
         3,
         1,
       );
     });
 
-    it('should return profiles sorted by last_name descending', async () => {
+    it('should return profiles sorted by last_name descendingnly', async () => {
       await expectResultOrder(
-        mockProfiles[0]._id.toString(),
-        [mockProfiles[1]._id.toString(), mockProfiles[3]._id.toString()],
+        mockProfiles[1]._id.toString(),
+        [mockProfiles[3]._id.toString(), mockProfiles[2]._id.toString()],
         3,
         -1,
       );
     });
   });
 
-  it('should return profile3 as sender if user id1 has one pending request', async () => {
-    const userId = mockProfiles[0]._id.toString(); // id1 is receiving
-
-    userConnectionModel.aggregate.mockResolvedValueOnce([
-      {
-        _id: mockProfiles[2]._id, // id3
-        first_name: mockProfiles[2].first_name,
-        last_name: mockProfiles[2].last_name,
-        profile_picture: mockProfiles[2].profile_picture,
-        headline: mockProfiles[2].headline,
-        created_at: mockConnections[1].created_at, // match the pending connection
-      },
-    ]);
-
-    const result = await service.getPendingRequests(userId, 1, 5);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].userId).toEqual(mockProfiles[2]._id.toString());
-    expect(result[0].firstName).toBe('Test');
-    expect(result[0].lastName).toBe('User3');
-    expect(result[0].createdAt).toBe(mockConnections[1].created_at);
-  });
-
-  it('should return profile2 as receiver if user id1 has one sent request', async () => {
-    const userId = mockProfiles[0]._id.toString(); // sending_party = id1
-
-    userConnectionModel.aggregate.mockResolvedValueOnce([
-      {
-        _id: mockProfiles[1]._id, // receiving_party = id2
-        first_name: mockProfiles[1].first_name,
-        last_name: mockProfiles[1].last_name,
-        profile_picture: mockProfiles[1].profile_picture,
-        headline: mockProfiles[1].headline,
-        created_at: mockConnections[0].created_at, // match the pending connection
-      },
-    ]);
-
-    const result = await service.getSentRequests(userId, 1, 5);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].userId).toEqual(mockProfiles[1]._id.toString());
-    expect(result[0].firstName).toBe('Testing');
-    expect(result[0].lastName).toBe('User2');
-    expect(result[0].createdAt).toBe(mockConnections[0].created_at);
-  });
-
-  it('should return profile5 as recommended for user id1', async () => {
-    const userId = mockProfiles[0]._id.toString(); // id1
-    const page = 1;
-    const limit = 5;
-
-    // All connections where user1 is involved
-    userConnectionModel.find.mockReturnValueOnce({
-      select: jest.fn().mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce([
-          // user1 connections or interactions
-          {
-            sending_party: mockProfiles[0]._id,
-            receiving_party: mockProfiles[1]._id,
-          }, // id1 → id2
-          {
-            sending_party: mockProfiles[0]._id,
-            receiving_party: mockProfiles[4]._id,
-          }, // id1 → id5
-          {
-            sending_party: mockProfiles[1]._id,
-            receiving_party: mockProfiles[0]._id,
-          }, // id2 → id1
-          {
-            sending_party: mockProfiles[4]._id,
-            receiving_party: mockProfiles[0]._id,
-          }, // id5 → id1
-          {
-            sending_party: mockProfiles[3]._id,
-            receiving_party: mockProfiles[0]._id,
-          }, // id4 → id1
-          {
-            sending_party: mockProfiles[2]._id,
-            receiving_party: mockProfiles[0]._id,
-          }, // id3 → id1
-        ]),
-      }),
+  it('should call handleError if getPendingRequests throws an error', async () => {
+    profileModel.find.mockImplementationOnce(() => {
+      throw new Error('Unexpected Error.');
     });
-
-    // Expected recommended = only user not connected is id3
-    profileModel.find.mockReturnValueOnce({
-      select: jest.fn().mockReturnValueOnce({
-        sort: jest.fn().mockReturnValueOnce({
-          skip: jest.fn().mockReturnValueOnce({
-            limit: jest.fn().mockReturnValueOnce({
-              lean: jest.fn().mockResolvedValueOnce([mockProfiles[4]]), // only user5
-            }),
-          }),
-        }),
-      }),
-    });
-
-    const result = await service.getRecommendedUsers(userId, page, limit);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].userId).toEqual(mockProfiles[4]._id.toString());
-    expect(result[0].firstName).toBe('Test');
-    expect(result[0].lastName).toBe('User5');
+    try {
+      await service.getPendingRequests(mockProfiles[4]._id.toString(), 1, 5);
+    } catch (_) {}
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Failed to retrieve list of pending connection requests.',
+    );
   });
 
-  it('should return profile4 as a follower for user id1', async () => {
-    const userId = mockProfiles[0]._id.toString(); // Receiving party
-    const page = 1;
-    const limit = 5;
-
-    userConnectionModel.aggregate.mockResolvedValueOnce([
-      {
-        _id: mockProfiles[3]._id,
-        first_name: mockProfiles[3].first_name,
-        last_name: mockProfiles[3].last_name,
-        profile_picture: mockProfiles[3].profile_picture,
-        headline: mockProfiles[3].headline,
-        created_at: mockConnections[7].created_at,
-      },
-    ]);
-
-    const result = await service.getFollowers(userId, page, limit);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].userId.toString()).toBe(mockProfiles[3]._id.toString());
-    expect(result[0].firstName).toBe('Test');
-    expect(result[0].lastName).toBe('User4');
-    expect(result[0].createdAt).toBe(mockConnections[7].created_at);
-  });
-
-  it('should return profile1 as followed user for user id4', async () => {
-    const userId = mockProfiles[3]._id.toString(); // Sending party
-    const page = 1;
-    const limit = 5;
-
+  it('should return profile1 as sender (id1 → id2)', async () => {
+    const userId = mockProfiles[1]._id.toString();
     userConnectionModel.aggregate.mockResolvedValueOnce([
       {
         _id: mockProfiles[0]._id,
@@ -845,45 +760,193 @@ describe('ConnectionsService', () => {
         last_name: mockProfiles[0].last_name,
         profile_picture: mockProfiles[0].profile_picture,
         headline: mockProfiles[0].headline,
-        created_at: mockConnections[7].created_at,
+        created_at: mockConnections[0].created_at,
       },
     ]);
+    const result = await service.getPendingRequests(userId, 1, 5);
+    expect(result).toHaveLength(1);
+    expect(result[0].userId).toEqual(mockProfiles[0]._id.toString());
+    expect(result[0].firstName).toBe('Testing');
+    expect(result[0].lastName).toBe('User1');
+    expect(result[0].createdAt).toBe(mockConnections[0].created_at);
+  });
 
-    const result = await service.getFollowing(userId, page, limit);
+  it('should call handleError if getSentRequests throws an error', async () => {
+    profileModel.find.mockImplementationOnce(() => {
+      throw new Error('Unexpected Error.');
+    });
+    try {
+      await service.getSentRequests(mockProfiles[4]._id.toString(), 1, 5);
+    } catch (_) {}
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Failed to retrieve list of sent connection requests.',
+    );
+  });
 
+  it('should return profile2 as receiver (id1 → id2)', async () => {
+    const userId = mockProfiles[0]._id.toString();
+    userConnectionModel.aggregate.mockResolvedValueOnce([
+      {
+        _id: mockProfiles[1]._id,
+        first_name: mockProfiles[1].first_name,
+        last_name: mockProfiles[1].last_name,
+        profile_picture: mockProfiles[1].profile_picture,
+        headline: mockProfiles[1].headline,
+        created_at: mockConnections[0].created_at,
+      },
+    ]);
+    const result = await service.getSentRequests(userId, 1, 5);
+    expect(result).toHaveLength(1);
+    expect(result[0].userId).toEqual(mockProfiles[1]._id.toString());
+    expect(result[0].firstName).toBe('Test');
+    expect(result[0].lastName).toBe('User2');
+    expect(result[0].createdAt).toBe(mockConnections[0].created_at);
+  });
+
+  it('should call handleError if getRecommendedUsers throws an error', async () => {
+    profileModel.find.mockImplementationOnce(() => {
+      throw new Error('Unexpected Error.');
+    });
+    try {
+      await service.getRecommendedUsers(mockProfiles[4]._id.toString(), 1, 5);
+    } catch (_) {}
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Failed to retrieve people you may know.',
+    );
+  });
+
+  it('should return profile5 as recommended for user id1', async () => {
+    const userId = mockProfiles[0]._id.toString();
+    userConnectionModel.find = jest.fn().mockReturnValueOnce({
+      select: jest.fn().mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce([
+          {
+            sending_party: mockProfiles[0]._id,
+            receiving_party: mockProfiles[1]._id,
+          },
+          {
+            sending_party: mockProfiles[2]._id,
+            receiving_party: mockProfiles[0]._id,
+          },
+          {
+            sending_party: mockProfiles[0]._id,
+            receiving_party: mockProfiles[3]._id,
+          },
+          {
+            sending_party: mockProfiles[3]._id,
+            receiving_party: mockProfiles[0]._id,
+          },
+        ]),
+      }),
+    });
+    profileModel.find = jest.fn().mockReturnValueOnce({
+      select: jest.fn().mockReturnValueOnce({
+        sort: jest.fn().mockReturnValueOnce({
+          skip: jest.fn().mockReturnValueOnce({
+            limit: jest.fn().mockReturnValueOnce({
+              lean: jest.fn().mockResolvedValueOnce([mockProfiles[4]]),
+            }),
+          }),
+        }),
+      }),
+    });
+    const result = await service.getRecommendedUsers(userId, 1, 5);
+    expect(result).toHaveLength(1);
+    expect(result[0].userId).toEqual(mockProfiles[4]._id.toString());
+    expect(result[0].firstName).toBe('Test');
+    expect(result[0].lastName).toBe('User5');
+  });
+
+  it('should call handleError if getFollowers throws an error', async () => {
+    profileModel.find.mockImplementationOnce(() => {
+      throw new Error('Unexpected Error.');
+    });
+    try {
+      await service.getFollowers(mockProfiles[4]._id.toString(), 1, 5);
+    } catch (_) {}
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Failed to retrieve list of followers.',
+    );
+  });
+
+  it('should return profile4 as a follower (id4 → id1)', async () => {
+    const userId = mockProfiles[0]._id.toString();
+    userConnectionModel.aggregate.mockResolvedValueOnce([
+      {
+        _id: mockProfiles[3]._id,
+        first_name: mockProfiles[3].first_name,
+        last_name: mockProfiles[3].last_name,
+        profile_picture: mockProfiles[3].profile_picture,
+        headline: mockProfiles[3].headline,
+        created_at: mockConnections[6].created_at,
+      },
+    ]);
+    const result = await service.getFollowers(userId, 1, 5);
+    expect(result).toHaveLength(1);
+    expect(result[0].userId.toString()).toBe(mockProfiles[3]._id.toString());
+    expect(result[0].firstName).toBe('Test');
+    expect(result[0].lastName).toBe('User4');
+    expect(result[0].createdAt).toBe(mockConnections[6].created_at);
+  });
+
+  it('should call handleError if getFollowing throws an error', async () => {
+    profileModel.find.mockImplementationOnce(() => {
+      throw new Error('Unexpected Error.');
+    });
+    try {
+      await service.getFollowing(mockProfiles[4]._id.toString(), 1, 5);
+    } catch (_) {}
+    expect(handleError).toHaveBeenCalledWith(
+      expect.any(Error),
+      'Failed to retrieve list of followed users.',
+    );
+  });
+
+  it('should return profile1 as followed user (id4 → id1)', async () => {
+    const userId = mockProfiles[3]._id.toString();
+    userConnectionModel.aggregate.mockResolvedValueOnce([
+      {
+        _id: mockProfiles[0]._id,
+        first_name: mockProfiles[0].first_name,
+        last_name: mockProfiles[0].last_name,
+        profile_picture: mockProfiles[0].profile_picture,
+        headline: mockProfiles[0].headline,
+        created_at: mockConnections[6].created_at,
+      },
+    ]);
+    const result = await service.getFollowing(userId, 1, 5);
     expect(result).toHaveLength(1);
     expect(result[0].userId).toBe(mockProfiles[0]._id.toString());
     expect(result[0].firstName).toBe('Testing');
     expect(result[0].lastName).toBe('User1');
-    expect(result[0].createdAt).toBe(mockConnections[7].created_at);
+    expect(result[0].createdAt).toBe(mockConnections[6].created_at);
   });
 
-  it('should successfully endorse a skill (User4 endorses User2)', async () => {
+  it('should successfully endorse a skill (id4 → id2)', async () => {
     profileModel.findById.mockResolvedValueOnce({
       ...mockProfiles[1],
       save: jest.fn(),
     });
     (getConnection as jest.Mock).mockResolvedValueOnce(mockConnections[3]);
-    (getConnection as jest.Mock).mockResolvedValueOnce(null); // connection2 not needed
-
+    (getConnection as jest.Mock).mockResolvedValueOnce(null);
     await service.endorseSkill(
       mockProfiles[3]._id.toString(),
       mockProfiles[1]._id.toString(),
       { skillName: 'Skill1' },
     );
-
     expect(profileModel.findById).toHaveBeenCalled();
   });
 
   it('should throw NotFoundException if endorsee user is not found', async () => {
     profileModel.findById.mockResolvedValueOnce(null);
-
     await service.endorseSkill(
       mockProfiles[0]._id.toString(),
       new Types.ObjectId().toString(),
       { skillName: 'Skill1' },
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('Endorsee profile not found.'),
       'Failed to endorse skill.',
@@ -892,30 +955,26 @@ describe('ConnectionsService', () => {
 
   it('should throw BadRequestException if user endorses their own skill', async () => {
     profileModel.findById.mockResolvedValueOnce(mockProfiles[0]);
-
     await service.endorseSkill(
       mockProfiles[0]._id.toString(),
       mockProfiles[0]._id.toString(),
       { skillName: 'Skill1' },
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new BadRequestException('User cannot endorse their own skill.'),
       'Failed to endorse skill.',
     );
   });
 
-  it('should throw ForbiddenException if no connection exists', async () => {
+  it('should throw ForbiddenException if no connection exists (id5 → id1)', async () => {
     profileModel.findById.mockResolvedValueOnce(mockProfiles[1]);
     (getConnection as jest.Mock).mockResolvedValueOnce(null);
     (getConnection as jest.Mock).mockResolvedValueOnce(null);
-
     await service.endorseSkill(
       mockProfiles[4]._id.toString(),
-      mockProfiles[1]._id.toString(),
+      mockProfiles[0]._id.toString(),
       { skillName: 'Skill1' },
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new ForbiddenException("User cannot endorse a non-connection's skill."),
       'Failed to endorse skill.',
@@ -926,13 +985,11 @@ describe('ConnectionsService', () => {
     profileModel.findById.mockResolvedValueOnce(mockProfiles[1]);
     (getConnection as jest.Mock).mockResolvedValueOnce(mockConnections[3]);
     (getConnection as jest.Mock).mockResolvedValueOnce(null);
-
     await service.endorseSkill(
       mockProfiles[3]._id.toString(),
       mockProfiles[1]._id.toString(),
       { skillName: 'NoSkill' },
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('Skill not found in endorsee profile.'),
       'Failed to endorse skill.',
@@ -940,56 +997,42 @@ describe('ConnectionsService', () => {
   });
 
   it('should throw ConflictException if skill already endorsed', async () => {
-    profileModel.findById.mockResolvedValueOnce({
-      ...mockProfiles[1],
-      skills: [
-        {
-          ...mockProfiles[1].skills![0],
-          endorsements: [mockProfiles[3]._id], // already endorsed
-        },
-      ],
-    });
+    profileModel.findById.mockResolvedValueOnce(mockProfiles[1]);
     (getConnection as jest.Mock).mockResolvedValueOnce(mockConnections[3]);
     (getConnection as jest.Mock).mockResolvedValueOnce(null);
-
     await service.endorseSkill(
       mockProfiles[3]._id.toString(),
       mockProfiles[1]._id.toString(),
       { skillName: 'Skill1' },
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new ConflictException('Endorser has already endorsed this skill.'),
       'Failed to endorse skill.',
     );
   });
 
-  it('should successfully remove an endorsement (User3 → User2)', async () => {
+  it('should successfully remove an endorsement (id3 → id2)', async () => {
     const saveMock = jest.fn();
     profileModel.findById.mockResolvedValueOnce({
       ...mockProfiles[1],
       save: saveMock,
     });
-
     await service.removeEndorsement(
       mockProfiles[2]._id.toString(),
       mockProfiles[1]._id.toString(),
       'Skill1',
     );
-
     expect(profileModel.findById).toHaveBeenCalledWith(mockProfiles[1]._id);
     expect(saveMock).toHaveBeenCalled();
   });
 
   it('should throw NotFoundException if user profile is not found', async () => {
     profileModel.findById.mockResolvedValueOnce(null);
-
     await service.removeEndorsement(
       mockProfiles[0]._id.toString(),
       new Types.ObjectId().toString(),
       'Skill1',
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException('User profile not found.'),
       'Failed to remove endorsement.',
@@ -998,13 +1041,11 @@ describe('ConnectionsService', () => {
 
   it('should throw NotFoundException if skill is not found in profile', async () => {
     profileModel.findById.mockResolvedValueOnce(mockProfiles[1]);
-
     await service.removeEndorsement(
       mockProfiles[2]._id.toString(),
       mockProfiles[1]._id.toString(),
       'NoSkill',
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new NotFoundException("Skill not found in user's profile."),
       'Failed to remove endorsement.',
@@ -1013,13 +1054,11 @@ describe('ConnectionsService', () => {
 
   it('should throw BadRequestException if user has not endorsed the skill', async () => {
     profileModel.findById.mockResolvedValueOnce(mockProfiles[1]);
-
     await service.removeEndorsement(
-      mockProfiles[4]._id.toString(), // User3 has NOT endorsed
-      mockProfiles[1]._id.toString(), // User2
+      mockProfiles[4]._id.toString(),
+      mockProfiles[1]._id.toString(),
       'Skill1',
     );
-
     expect(handleError).toHaveBeenCalledWith(
       new BadRequestException('Logged in user has not endorsed this skill.'),
       'Failed to remove endorsement.',

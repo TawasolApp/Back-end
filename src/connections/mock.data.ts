@@ -18,7 +18,7 @@ export const mockProfiles = [
   },
   {
     _id: profileId2,
-    first_name: 'Testing',
+    first_name: 'Test',
     last_name: 'User2',
     profile_picture: 'https://example.com/pfp2.jpg',
     cover_photo: 'https://example.com/pfp2.jpg',
@@ -33,7 +33,7 @@ export const mockProfiles = [
   },
   {
     _id: profileId3,
-    first_name: 'Test',
+    first_name: 'Testing',
     last_name: 'User3',
     profile_picture: 'https://example.com/pfp3.jpg',
     cover_photo: 'https://example.com/pfp3.jpg',
@@ -69,7 +69,7 @@ export const mockConnections = [
     _id: new Types.ObjectId(),
     sending_party: profileId3,
     receiving_party: profileId1,
-    status: ConnectionStatus.Pending,
+    status: ConnectionStatus.Ignored,
     created_at: '2025-03-20T22:17:17.618Z',
   },
   {
@@ -85,13 +85,6 @@ export const mockConnections = [
     receiving_party: profileId4,
     status: ConnectionStatus.Connected,
     created_at: '2025-03-22T22:17:17.618Z',
-  },
-  {
-    _id: new Types.ObjectId(),
-    sending_party: profileId1,
-    receiving_party: profileId2,
-    status: ConnectionStatus.Connected,
-    created_at: '2025-03-23T22:17:17.618Z',
   },
   {
     _id: new Types.ObjectId(),

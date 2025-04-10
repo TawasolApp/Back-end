@@ -513,7 +513,6 @@ export class ConnectionsService {
             : existingConnection.sending_party.toString();
         connectedUserIds.add(otherId);
       }
-
       return connections.map((profile: any) => {
         const dto = toGetUserDto(profile);
         dto.createdAt = profile.created_at;
