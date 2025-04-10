@@ -54,6 +54,11 @@ import {
   Post,
   PostDocument,
 } from '../posts/infrastructure/database/schemas/post.schema';
+import { use } from 'passport';
+import {
+  setConnectionStatus,
+  setFollowStatus,
+} from './helpers/set-status.utils';
 
 @Injectable()
 export class ProfilesService {
@@ -108,42 +113,16 @@ export class ProfilesService {
       throw new NotFoundException('Profile not found');
     }
     const profileDto = toGetProfileDto(profile);
-    console.log('getProfile service profileDto status: ' + profileDto.status);
-    if (id.toString() === loggedInUser) {
-      profileDto.status = ProfileStatus.ME;
-    } else if (
-      (await getConnection(
-        this.userConnectionModel,
-        id.toString(),
-        loggedInUser,
-      )) ||
-      (await getConnection(
-        this.userConnectionModel,
-        loggedInUser,
-        id.toString(),
-      ))
-    ) {
-      profileDto.status = ProfileStatus.CONNECTION;
-    } else if (
-      await getFollow(this.userConnectionModel, loggedInUser, id.toString())
-    ) {
-      profileDto.status = ProfileStatus.FOLLOWING;
-    } else if (
-      (await getPending(
-        this.userConnectionModel,
-        loggedInUser,
-        id.toString(),
-      )) ||
-      (await getIgnored(this.userConnectionModel, loggedInUser, id.toString()))
-    ) {
-      profileDto.status = ProfileStatus.PENDING;
-    } else if (
-      await getPending(this.userConnectionModel, id.toString(), loggedInUser)
-    ) {
-      profileDto.status = ProfileStatus.REQUEST;
-    } else {
-      profileDto.status = ProfileStatus.NULL;
-    }
+    profileDto.connectStatus = await setConnectionStatus(
+      this.userConnectionModel,
+      loggedInUser,
+      id.toString(),
+    );
+    profileDto.followStatus = await setFollowStatus(
+      this.userConnectionModel,
+      loggedInUser,
+      id.toString(),
+    );
     return profileDto;
   }
   /**

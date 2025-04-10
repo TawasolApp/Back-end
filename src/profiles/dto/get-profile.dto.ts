@@ -9,7 +9,6 @@ import {
   PlanType,
   ProfileStatus,
 } from '../enums/profile-enums';
-import { N } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 class Education {
   _id: Types.ObjectId;
@@ -136,5 +135,7 @@ export class GetProfileDto {
 
   connectionCount?: number;
 
-  status?: ProfileStatus = ProfileStatus.ME;
+  connectStatus?: ProfileStatus = ProfileStatus.ME;
+
+  followStatus?: ProfileStatus = ProfileStatus.ME;
 }
