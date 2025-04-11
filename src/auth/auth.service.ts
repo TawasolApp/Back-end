@@ -48,17 +48,24 @@ export class AuthService {
   async register(dto: RegisterDto) {
     const { firstName, lastName, email, password, captchaToken } = dto;
 
+    console.log('Registering user with email:', email);
+
     const isCaptchaValid = await this.verifyCaptcha(captchaToken);
+    console.log('CAPTCHA validation result:', isCaptchaValid);
+
     if (!isCaptchaValid) {
       throw new BadRequestException('Invalid CAPTCHA');
     }
 
     const existingUser = await this.userModel.findOne({ email });
+    console.log('Existing user check result:', existingUser);
+
     if (existingUser) {
       throw new ConflictException('Email is already in use');
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
+    console.log('Hashed password:', hashedPassword);
 
     const user = await this.userModel.create({
       first_name: firstName,
@@ -70,15 +77,24 @@ export class AuthService {
 
     try {
       await user.save();
+      console.log('User saved successfully:', user);
     } catch (error) {
-      console.error(
-        'Error saving user during registration:',
-      );
+      console.error('Error saving user during registration:', error);
       throw new InternalServerErrorException('Unexpected error occurred');
     }
 
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
-    await this.mailerService.sendVerificationEmail(email, token);
+    console.log('Generated verification token:', token);
+
+    try {
+      await this.mailerService.sendVerificationEmail(email, token);
+      console.log('Verification email sent successfully to:', email);
+    } catch (error) {
+      console.error('Error sending verification email:', error);
+      throw new InternalServerErrorException(
+        'Failed to send verification email',
+      );
+    }
 
     return {
       message:
@@ -137,9 +153,13 @@ export class AuthService {
    * @returns True if valid, otherwise false
    */
   private async verifyCaptcha(token: string): Promise<boolean> {
+    console.log('Verifying CAPTCHA token:', token);
+
     if (token === 'test-token') return true;
 
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    console.log('Using reCAPTCHA secret key:', secretKey);
+
     try {
       const response = await axios.post(
         `https://www.google.com/recaptcha/api/siteverify`,
@@ -147,10 +167,11 @@ export class AuthService {
         { params: { secret: secretKey, response: token } },
       );
 
-      // Simplify logic to only check for success
+      console.log('reCAPTCHA API response:', response.data);
       return response.data.success === true;
     } catch (error) {
-      return false; // Ensure it returns false on error
+      console.error('Error during reCAPTCHA verification:', error);
+      return false;
     }
   }
 
@@ -207,9 +228,7 @@ export class AuthService {
     try {
       await this.mailerService.resendConfirmationEmail(email, type, token);
     } catch (error) {
-      console.error(
-        'Error resending confirmation email:',
-      );
+      console.error('Error resending confirmation email:');
       throw new InternalServerErrorException(
         'Failed to resend confirmation email',
       );
@@ -266,9 +285,7 @@ export class AuthService {
           isAndroid,
         );
       } catch (error) {
-        console.error(
-          'Error sending password reset email:',
-        );
+        console.error('Error sending password reset email:');
         throw new InternalServerErrorException(
           'Failed to send password reset email',
         );
@@ -339,14 +356,16 @@ export class AuthService {
   async googleLogin(dto: SocialLoginDto) {
     const { idToken, isAndroid } = dto;
 
+    console.log('Google login initiated with idToken:', idToken);
+
     try {
       const googleClient = isAndroid
         ? this.googleClientAndroid
         : this.googleClientFrontend;
 
       const tokenInfo = await googleClient.getTokenInfo(idToken);
+      console.log('Google token info:', tokenInfo);
 
-      // Add validation for empty tokenInfo or missing email
       if (!tokenInfo || !tokenInfo.email) {
         throw new BadRequestException('Invalid Google token');
       }
@@ -358,16 +377,21 @@ export class AuthService {
         },
       );
 
+      console.log('Google user profile:', profile);
+
       if (!profile?.email) {
         throw new BadRequestException('Invalid Google token');
       }
 
       let user = await this.userModel.findOne({ email: profile.email });
+      console.log('Existing user check result:', user);
+
       const isNewUser = !user;
 
       if (!user) {
         const randomPassword = 'TestPassword123';
         const hashedPassword = await bcrypt.hash(randomPassword, 10);
+        console.log('Generated hashed password for new user:', hashedPassword);
 
         user = await this.userModel.create({
           first_name: profile.given_name || '',
@@ -380,10 +404,9 @@ export class AuthService {
 
         try {
           await user.save();
+          console.log('New user saved successfully:', user);
         } catch (error) {
-          console.error(
-            'Error saving user during Google login:',
-          );
+          console.error('Error saving user during Google login:', error);
           throw new InternalServerErrorException('Google login failed');
         }
       }
@@ -391,6 +414,8 @@ export class AuthService {
       const payload = { sub: user._id, email: user.email, role: user.role };
       const token = this.jwtService.sign(payload, { expiresIn: '1h' });
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+      console.log('Generated tokens for user:', { token, refreshToken });
 
       return {
         token: token,
@@ -401,6 +426,7 @@ export class AuthService {
         message: 'Login successful',
       };
     } catch (error) {
+      console.error('Error during Google login:', error);
       if (error instanceof BadRequestException) throw error;
       throw new InternalServerErrorException('Google login failed');
     }

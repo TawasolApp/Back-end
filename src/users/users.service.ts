@@ -158,33 +158,48 @@ export class UsersService {
   async deleteAccount(userId: string) {
     try {
       const objectId = new Types.ObjectId(userId);
-      const user = await this.userModel.findById(objectId);
-      if (!user) throw new NotFoundException('User not found'); // Fix: Throw NotFoundException
+      console.log(`Starting account deletion for user: ${userId}`);
 
+      const user = await this.userModel.findById(objectId);
+      if (!user) {
+        console.error(`User not found: ${userId}`);
+        throw new NotFoundException('User not found');
+      }
+
+      console.log(`Deleting profile for user: ${userId}`);
       await this.profileModel.deleteOne({ _id: objectId });
+
+      console.log(`Deleting posts for user: ${userId}`);
       await this.postModel.deleteMany({ author_id: objectId });
+
+      console.log(`Deleting saved posts for user: ${userId}`);
       await this.saveModel.deleteMany({ user_id: objectId });
 
+      console.log(`Processing reacts for user: ${userId}`);
       const userReacts = await this.reactModel.find({ user_id: objectId });
       for (const react of userReacts) {
         if (react.post_type === 'Post') {
+          console.log(`Updating react count for post: ${react.post_id}`);
           await this.postModel.updateOne(
             { _id: react.post_id },
             { $inc: { [`react_count.${react.react_type}`]: -1 } },
           );
         } else if (react.post_type === 'Comment') {
+          console.log(`Updating react count for comment: ${react.post_id}`);
           await this.commentModel.updateOne(
             { _id: react.post_id },
-            { $inc: { react_count: -1 } },
+            { $inc: { [`react_count.${react.react_type}`]: -1 } },
           );
         }
       }
       await this.reactModel.deleteMany({ user_id: objectId });
 
+      console.log(`Processing comments for user: ${userId}`);
       const userComments = await this.commentModel.find({
         author_id: objectId,
       });
       for (const comment of userComments) {
+        console.log(`Updating comment count for post: ${comment.post_id}`);
         await this.postModel.updateOne(
           { _id: comment.post_id },
           { $inc: { comment_count: -1 } },
@@ -192,11 +207,15 @@ export class UsersService {
       }
       await this.commentModel.deleteMany({ author_id: objectId });
 
+      console.log(`Processing reposts for user: ${userId}`);
       const userReposts = await this.postModel.find({
         author_id: objectId,
         parent_post_id: { $ne: null },
       });
       for (const repost of userReposts) {
+        console.log(
+          `Updating share count for parent post: ${repost.parent_post_id}`,
+        );
         await this.postModel.updateOne(
           { _id: repost.parent_post_id },
           { $inc: { share_count: -1 } },
@@ -207,20 +226,29 @@ export class UsersService {
         parent_post_id: { $ne: null },
       });
 
+      console.log(`Deleting shares for user: ${userId}`);
       await this.shareModel.deleteMany({ user: objectId });
 
+      console.log(`Deleting user connections for user: ${userId}`);
       await this.userConnectionModel.deleteMany({
         $or: [{ sending_party: objectId }, { receiving_party: objectId }],
       });
 
+      console.log(`Deleting company connections for user: ${userId}`);
       await this.companyConnectionModel.deleteMany({ user_id: objectId });
+
+      console.log(`Deleting company employer records for user: ${userId}`);
       await this.companyEmployerModel.deleteMany({ employer_id: objectId });
+
+      console.log(`Deleting company manager records for user: ${userId}`);
       await this.companyManagerModel.deleteMany({ manager_id: objectId });
 
+      console.log(`Processing job applications for user: ${userId}`);
       const userApplications = await this.applicationModel.find({
         user_id: objectId,
       });
       for (const application of userApplications) {
+        console.log(`Updating applicant count for job: ${application.job_id}`);
         await this.jobModel.updateOne(
           { _id: application.job_id },
           { $inc: { applicants: -1 } },
@@ -228,11 +256,16 @@ export class UsersService {
       }
       await this.applicationModel.deleteMany({ user_id: objectId });
 
+      console.log(`Deleting user record for user: ${userId}`);
       await this.userModel.deleteOne({ _id: objectId });
 
+      console.log(
+        `Account deletion completed successfully for user: ${userId}`,
+      );
       return { message: 'Account and all related data deleted successfully.' };
     } catch (error) {
-      if (error instanceof NotFoundException) throw error; // Re-throw NotFoundException
+      console.error(`Error during account deletion for user: ${userId}`, error);
+      if (error instanceof NotFoundException) throw error;
       throw new InternalServerErrorException(
         'Failed to delete account. Please try again later.',
       );
