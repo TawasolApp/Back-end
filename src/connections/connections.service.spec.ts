@@ -92,7 +92,7 @@ describe('ConnectionsService', () => {
     expect(profileModel.find).toHaveBeenCalledWith({});
   });
 
-  it('should return only 2 profiles (profiles 1 & 2) when filtering by name = "testing"', async () => {
+  it('should return only 2 profiles (profiles 1 & 3) when filtering by name = "testing"', async () => {
     const filtered = mockProfiles.filter(
       (profile) =>
         profile.first_name.toLowerCase().includes('testing') ||
@@ -117,6 +117,34 @@ describe('ConnectionsService', () => {
         { first_name: { $regex: 'testing', $options: 'i' } },
         { last_name: { $regex: 'testing', $options: 'i' } },
       ],
+    });
+  });
+
+  it('should return only 1 profile (profile 2) when filtering by company = "company"', async () => {
+    const filtered = mockProfiles.filter((profile) =>
+      profile.work_experience?.some((exp) =>
+        exp.company?.toLowerCase().includes('company'),
+      ),
+    );
+    profileModel.find.mockReturnValueOnce({
+      select: jest.fn().mockReturnValueOnce({
+        skip: jest.fn().mockReturnValueOnce({
+          limit: jest.fn().mockReturnValueOnce({
+            lean: jest.fn().mockResolvedValueOnce(filtered),
+          }),
+        }),
+      }),
+    });
+    const result = await service.searchUsers(1, 5, undefined, 'company');
+    expect(result).toHaveLength(1);
+    expect(
+      result.map((profile) => profile.firstName + ' ' + profile.lastName),
+    ).toEqual(['Test User2']);
+    expect(profileModel.find).toHaveBeenCalledWith({
+      'work_experience.company': {
+        $regex: 'company',
+        $options: 'i',
+      },
     });
   });
 
