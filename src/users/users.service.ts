@@ -199,6 +199,9 @@ export class UsersService {
         author_id: objectId,
       });
       for (const comment of userComments) {
+        console.log(`Deleting replies for comment: ${comment._id}`);
+        await this.commentModel.deleteMany({ _id: { $in: comment.replies } });
+
         console.log(`Updating comment count for post: ${comment.post_id}`);
         await this.postModel.updateOne(
           { _id: comment.post_id },
