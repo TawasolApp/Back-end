@@ -63,8 +63,7 @@ export function mapPostToDto(
       | 'Funny'
       | 'Celebrate'
       | 'Insightful'
-      | 'Support'
-      | null,
+      | 'Support',
     timestamp: post.posted_at,
     isSaved: !!isSaved,
     isSilentRepost: post.is_silent_repost,

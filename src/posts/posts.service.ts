@@ -396,10 +396,15 @@ export class PostsService {
   async getUserPosts(
     searchedUserId: string,
     userId: string,
+    page: number,
+    limit: number,
   ): Promise<GetPostDto[]> {
     try {
+      const skip = (page - 1) * limit;
       const posts = await this.postModel
         .find({ author_id: new Types.ObjectId(searchedUserId) })
+        .skip(skip)
+        .limit(limit)
         .exec();
 
       if (!posts || posts.length === 0) {
