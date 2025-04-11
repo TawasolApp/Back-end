@@ -19,7 +19,6 @@ import {
   ProfileStatus,
 } from '../enums/profile-enums';
 import { Company } from 'src/companies/infrastructure/database/schemas/company.schema';
-import { Company } from 'src/companies/infrastructure/database/schemas/company.schema';
 
 /**
  * Maps CreateProfileDto to the Profile schema.
@@ -59,17 +58,12 @@ export function toCreateProfileSchema(
         description: education?.description,
         company_id: education?.companyId,
         company_logo: education?.companyLogo,
-        company_id: education?.companyId,
-        company_logo: education?.companyLogo,
       })) ?? [],
 
     certification:
       createProfileDto.certification?.map((cert) => ({
         name: cert?.name ?? null,
         company: cert?.company ?? null,
-        company_id: cert?.companyId ?? null,
-        expiry_date: cert?.expiryDate ?? null,
-        company_logo: cert?.companyLogo ?? null,
         company_id: cert?.companyId ?? null,
         expiry_date: cert?.expiryDate ?? null,
         company_logo: cert?.companyLogo ?? null,
@@ -82,14 +76,9 @@ export function toCreateProfileSchema(
         company: work.company,
         company_id: work.companyId ?? null,
         company_logo: work.companyLogo ?? null,
-        company_id: work.companyId ?? null,
-        company_logo: work.companyLogo ?? null,
         employment_type: work.employmentType as EmploymentType,
         start_date: work.startDate ? new Date(work.startDate) : new Date(),
         end_date: work.endDate ? new Date(work.endDate) : new Date(),
-        location: work.location,
-        location_type: work.locationType as LocationType,
-        description: work.description ?? null,
         location: work.location,
         location_type: work.locationType as LocationType,
         description: work.description ?? null,
@@ -241,9 +230,6 @@ export function toCreateCertificationSchema(
     company_id: certificationDto.companyId,
     company_logo: certificationDto.companyLogo,
     expiry_date: certificationDto.expiryDate,
-    company_id: certificationDto.companyId,
-    company_logo: certificationDto.companyLogo,
-    expiry_date: certificationDto.expiryDate,
   };
 }
 
@@ -259,14 +245,6 @@ export function toUpdateCertificationSchema(
     ...(certificationDto.issueDate && {
       issue_date: certificationDto.issueDate,
     }),
-    ...(certificationDto.companyLogo && {
-      company_logo: certificationDto.companyLogo,
-    }),
-    ...(certificationDto.expiryDate && {
-      expiry_date: certificationDto.expiryDate,
-    }),
-    ...(certificationDto.companyId && {
-      company_id: certificationDto.companyId,
     ...(certificationDto.companyLogo && {
       company_logo: certificationDto.companyLogo,
     }),
@@ -296,8 +274,6 @@ export function toCreateWorkExperienceSchema(
     location: workExperienceDto.location,
     location_type: workExperienceDto.locationType as LocationType,
     description: workExperienceDto.description,
-    company_logo: workExperienceDto.companyLogo ?? null,
-    company_id: workExperienceDto.companyId ?? null,
     company_logo: workExperienceDto.companyLogo ?? null,
     company_id: workExperienceDto.companyId ?? null,
   };

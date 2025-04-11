@@ -32,14 +32,9 @@ class Education {
 
   companyLogo?: string;
 
-  companyId?: Types.ObjectId;
-
-  companyLogo?: string;
 }
 
 class Certification {
-  _id: Types.ObjectId;
-
   _id: Types.ObjectId;
 
   name: string;
@@ -78,9 +73,6 @@ class WorkExperience {
 
   companyLogo?: string;
 
-  companyId?: Types.ObjectId;
-
-  companyLogo?: string;
 }
 
 class PlanDetails {
@@ -126,7 +118,6 @@ export class GetProfileDto {
 
   education?: Education[];
 
-  certification?: Certification[];
   certification?: Certification[];
 
   workExperience?: WorkExperience[];
