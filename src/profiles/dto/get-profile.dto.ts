@@ -13,6 +13,7 @@ import {
 class Education {
   _id: Types.ObjectId;
 
+
   school: string;
 
   degree?: string;
@@ -30,6 +31,7 @@ class Education {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
+
 }
 
 class Certification {
@@ -70,6 +72,7 @@ class WorkExperience {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
+
 }
 
 class PlanDetails {

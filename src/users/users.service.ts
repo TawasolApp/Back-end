@@ -88,7 +88,6 @@ export class UsersService {
       ) {
         throw error;
       }
-      console.error('Error in requestEmailUpdate:', error);
       throw new InternalServerErrorException(
         'Failed to process email update request',
       );
@@ -106,6 +105,7 @@ export class UsersService {
 
       return { message: 'Email updated successfully.' };
     } catch (err) {
+      if (err instanceof NotFoundException) throw err;
       throw new BadRequestException('Invalid or expired token');
     }
   }
@@ -141,9 +141,8 @@ export class UsersService {
         error instanceof NotFoundException ||
         error instanceof BadRequestException
       ) {
-        throw error; // Re-throw known exceptions
+        throw error;
       }
-      console.error('Error in updatePassword:', error); // Log unexpected errors
       throw new InternalServerErrorException('Failed to update password');
     }
   }
@@ -160,7 +159,7 @@ export class UsersService {
     try {
       const objectId = new Types.ObjectId(userId);
       const user = await this.userModel.findById(objectId);
-      if (!user) throw new NotFoundException('User not found');
+      if (!user) throw new NotFoundException('User not found'); // Fix: Throw NotFoundException
 
       await this.profileModel.deleteOne({ _id: objectId });
       await this.postModel.deleteMany({ author_id: objectId });
@@ -233,7 +232,7 @@ export class UsersService {
 
       return { message: 'Account and all related data deleted successfully.' };
     } catch (error) {
-      console.error('Error during account deletion:', error);
+      if (error instanceof NotFoundException) throw error; // Re-throw NotFoundException
       throw new InternalServerErrorException(
         'Failed to delete account. Please try again later.',
       );
