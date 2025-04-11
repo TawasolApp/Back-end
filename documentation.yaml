@@ -80,6 +80,20 @@ paths:
           required: true
           schema:
             type: string
+        - name: page
+          in: query
+          description: Page number for pagination
+          required: false
+          schema:
+            type: integer
+            default: 1
+        - name: limit
+          in: query
+          description: Number of posts per page
+          required: false
+          schema:
+            type: integer
+            default: 10
       responses:
         '200':
           description: A list of posts
@@ -196,6 +210,10 @@ paths:
       responses:
         '200':
           description: Post updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPostDto'
         '401':
           description: Unauthorized access
         '403':
@@ -246,6 +264,10 @@ paths:
       responses:
         '200':
           description: Reactions updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPostDto'
         '404':
           description: Post or user not found
         '500':
@@ -307,6 +329,17 @@ paths:
       responses:
         '200':
           description: Post saved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Post saved successfully'
+                  postId:
+                    type: string
+                    example: '507f1f77bcf86cd799439013'
         '400':
           description: Post already saved
         '404':
@@ -326,6 +359,14 @@ paths:
       responses:
         '200':
           description: save delete successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'Save deleted successfully'
         '404':
           description: save not found
         '500':
@@ -387,6 +428,10 @@ paths:
       responses:
         '200':
           description: Comment added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCommentDto'
         '404':
           description: Post or user not found
         '500':
@@ -489,6 +534,10 @@ paths:
       responses:
         '200':
           description: Comment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetCommentDto'
         '401':
           description: Unauthorized access
         '403':
