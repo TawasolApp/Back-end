@@ -42,16 +42,13 @@ export class UsersController {
     @Req() req: Request,
     @Body() updatePasswordDto: UpdatePasswordDto,
   ) {
-    if (!req.user) {
+    if (!req.user || !req.user['sub']) {
       throw new UnauthorizedException('User not authenticated');
     }
-
-    console.log('🔹 Extracted User ID from Token:', req.user['sub']);
     return this.usersService.updatePassword(req.user['sub'], updatePasswordDto);
   }
 
-
- @Delete('delete-account')
+  @Delete('delete-account')
   @UseGuards(JwtAuthGuard)
   async deleteAccount(@Req() req: Request) {
     if (!req.user || !req.user['sub']) {
