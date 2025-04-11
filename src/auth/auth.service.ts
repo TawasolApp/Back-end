@@ -71,9 +71,7 @@ export class AuthService {
     try {
       await user.save();
     } catch (error) {
-      console.error(
-        'Error saving user during registration:',
-      );
+      console.error('Error saving user during registration:');
       throw new InternalServerErrorException('Unexpected error occurred');
     }
 
@@ -137,9 +135,17 @@ export class AuthService {
    * @returns True if valid, otherwise false
    */
   private async verifyCaptcha(token: string): Promise<boolean> {
-    if (token === 'test-token') return true;
+    console.log('Starting CAPTCHA verification...');
+    console.log('CAPTCHA token received:', token);
+
+    if (token === 'test-token') {
+      console.log('Test token detected. Returning true.');
+      return true;
+    }
 
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    console.log('Using reCAPTCHA secret key:', secretKey);
+
     try {
       const response = await axios.post(
         `https://www.google.com/recaptcha/api/siteverify`,
@@ -147,10 +153,21 @@ export class AuthService {
         { params: { secret: secretKey, response: token } },
       );
 
-      // Simplify logic to only check for success
+      console.log('reCAPTCHA API response:', response.data);
+
+      if (response.data.success) {
+        console.log('CAPTCHA verification succeeded.');
+      } else {
+        console.error(
+          'CAPTCHA verification failed. Errors:',
+          response.data['error-codes'],
+        );
+      }
+
       return response.data.success === true;
     } catch (error) {
-      return false; // Ensure it returns false on error
+      console.error('Error during reCAPTCHA verification:', error.message);
+      return false;
     }
   }
 
@@ -207,9 +224,7 @@ export class AuthService {
     try {
       await this.mailerService.resendConfirmationEmail(email, type, token);
     } catch (error) {
-      console.error(
-        'Error resending confirmation email:',
-      );
+      console.error('Error resending confirmation email:');
       throw new InternalServerErrorException(
         'Failed to resend confirmation email',
       );
@@ -266,9 +281,7 @@ export class AuthService {
           isAndroid,
         );
       } catch (error) {
-        console.error(
-          'Error sending password reset email:',
-        );
+        console.error('Error sending password reset email:');
         throw new InternalServerErrorException(
           'Failed to send password reset email',
         );
@@ -381,9 +394,7 @@ export class AuthService {
         try {
           await user.save();
         } catch (error) {
-          console.error(
-            'Error saving user during Google login:',
-          );
+          console.error('Error saving user during Google login:');
           throw new InternalServerErrorException('Google login failed');
         }
       }
