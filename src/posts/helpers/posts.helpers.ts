@@ -69,6 +69,8 @@ export async function getCommentInfo(
 
   if (comment.author_type === 'User') {
     authorProfile = await profileModel.findById(comment.author_id).exec();
+
+    console.log('authorProfile', authorProfile);
     if (authorProfile) {
       authorProfilePicture =
         'profile_picture' in authorProfile
@@ -78,10 +80,11 @@ export async function getCommentInfo(
         'first_name' in authorProfile && 'last_name' in authorProfile
           ? `${authorProfile.first_name} ${authorProfile.last_name}`
           : 'Unknown';
-      authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
+      authorBio = 'headline' in authorProfile ? authorProfile.headline : '';
     }
   } else if (comment.author_type === 'Company') {
     authorProfile = await companyModel.findById(comment.author_id).exec();
+    console.log('authorProfile', authorProfile);
     if (authorProfile) {
       if ('logo' in authorProfile) {
         authorProfilePicture =
@@ -184,7 +187,7 @@ export async function getPostInfo(
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
   let authorBio: string | undefined;
-
+  console.log('post', post);
   //   console.log(post);
   if (post.author_type === 'User') {
     authorProfile = await profileModel
@@ -201,6 +204,7 @@ export async function getPostInfo(
     authorProfile = await companyModel
       .findById(new Types.ObjectId(post.author_id))
       .exec();
+    console.log('authorProfile', authorProfile);
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
     }

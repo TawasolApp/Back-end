@@ -195,12 +195,16 @@ export class PostsController {
   @HttpCode(HttpStatus.OK)
   async getUserPosts(
     @Param('userId') searchedUserId: string,
+    @Query('page') page: number = 1,
+    @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getUserPosts(
       searchedUserId,
       req.user['sub'],
+      page,
+      limit,
     );
   }
 

@@ -6,10 +6,7 @@ import {
   Company,
   CompanyDocument,
 } from '../../../../companies/infrastructure/database/schemas/company.schema';
-import {
-  Post,
-  PostDocument,
-} from '../schemas/post.schema';
+import { Post, PostDocument } from '../schemas/post.schema';
 import { faker } from '@faker-js/faker';
 import { Comment, CommentDocument } from '../schemas/comment.schema';
 import {
@@ -77,6 +74,10 @@ export class ReactSeeder {
           'Support',
         ]),
         post_type: 'Post',
+        reacted_at: faker.date.recent({
+          days: 5,
+          refDate: new Date('2025-04-10'),
+        }),
       });
     }
 
@@ -134,6 +135,10 @@ export class ReactSeeder {
           'Support',
         ]),
         post_type: 'Comment',
+        reacted_at: faker.date.recent({
+          days: 5,
+          refDate: new Date('2025-04-10'),
+        }),
       });
     }
     await this.reactModel.insertMany(reacts);

@@ -6,7 +6,10 @@ import {
   UserDocument,
 } from '../../../../users/infrastructure/database/schemas/user.schema';
 import { faker } from '@faker-js/faker';
-import { Application, ApplicationDocument } from '../schemas/application.schema';
+import {
+  Application,
+  ApplicationDocument,
+} from '../schemas/application.schema';
 import { Job, JobDocument } from '../schemas/job.schema';
 import { ApplicationStatus } from '../../../enums/application-status.enum';
 
@@ -22,10 +25,10 @@ export class ApplicationSeeder {
   async seedApplications(count: number): Promise<void> {
     const users = await this.userModel
       .find({ role: 'customer' })
-      .select('_id')
+      .select('_id created_at')
       .lean();
 
-    const jobs = await this.jobModel.find().select('_id').lean();
+    const jobs = await this.jobModel.find().select('_id posted_at').lean();
 
     if (users.length === 0 || jobs.length === 0) {
       console.log('No eligible users or jobs found. Seeding aborted.');
@@ -47,18 +50,29 @@ export class ApplicationSeeder {
       const randomJob = faker.helpers.arrayElement(jobs);
       const key = `${randomUser._id}-${randomJob._id}`;
 
-      if (!existingSet.has(key)) {
-        existingSet.add(key);
-        applications.push({
-          user_id: randomUser._id,
-          job_id: randomJob._id,
-          status: faker.helpers.arrayElement(Object.values(ApplicationStatus))
-        });
-      }
+      if (existingSet.has(key)) continue;
+
+      const userCreatedAt = new Date(randomUser.created_at);
+      const jobPostedAt = new Date(randomJob.posted_at);
+      const minDate = userCreatedAt > jobPostedAt ? userCreatedAt : jobPostedAt;
+
+      const applicationCreatedAt = faker.date.between({
+        from: minDate,
+        to: new Date('2025-04-10'),
+      });
+
+      applications.push({
+        user_id: randomUser._id,
+        job_id: randomJob._id,
+        status: faker.helpers.arrayElement(Object.values(ApplicationStatus)),
+        applied_at: applicationCreatedAt.toISOString(),
+      });
+
+      existingSet.add(key);
     }
 
     await this.applicationModel.insertMany(applications);
-    console.log(`${count} job applications seeded successfully!`);
+    console.log(`${applications.length} job applications seeded successfully!`);
   }
 
   async clearApplications(): Promise<void> {

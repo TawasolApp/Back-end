@@ -27,6 +27,12 @@ export class CompanyManagerSeeder {
       .select('_id')
       .lean();
     const companies = await this.companyModel.find().select('_id').lean();
+    const users = await this.userModel.find().select('_id created_at').lean();
+    const usersMap = new Map<string, Date>();
+
+    users.forEach((user) => {
+      usersMap.set(user._id.toString(), new Date(user.created_at));
+    });
 
     if (managers.length === 0 || companies.length === 0) {
       console.log('No eligible managers or companies found. Seeding aborted.');
@@ -48,13 +54,23 @@ export class CompanyManagerSeeder {
       const randomCompany = faker.helpers.arrayElement(companies);
       const key = `${randomManager._id}-${randomCompany._id}`;
 
-      if (!existingSet.has(key)) {
-        existingSet.add(key);
-        companyManagers.push({
-          manager_id: randomManager._id,
-          company_id: randomCompany._id,
-        });
-      }
+      if (existingSet.has(key)) continue;
+
+      const userCreatedAt = usersMap.get(randomManager._id.toString());
+      if (!userCreatedAt) continue;
+
+      const managementCreatedAt = faker.date.between({
+        from: userCreatedAt,
+        to: new Date('2025-04-10'),
+      });
+
+      companyManagers.push({
+        manager_id: randomManager._id,
+        company_id: randomCompany._id,
+        created_at: managementCreatedAt.toISOString(),
+      });
+
+      existingSet.add(key);
     }
 
     await this.companyManagerModel.insertMany(companyManagers);

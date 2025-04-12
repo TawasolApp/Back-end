@@ -44,8 +44,8 @@ export function mapPostToDto(
         ? authorProfile.profile_picture
         : authorProfile.logo,
     authorBio:
-      'bio' in authorProfile
-        ? authorProfile.bio
+      'headline' in authorProfile
+        ? authorProfile.headline
         : 'followers' in authorProfile
           ? `${authorProfile.followers.toLocaleString()} followers`
           : '',
@@ -54,7 +54,7 @@ export function mapPostToDto(
     reactCounts: post.react_count,
     comments: post.comment_count,
     shares: post.share_count,
-    taggedUsers: [], // Assuming this is handled elsewhere
+    taggedUsers: post.tags, // Assuming this is handled elsewhere
     visibility: post.visibility as 'Public' | 'Connections' | 'Private',
     authorType: post.author_type,
     reactType: userReactionType as
@@ -63,8 +63,7 @@ export function mapPostToDto(
       | 'Funny'
       | 'Celebrate'
       | 'Insightful'
-      | 'Support'
-      | null,
+      | 'Support',
     timestamp: post.posted_at,
     isSaved: !!isSaved,
     isSilentRepost: post.is_silent_repost,
@@ -163,7 +162,7 @@ export function mapCommentToDto(
     repliesCount: replies.length, // Assuming replies are handled elsewhere
     reactCounts: comment.react_count,
     timestamp: comment.commented_at.toISOString(),
-    taggedUsers: [], // Assuming tagged users are handled elsewhere
+    taggedUsers: comment.tags, // Assuming tagged users are handled elsewhere
     reactType: userReactionType,
     isConnected: !!isConnected,
     isFollowing: !!isFollowing,

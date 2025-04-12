@@ -71,7 +71,9 @@ export class AuthService {
     try {
       await user.save();
     } catch (error) {
-      console.error('Error saving user during registration:');
+      console.error(
+        'Error saving user during registration:',
+      );
       throw new InternalServerErrorException('Unexpected error occurred');
     }
 
@@ -114,8 +116,7 @@ export class AuthService {
       throw new BadRequestException('Invalid password');
     }
 
-    if (!user.is_verified) {
-      // Changed from isVerified to is_verified
+    if (!user.isVerified) {
       throw new ForbiddenException('Email not verified');
     }
 
@@ -126,7 +127,7 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
+      isSocialLogin: user.isSocialLogin,
     };
   }
 
@@ -136,17 +137,9 @@ export class AuthService {
    * @returns True if valid, otherwise false
    */
   private async verifyCaptcha(token: string): Promise<boolean> {
-    console.log('Starting CAPTCHA verification...');
-    console.log('CAPTCHA token received:', token);
+    if (token === 'test-token') return true;
 
-    if (token === 'test-token') {
-      console.log('Test token detected. Returning true.');
-      return true;
-    }
-
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
-    console.log('Using reCAPTCHA secret key:', secretKey);
-
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
     try {
       const response = await axios.post(
         `https://www.google.com/recaptcha/api/siteverify`,
@@ -154,21 +147,10 @@ export class AuthService {
         { params: { secret: secretKey, response: token } },
       );
 
-      console.log('reCAPTCHA API response:', response.data);
-
-      if (response.data.success) {
-        console.log('CAPTCHA verification succeeded.');
-      } else {
-        console.error(
-          'CAPTCHA verification failed. Errors:',
-          response.data['error-codes'],
-        );
-      }
-
+      // Simplify logic to only check for success
       return response.data.success === true;
     } catch (error) {
-      console.error('Error during reCAPTCHA verification:', error.message);
-      return false;
+      return false; // Ensure it returns false on error
     }
   }
 
@@ -186,9 +168,9 @@ export class AuthService {
 
       if (!user)
         throw new BadRequestException('Invalid token or user does not exist');
-      if (user.is_verified) return { message: 'Email is already verified.' };
+      if (user.isVerified) return { message: 'Email is already verified.' };
 
-      user.is_verified = true;
+      user.isVerified = true;
       await user.save();
       return { message: 'Email verified successfully.' };
     } catch (err) {
@@ -207,8 +189,7 @@ export class AuthService {
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('Email not found');
 
-    if (type === 'verifyEmail' && user.is_verified) {
-      // Changed from isVerified to is_verified
+    if (type === 'verifyEmail' && user.isVerified) {
       return { message: 'Email is already verified' };
     }
 
@@ -226,7 +207,9 @@ export class AuthService {
     try {
       await this.mailerService.resendConfirmationEmail(email, type, token);
     } catch (error) {
-      console.error('Error resending confirmation email:');
+      console.error(
+        'Error resending confirmation email:',
+      );
       throw new InternalServerErrorException(
         'Failed to resend confirmation email',
       );
@@ -270,8 +253,7 @@ export class AuthService {
     const { email, isAndroid } = dto;
 
     const user = await this.userModel.findOne({ email });
-    if (user?.is_verified) {
-      // Changed from isVerified to is_verified
+    if (user?.isVerified) {
       const token = this.jwtService.sign(
         { sub: user._id },
         { expiresIn: '15m' },
@@ -284,7 +266,9 @@ export class AuthService {
           isAndroid,
         );
       } catch (error) {
-        console.error('Error sending password reset email:');
+        console.error(
+          'Error sending password reset email:',
+        );
         throw new InternalServerErrorException(
           'Failed to send password reset email',
         );
@@ -337,7 +321,7 @@ export class AuthService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
-      user.is_social_login = false;
+      user.isSocialLogin = false;
       await user.save();
 
       return { message: 'Password reset successfully' };
@@ -362,6 +346,7 @@ export class AuthService {
 
       const tokenInfo = await googleClient.getTokenInfo(idToken);
 
+      // Add validation for empty tokenInfo or missing email
       if (!tokenInfo || !tokenInfo.email) {
         throw new BadRequestException('Invalid Google token');
       }
@@ -389,11 +374,18 @@ export class AuthService {
           last_name: profile.family_name || '',
           email: profile.email,
           password: hashedPassword,
-          is_verified: true,
-          is_social_login: true,
+          isVerified: true,
+          isSocialLogin: true,
         });
 
-        await user.save();
+        try {
+          await user.save();
+        } catch (error) {
+          console.error(
+            'Error saving user during Google login:',
+          );
+          throw new InternalServerErrorException('Google login failed');
+        }
       }
 
       const payload = { sub: user._id, email: user.email, role: user.role };
@@ -401,10 +393,10 @@ export class AuthService {
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
       return {
-        token,
+        token: token,
         refreshToken,
         email: user.email,
-        is_social_login: user.is_social_login,
+        isSocialLogin: user.isSocialLogin,
         isNewUser,
         message: 'Login successful',
       };
