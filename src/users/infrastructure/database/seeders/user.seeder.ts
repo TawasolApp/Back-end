@@ -27,8 +27,12 @@ export class UserSeeder {
           'manager',
           'admin',
         ]),
-        is_verified: true, // Changed from isVerified to is_verified
-        is_social_login: false, // Changed from isSocialLogin to is_social_login
+        is_verified: true,
+        is_social_login: false,
+        created_at: faker.date.past({
+          years: 2,
+          refDate: new Date('2025-04-05'),
+        }),
       });
     }
 

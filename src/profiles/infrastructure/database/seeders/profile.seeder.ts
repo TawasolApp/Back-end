@@ -50,7 +50,10 @@ export class ProfileSeeder {
     }
 
     const profiles: Partial<ProfileDocument>[] = users.map((user) => {
-      const randomCompany = faker.helpers.arrayElement(companies); // Select a random company
+      const skillCount = faker.number.int({ min: 0, max: 10 });
+      const educationCount = faker.number.int({ min: 1, max: 3 });
+      const certificationCount = faker.number.int({ min: 0, max: 3 });
+      const experienceCount = faker.number.int({ min: 1, max: 3 });
 
       return {
         _id: user._id,
@@ -63,57 +66,86 @@ export class ProfileSeeder {
         bio: faker.lorem.sentence(),
         location: faker.location.city(),
         industry: faker.commerce.department(),
-        skills: [
-          {
+        skills: Array.from({ length: skillCount }, () => {
+          const availableEndorsers = users.filter(
+            (u) => !u._id.equals(user._id),
+          );
+          const selectedEndorsers = faker.helpers.arrayElements(
+            availableEndorsers,
+            { min: 0, max: Math.min(5, availableEndorsers.length) },
+          );
+          return {
             skill_name: faker.word.adverb(),
             position: faker.company.name(),
-            endorsements: [faker.helpers.arrayElement(users)._id],
-          },
-        ],
-        education: [
-          {
-            _id: new this.profileModel()._id, // Generate a unique ObjectId
-            school: faker.company.name(),
+            endorsements: selectedEndorsers.map((e) => e._id),
+          };
+        }),
+
+        education: Array.from({ length: educationCount }, () => {
+          const company = faker.helpers.arrayElement(companies);
+          const start = faker.date.between({
+            from: user.created_at,
+            to: new Date('2025-04-10'),
+          });
+          const end = faker.datatype.boolean()
+            ? faker.date.between({
+                from: start,
+                to: new Date('2025-04-10'),
+              })
+            : undefined;
+          return {
+            _id: new this.profileModel()._id,
+            school: company.name,
             degree: faker.person.jobTitle(),
             field: faker.commerce.department(),
-            start_date: faker.date.past({ years: 10 }),
-            end_date: faker.datatype.boolean()
-              ? faker.date.past({ years: 5 })
-              : undefined,
+            start_date: start,
+            end_date: end,
             grade: faker.helpers.arrayElement(['A', 'B', 'C']),
             description: faker.lorem.sentence(),
-            company_id: randomCompany._id, // Assign a random company_id
-            company_logo: randomCompany.logo,
-          },
-        ],
-        certification: [
-          {
-            _id: new this.profileModel()._id, // Generate a unique ObjectId
+            company_id: company._id,
+            company_logo: company.logo,
+          };
+        }),
+
+        certification: Array.from({ length: certificationCount }, () => {
+          const company = faker.helpers.arrayElement(companies);
+          return {
+            _id: new this.profileModel()._id,
             name: faker.person.jobTitle(),
-            company: faker.company.name(),
-            company_id: randomCompany._id, // Assign a random company_id
-            company_logo: randomCompany.logo,
+            company: company.name,
+            company_id: company._id,
+            company_logo: company.logo,
             issue_date: faker.date.past({ years: 3 }),
             expiry_date: faker.date.future({ years: 1 }),
-          },
-        ],
-        work_experience: [
-          {
-            _id: new this.profileModel()._id, // Generate a unique ObjectId
+          };
+        }),
+
+        work_experience: Array.from({ length: experienceCount }, () => {
+          const company = faker.helpers.arrayElement(companies);
+          const start = faker.date.between({
+            from: user.created_at,
+            to: new Date('2025-04-10'),
+          });
+          const end = faker.datatype.boolean()
+            ? faker.date.between({
+                from: start,
+                to: new Date('2025-04-10'),
+              })
+            : undefined;
+          return {
+            _id: new this.profileModel()._id,
             title: faker.person.jobTitle(),
-            company_id: randomCompany._id, // Assign a random company_id
-            company_logo: randomCompany.logo,
+            company_id: company._id,
+            company_logo: company.logo,
             employment_type: faker.helpers.enumValue(EmploymentType),
-            company: faker.company.name(),
-            start_date: faker.date.past({ years: 5 }),
-            end_date: faker.datatype.boolean()
-              ? faker.date.past({ years: 2 })
-              : undefined,
+            company: company.name,
+            start_date: start,
+            end_date: end,
             location: faker.location.city(),
             location_type: faker.helpers.enumValue(LocationType),
             description: faker.lorem.sentence(),
-          },
-        ],
+          };
+        }),
         visibility: faker.helpers.enumValue(Visibility),
         connection_count: 0,
         plan_details: {
