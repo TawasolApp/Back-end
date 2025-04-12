@@ -92,11 +92,39 @@ describe('ProfilesController', () => {
       expect(service.getProfile).toHaveBeenCalled();
     });
 
+    const unauthorizedReq = { user: null };
+    it('should throw UnauthorizedException when user is not authenticated', async () => {
+      await expect(
+        controller.getProfile(unauthorizedReq, 'someId'),
+      ).rejects.toThrow(UnauthorizedException);
+    });
     it('should throw BadRequestException for invalid ObjectId', async () => {
       await expect(controller.getProfile(req, 'invalid-id')).rejects.toThrow(
         BadRequestException,
       );
     });
+  });
+
+  describe('getMyProfile', () => {
+    const testUserId = new Types.ObjectId();
+    const req = { user: { sub: testUserId } };
+    it('should get profile successfully with valid ObjectId', async () => {
+      const id = new Types.ObjectId().toHexString();
+      await controller.getMyProfile(req);
+      expect(service.getProfile).toHaveBeenCalled(); // This may need to be updated to expect(service.getMyProfile) if the service method is renamed
+    });
+
+    const unauthorizedReq = { user: null };
+    it('should throw UnauthorizedException when user is not authenticated', async () => {
+      await expect(controller.getMyProfile(unauthorizedReq)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+    // it('should throw BadRequestException for invalid ObjectId', async () => {
+    //   await expect(controller.getMyProfile(req)).rejects.toThrow(
+    //     BadRequestException,
+    //   );
+    // });
   });
 
   describe('updateProfile', () => {
