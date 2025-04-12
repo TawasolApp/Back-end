@@ -1,7 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
-import { Profile } from './infrastructure/database/schemas/profile.schema';
+import {
+  Profile,
+  WorkExperience,
+} from './infrastructure/database/schemas/profile.schema';
 import { Model, Types } from 'mongoose';
 import {
   NotFoundException,
@@ -20,6 +23,7 @@ import {
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { toGetProfileDto } from './dto/profile.mapper';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import * as profileMapper from './dto/profile.mapper';
 import { SkillDto } from './dto/skill.dto';
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
@@ -27,6 +31,8 @@ import { get } from 'http';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesService } from '../companies/companies.service';
+import { WorkExperienceDto } from './dto/work-experience.dto';
+import { first } from 'rxjs';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -92,7 +98,11 @@ describe('ProfilesService', () => {
   let profileModel: Model<Profile>;
 
   const mockUserConnectionModel = {};
-  const mockUserModel = {};
+  const mockUserModel = {
+    findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    find: jest.fn(), // Add the find method to mockUserModel
+  };
   const mockCompaniesService = {
     getCompanyById: jest.fn(),
     createCompany: jest.fn(),
@@ -113,7 +123,9 @@ describe('ProfilesService', () => {
             findOneAndUpdate: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
+            find: jest.fn(),
           },
+          // Add the find method to mock profileModel
         },
         {
           provide: CompaniesService,
@@ -129,22 +141,22 @@ describe('ProfilesService', () => {
 
     service = module.get<ProfilesService>(ProfilesService);
     profileModel = module.get<Model<Profile>>(getModelToken(Profile.name));
-    jest
-      .spyOn(service, 'getUserFirstLastName')
-      .mockResolvedValue({ firstName: 'Hohn', lastName: 'Doe' });
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
     jest
       .spyOn(service, 'getUserFirstLastName')
-      .mockResolvedValue({ firstName: 'Hohn', lastName: 'Doe' });
+      .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
   });
 
   describe('createProfile', () => {
     it('should create a profile', async () => {
       const dto: CreateProfileDto = {};
       jest.spyOn(profileModel, 'create').mockResolvedValue(mockProfile as any);
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
       const result = await service.createProfile(new Types.ObjectId(), dto);
       expect(result).toEqual(toGetProfileDto(mockProfile));
     });
@@ -153,6 +165,10 @@ describe('ProfilesService', () => {
 
       // Mock the `create` method to throw a duplicate key error (MongoDB error code 11000)
       jest.spyOn(profileModel, 'create').mockRejectedValue({ code: 11000 });
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
 
       await expect(
         service.createProfile(new Types.ObjectId(), dto),
@@ -173,6 +189,9 @@ describe('ProfilesService', () => {
 
       const id = new Types.ObjectId();
       const createProfileDto = { name: 'John Doe', bio: 'Software Engineer' };
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
 
       await expect(service.createProfile(id, createProfileDto)).rejects.toThrow(
         new BadRequestException('Failed to create profile'),
@@ -376,6 +395,57 @@ describe('ProfilesService', () => {
       await expect(service.addSkill(skill, id)).rejects.toThrow(
         new NotFoundException('updated Profile not found'),
       );
+    });
+  });
+
+  it('should throw NotFoundException when updated profile is not found after adding skill', async () => {
+    const id = new Types.ObjectId();
+    const skill: SkillDto = { skillName: 'JavaScript' };
+
+    // Mock `findById().exec()` to return a profile (valid profile)
+    jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ _id: id, skills: [] }),
+    } as any);
+
+    // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
+    jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+    await expect(service.addSkill(skill, id)).rejects.toThrow(
+      new NotFoundException('updated Profile not found'),
+    );
+  });
+  describe('editSkillPosition', () => {
+    it('should edit a skill position successfully', async () => {
+      const updatedSkill = {
+        skill_name: 'JavaScript',
+        position: 'Updated Position',
+        endorsements: [],
+      };
+
+      const updatedProfile = {
+        ...mockProfile,
+        skills: [updatedSkill],
+      };
+
+      jest
+        .spyOn(profileModel, 'findOneAndUpdate')
+        .mockResolvedValue(updatedProfile as any);
+
+      // If you're calling toGetProfileDto directly in the service
+      const mockDto = {
+        ...mockProfile,
+        first_name: mockProfile.first_name,
+        last_name: mockProfile.last_name,
+        skills: [updatedSkill],
+      };
+
+      const result = await service.editSkillPosition(
+        'JavaScript',
+        'Updated Position',
+        mockProfile._id,
+      );
+
+      expect(result.skills?.[0]?.position).toBe('Updated Position');
     });
   });
 
@@ -1081,6 +1151,458 @@ describe('ProfilesService', () => {
 
       await expect(
         service.deleteCertification(certificationId, profileId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+  describe('Work Experience Methods', () => {
+    const mockWorkExperienceDto = {
+      title: 'Software Engineer',
+      company: 'Tech Corp',
+      startDate: new Date('2020-01-01'),
+      endDate: new Date('2022-01-01'),
+      employmentType: EmploymentType.FULL_TIME,
+      location: 'Remote',
+      locationType: LocationType.REMOTE,
+      description: 'Worked on cool stuff',
+      companyLogo: 'logo.png',
+      companyId: new Types.ObjectId(),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('addWorkExperience', () => {
+      it('should add work experience to the profile', async () => {
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(mockProfile as any);
+        jest
+          .spyOn(profileModel, 'findOneAndUpdate')
+          .mockResolvedValue(mockProfile as any);
+
+        const result = await service.addWorkExperience(
+          mockWorkExperienceDto,
+          mockProfile._id,
+        );
+        expect(result).toEqual(toGetProfileDto(mockProfile));
+      });
+
+      it('should throw NotFoundException if profile does not exist', async () => {
+        jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+
+        await expect(
+          service.addWorkExperience(mockWorkExperienceDto, mockProfile._id),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw BadRequestException for invalid ID', async () => {
+        await expect(
+          service.addWorkExperience(mockWorkExperienceDto, 'invalid-id' as any),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should throw NotFoundException when updated profile is not found after adding work experience', async () => {
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue({ _id: mockProfile._id, work_experience: [] });
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.addWorkExperience(mockWorkExperienceDto, mockProfile._id),
+        ).rejects.toThrow(new NotFoundException('Updated Profile not found'));
+      });
+    });
+
+    describe('editWorkExperience', () => {
+      const mockWorkExperienceId = new Types.ObjectId();
+
+      it('should edit work experience', async () => {
+        const profileWithExperience = {
+          ...mockProfile,
+          work_experience: [
+            {
+              _id: mockWorkExperienceId,
+              title: 'Old Title',
+              company: 'Old Company',
+              start_date: new Date('2020-01-01'),
+              end_date: new Date('2022-01-01'),
+              employment_type: EmploymentType.FULL_TIME,
+              location: 'Remote',
+              location_type: LocationType.REMOTE,
+              description: 'Worked on cool stuff',
+              company_logo: 'logo.png',
+              company_id: new Types.ObjectId(),
+            },
+          ],
+        };
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(profileWithExperience as any);
+        jest
+          .spyOn(profileModel, 'findOneAndUpdate')
+          .mockResolvedValue(profileWithExperience as any);
+
+        const result = await service.editWorkExperience(
+          mockWorkExperienceDto,
+          mockProfile._id,
+          mockWorkExperienceId,
+        );
+
+        expect(result).toEqual(toGetProfileDto(profileWithExperience));
+      });
+      it('should throw BadRequestException if profile ID is invalid', async () => {
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            '12345' as any,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should throw NotFoundException if profile not found', async () => {
+        jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw NotFoundException if work experience not found in profile', async () => {
+        const profileWithNoMatch = {
+          ...mockProfile,
+          work_experience: [{ _id: new Types.ObjectId() }],
+        };
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(profileWithNoMatch as any);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw NotFoundException when updated profile is not found after updating work experience', async () => {
+        jest.spyOn(profileModel, 'findById').mockResolvedValue({
+          _id: mockProfile._id,
+          work_experience: [
+            {
+              _id: mockWorkExperienceId,
+              title: 'Old Title',
+              company: 'Old Company',
+              issueDate: new Date(),
+            },
+          ],
+        });
+
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(
+          new NotFoundException('Work experience not found in profile'),
+        );
+      });
+
+      it('should throw NotFoundException when updated profile is not found after editing work experience', async () => {
+        const profileWithExperience = {
+          ...mockProfile,
+          work_experience: [
+            {
+              _id: mockWorkExperienceId,
+              title: 'Old Title',
+              company: 'Old Company',
+              start_date: new Date('2020-01-01'),
+              end_date: new Date('2022-01-01'),
+              employment_type: EmploymentType.FULL_TIME,
+              location: 'Remote',
+              location_type: LocationType.REMOTE,
+              description: 'Worked on cool stuff',
+              company_logo: 'logo.png',
+              company_id: new Types.ObjectId(),
+            },
+          ],
+        };
+
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(profileWithExperience as any);
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(
+          new NotFoundException('Work experience not found in profile'),
+        );
+      });
+    });
+
+    describe('deleteWorkExperience', () => {
+      const mockWorkExperienceId = new Types.ObjectId();
+
+      it('should delete work experience from the profile', async () => {
+        jest
+          .spyOn(profileModel, 'findOneAndUpdate')
+          .mockResolvedValue(mockProfile as any);
+
+        const result = await service.deleteWorkExperience(
+          mockWorkExperienceId,
+          mockProfile._id,
+        );
+        expect(result).toEqual(toGetProfileDto(mockProfile));
+      });
+
+      it('should throw NotFoundException if profile or work experience not found', async () => {
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.deleteWorkExperience(mockWorkExperienceId, mockProfile._id),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw BadRequestException for invalid profile ID', async () => {
+        await expect(
+          service.deleteWorkExperience(
+            mockWorkExperienceId,
+            'invalid-id' as any,
+          ),
+        ).rejects.toThrow(BadRequestException);
+      });
+    });
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  describe('getUserFirstLastName', () => {
+    it('should return first and last name', async () => {
+      const mockUser = { first_name: 'John', last_name: 'Doe' };
+
+      jest.spyOn(mockUserModel, 'findById').mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+
+      const result = await service.getUserFirstLastName(mockProfile._id);
+      expect(result).toEqual({ firstName: 'John', lastName: 'Doe' });
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      jest.spyOn(mockUserModel, 'findById').mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockImplementation(async () => {
+          throw new NotFoundException();
+        });
+
+      await expect(
+        service.getUserFirstLastName(mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException on error', async () => {
+      jest.spyOn(mockUserModel, 'findById').mockImplementation(() => {
+        throw new Error('Something went wrong');
+      });
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockImplementation(async () => {
+          throw new BadRequestException();
+        });
+      await expect(
+        service.getUserFirstLastName(mockProfile._id),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getUserFirstLastName', () => {
+    const mockUserId = new Types.ObjectId();
+
+    it('should return user first and last name', async () => {
+      const user = {
+        _id: mockUserId,
+        first_name: 'Alice',
+        last_name: 'Smith',
+      };
+
+      const selectMock = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(user),
+      });
+
+      jest
+        .spyOn(mockUserModel, 'findById')
+        .mockReturnValue({ select: selectMock } as any);
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+
+      const result = await service.getUserFirstLastName(mockUserId);
+
+      expect(result).toEqual({
+        firstName: 'John',
+        lastName: 'Doe',
+      });
+    });
+
+    it('should throw NotFoundException if user is not found', async () => {
+      const selectMock = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      jest
+        .spyOn(mockUserModel, 'findById')
+        .mockReturnValue({ select: selectMock } as any);
+
+      await expect(service.getUserFirstLastName(mockUserId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    // it('should throw BadRequestException on general DB error', async () => {
+    //   const execMock = jest.fn().mockRejectedValue(new Error('DB crash'));
+    //   const selectMock = jest.fn(() => ({ exec: execMock }));
+
+    //   jest
+    //     .spyOn(mockUserModel, 'findById')
+    //     .mockReturnValue({ select: selectMock } as any);
+
+    //   await expect(
+    //     service.getUserFirstLastName(mockProfile._id),
+    //   ).rejects.toThrow(BadRequestException);
+    // });
+  });
+
+  describe('updateUserFirstName', () => {
+    it('should update first name', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: mockProfile._id }),
+      } as any);
+
+      await expect(
+        service.updateUserFirstName('Jane', mockProfile._id),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      await expect(
+        service.updateUserFirstName('Jane', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateUserLastName', () => {
+    it('should update last name', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: mockProfile._id }),
+      } as any);
+
+      await expect(
+        service.updateUserLastName('Smith', mockProfile._id),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      await expect(
+        service.updateUserLastName('Smith', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getSkillEndorsements', () => {
+    it('should return skill endorsements', async () => {
+      const endorsers = [
+        {
+          _id: new Types.ObjectId(),
+          profile_picture: 'pic1.png',
+          first_name: 'Alice',
+          last_name: 'Johnson',
+        },
+      ];
+
+      jest.spyOn(profileModel, 'findById').mockResolvedValueOnce({
+        ...mockProfile,
+        skills: [
+          {
+            skill_name: 'JavaScript',
+            endorsements: endorsers.map((e) => e._id),
+          },
+        ],
+      } as any);
+
+      jest.spyOn(profileModel, 'find').mockReturnValueOnce({
+        select: jest.fn().mockResolvedValue(endorsers),
+      } as any);
+
+      const result = await service.getSkillEndorsements(
+        'JavaScript',
+        mockProfile._id,
+      );
+
+      expect(result).toEqual([
+        {
+          _id: endorsers[0]._id,
+          profilePicture: 'pic1.png',
+          firstName: 'Alice',
+          lastName: 'Johnson',
+        },
+      ]);
+    });
+
+    it('should throw BadRequestException if ID is invalid', async () => {
+      await expect(
+        service.getSkillEndorsements('JavaScript', 'bad-id' as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if profile not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValueOnce(null);
+
+      await expect(
+        service.getSkillEndorsements('JavaScript', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException if skill not found', async () => {
+      jest
+        .spyOn(profileModel, 'findById')
+        .mockResolvedValueOnce({ ...mockProfile, skills: [] } as any);
+
+      await expect(
+        service.getSkillEndorsements('UnknownSkill', mockProfile._id),
       ).rejects.toThrow(NotFoundException);
     });
   });

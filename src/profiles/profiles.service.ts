@@ -614,18 +614,13 @@ export class ProfilesService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
-      console.log('user first name:', user.first_name);
-      console.log('user last name:', user.last_name);
 
       return {
         firstName: user.first_name,
         lastName: user.last_name,
       };
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new BadRequestException('Failed to retrieve user name');
+      handleError(error, 'Failed to get user first and last name');
     }
   }
 
