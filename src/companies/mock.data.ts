@@ -174,7 +174,7 @@ export const mockCompanyEmployers = [
   {
     _id: new Types.ObjectId(),
     manager_id: profileId5,
-    company_id: companyId4,
+    company_id: companyId1,
     created_at: new Date().toISOString(),
   },
 ];
@@ -183,7 +183,7 @@ export const mockJobs = [
   {
     _id: new Types.ObjectId(),
     company_id: companyId1,
-    created_at: "Designer",
+    position: "Designer",
   },
   {
     _id: new Types.ObjectId(),
