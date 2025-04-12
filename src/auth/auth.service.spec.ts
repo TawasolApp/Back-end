@@ -616,14 +616,14 @@ describe('AuthService', () => {
         last_name: googleProfile.family_name,
         email: googleProfile.email,
         password: expect.any(String),
-        is_verified: true,
-        is_social_login: true, // Updated to match snake_case
+        is_verified: true, // Changed from isVerified to is_verified
+        is_social_login: true, // Changed from isSocialLogin to is_social_login
       });
       expect(result).toEqual({
         token: 'token',
         refreshToken: 'token',
         email: googleProfile.email,
-        is_social_login: true, // Updated to match snake_case
+        is_social_login: true, // Changed from isSocialLogin to is_social_login
         isNewUser: true,
         message: 'Login successful',
       });
@@ -791,14 +791,14 @@ describe('AuthService', () => {
         last_name: '',
         email: googleProfile.email,
         password: expect.any(String),
-        isVerified: true,
-        isSocialLogin: true,
+        is_verified: true, // Changed from isVerified to is_verified
+        is_social_login: true, // Changed from isSocialLogin to is_social_login
       });
       expect(result).toEqual({
         token: 'token',
         refreshToken: 'token',
         email: googleProfile.email,
-        isSocialLogin: true,
+        is_social_login: true, // Changed from isSocialLogin to is_social_login
         isNewUser: true,
         message: 'Login successful',
       });

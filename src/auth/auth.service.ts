@@ -149,7 +149,7 @@ export class AuthService {
 
     try {
       const response = await axios.post(
-        `https://www.google.com/recaptcha/api/siteverify`,
+        `https://www.google.com/recaptcha/siteverify`,
         null,
         { params: { secret: secretKey, response: token } },
       );
@@ -186,9 +186,9 @@ export class AuthService {
 
       if (!user)
         throw new BadRequestException('Invalid token or user does not exist');
-      if (user.is_verified) return { message: 'Email is already verified.' }; // Changed from isVerified to is_verified
+      if (user.is_verified) return { message: 'Email is already verified.' };
 
-      user.is_verified = true; // Changed from isVerified to is_verified
+      user.is_verified = true;
       await user.save();
       return { message: 'Email verified successfully.' };
     } catch (err) {
@@ -337,7 +337,7 @@ export class AuthService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
-      user.is_social_login = false; // Changed from isSocialLogin to is_social_login
+      user.is_social_login = false;
       await user.save();
 
       return { message: 'Password reset successfully' };
@@ -353,16 +353,15 @@ export class AuthService {
   }
 
   async googleLogin(dto: SocialLoginDto) {
-    const { idToken, isAndroid } = dto; // Reverted from is_android to isAndroid
+    const { idToken, isAndroid } = dto;
 
     try {
-      const googleClient = isAndroid // Reverted from is_android to isAndroid
+      const googleClient = isAndroid
         ? this.googleClientAndroid
         : this.googleClientFrontend;
 
       const tokenInfo = await googleClient.getTokenInfo(idToken);
 
-      // Add validation for empty tokenInfo or missing email
       if (!tokenInfo || !tokenInfo.email) {
         throw new BadRequestException('Invalid Google token');
       }
@@ -390,16 +389,11 @@ export class AuthService {
           last_name: profile.family_name || '',
           email: profile.email,
           password: hashedPassword,
-          isVerified: true,
-          isSocialLogin: true,
+          is_verified: true,
+          is_social_login: true,
         });
 
-        try {
-          await user.save();
-        } catch (error) {
-          console.error('Error saving user during Google login:');
-          throw new InternalServerErrorException('Google login failed');
-        }
+        await user.save();
       }
 
       const payload = { sub: user._id, email: user.email, role: user.role };
@@ -407,10 +401,10 @@ export class AuthService {
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
       return {
-        token: token,
+        token,
         refreshToken,
         email: user.email,
-        is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
+        is_social_login: user.is_social_login,
         isNewUser,
         message: 'Login successful',
       };

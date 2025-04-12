@@ -418,18 +418,19 @@ describe('UsersService', () => {
 
     it('should handle reacts on posts and comments', async () => {
       const mockPostReact = {
-        post_id: new Types.ObjectId(),
-        post_type: 'Post',
+        post_id: '67fac9f9086226b1d9cf22da',
         react_type: 'like',
+        post_type: 'Post',
       };
       const mockCommentReact = {
-        post_id: new Types.ObjectId(),
-        post_type: 'Comment',
+        post_id: '67fac9f9086226b1d9cf22db',
         react_type: 'like',
+        post_type: 'Comment',
       };
+
       mockReactModel.find.mockResolvedValue([mockPostReact, mockCommentReact]);
 
-      await service.deleteAccount(userId);
+      await service.deleteAccount('67fac9f9086226b1d9cf22d8');
 
       expect(mockPostModel.updateOne).toHaveBeenCalledWith(
         { _id: mockPostReact.post_id },
@@ -437,7 +438,7 @@ describe('UsersService', () => {
       );
       expect(mockCommentModel.updateOne).toHaveBeenCalledWith(
         { _id: mockCommentReact.post_id },
-        { $inc: { react_count: -1 } },
+        { $inc: { [`react_count.${mockCommentReact.react_type}`]: -1 } }, // Fixed react_count update
       );
     });
 
