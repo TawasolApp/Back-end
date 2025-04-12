@@ -30,8 +30,8 @@ describe('AuthService', () => {
     last_name: 'Doe',
     email: 'john@example.com',
     password: 'hashedPassword',
-    isVerified: true,
-    isSocialLogin: false,
+    is_verified: true, // Changed from isVerified to is_verified
+    is_social_login: false, // Changed from isSocialLogin to is_social_login
     role: 'user',
     save: jest.fn().mockResolvedValue(true),
   };
@@ -42,8 +42,8 @@ describe('AuthService', () => {
     last_name: 'User',
     email: 'google@example.com',
     password: 'hashedPassword',
-    isVerified: true,
-    isSocialLogin: true,
+    is_verified: true, // Changed from isVerified to is_verified
+    is_social_login: true, // Changed from isSocialLogin to is_social_login
     role: 'user',
     save: jest.fn().mockResolvedValue(true),
   };
@@ -206,7 +206,7 @@ describe('AuthService', () => {
       expect(result).toEqual({
         token: 'token',
         refreshToken: 'token',
-        isSocialLogin: false,
+        is_social_login: false, // Updated to match snake_case
       });
     });
 
@@ -224,7 +224,7 @@ describe('AuthService', () => {
     });
 
     it('should throw ForbiddenException if email not verified', async () => {
-      userModel.findOne.mockResolvedValue({ ...mockUser, isVerified: false });
+      userModel.findOne.mockResolvedValue({ ...mockUser, is_verified: false });
       (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       await expect(service.login(loginDto)).rejects.toThrow(ForbiddenException);
     });
@@ -250,7 +250,7 @@ describe('AuthService', () => {
   describe('verifyEmail', () => {
     it('should verify email successfully', async () => {
       jwtService.verify.mockReturnValue({ email: 'john@example.com' });
-      userModel.findOne.mockResolvedValue({ ...mockUser, isVerified: false });
+      userModel.findOne.mockResolvedValue({ ...mockUser, is_verified: false });
 
       const result = await service.verifyEmail({ token: 'valid-token' });
       expect(result).toEqual({ message: 'Email verified successfully.' });
@@ -298,7 +298,7 @@ describe('AuthService', () => {
     };
 
     it('should resend verifyEmail confirmation email successfully', async () => {
-      userModel.findOne.mockResolvedValue({ ...mockUser, isVerified: false });
+      userModel.findOne.mockResolvedValue({ ...mockUser, is_verified: false });
       const result = await service.resendConfirmationEmail(verifyEmailDto);
       expect(result).toEqual({
         message: 'verifyEmail email resent successfully',
@@ -350,7 +350,7 @@ describe('AuthService', () => {
     const dto = { email: 'john@example.com', type: 'verifyEmail' as const };
 
     it('should handle unexpected errors during email sending', async () => {
-      userModel.findOne.mockResolvedValue({ ...mockUser, isVerified: false });
+      userModel.findOne.mockResolvedValue({ ...mockUser, is_verified: false });
       mailerService.resendConfirmationEmail.mockRejectedValue(
         new Error('Unexpected error'),
       );
@@ -410,7 +410,7 @@ describe('AuthService', () => {
       userModel.findOne.mockResolvedValue(mockUser);
       const result = await service.forgotPassword({
         email: 'john@example.com',
-        isAndroid: false,
+        isAndroid: false, // Use camelCase for DTO
       });
       expect(result).toEqual({
         message:
@@ -420,7 +420,7 @@ describe('AuthService', () => {
     });
 
     it('should not send email for unverified user', async () => {
-      userModel.findOne.mockResolvedValue({ ...mockUser, isVerified: false });
+      userModel.findOne.mockResolvedValue({ ...mockUser, is_verified: false });
       const result = await service.forgotPassword({
         email: 'john@example.com',
         isAndroid: false,
@@ -578,7 +578,7 @@ describe('AuthService', () => {
   });
 
   describe('googleLogin', () => {
-    const socialLoginDto = { idToken: 'google-token', isAndroid: false };
+    const socialLoginDto = { idToken: 'google-token', isAndroid: false }; // Use camelCase for DTO
     const googleProfile = {
       email: 'google@example.com',
       given_name: 'Google',
@@ -616,14 +616,14 @@ describe('AuthService', () => {
         last_name: googleProfile.family_name,
         email: googleProfile.email,
         password: expect.any(String),
-        isVerified: true,
-        isSocialLogin: true,
+        is_verified: true,
+        is_social_login: true, // Updated to match snake_case
       });
       expect(result).toEqual({
         token: 'token',
         refreshToken: 'token',
         email: googleProfile.email,
-        isSocialLogin: true,
+        is_social_login: true, // Updated to match snake_case
         isNewUser: true,
         message: 'Login successful',
       });
@@ -642,7 +642,7 @@ describe('AuthService', () => {
         token: 'token',
         refreshToken: 'token',
         email: mockUser.email,
-        isSocialLogin: mockUser.isSocialLogin,
+        is_social_login: mockUser.is_social_login, // Updated to match snake_case
         isNewUser: false,
         message: 'Login successful',
       });
@@ -699,7 +699,7 @@ describe('AuthService', () => {
 
       const result = await service.googleLogin({
         ...socialLoginDto,
-        isAndroid: true,
+        isAndroid: true, // Use camelCase for DTO
       });
 
       expect(androidGoogleClientMock.getTokenInfo).toHaveBeenCalledWith(
@@ -709,7 +709,7 @@ describe('AuthService', () => {
         token: 'token',
         refreshToken: 'token',
         email: mockUser.email,
-        isSocialLogin: mockUser.isSocialLogin,
+        is_social_login: mockUser.is_social_login, // Keep snake_case for database fields
         isNewUser: false,
         message: 'Login successful',
       });
@@ -879,7 +879,7 @@ describe('AuthService', () => {
         token: 'token',
         refreshToken: 'token',
         email: mockUser.email,
-        isSocialLogin: mockUser.isSocialLogin,
+        is_social_login: mockUser.is_social_login, // Changed from isSocialLogin to is_social_login
         isNewUser: false,
         message: 'Login successful',
       });
@@ -908,7 +908,7 @@ describe('AuthService', () => {
 
       const result = await service.googleLogin({
         ...socialLoginDto,
-        isAndroid: true,
+        isAndroid: true, // Use camelCase for DTO
       });
 
       expect(androidGoogleClientMock.getTokenInfo).toHaveBeenCalledWith(
@@ -918,7 +918,7 @@ describe('AuthService', () => {
         token: 'token',
         refreshToken: 'token',
         email: mockUser.email,
-        isSocialLogin: mockUser.isSocialLogin,
+        is_social_login: mockUser.is_social_login, // Changed from isSocialLogin to is_social_login
         isNewUser: false,
         message: 'Login successful',
       }); // Covers branch for isAndroid=true

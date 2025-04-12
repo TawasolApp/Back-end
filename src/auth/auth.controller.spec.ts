@@ -23,14 +23,31 @@ describe('AuthController', () => {
           provide: AuthService,
           useValue: {
             register: jest.fn().mockResolvedValue({ message: 'success' }),
-            checkEmailAvailability: jest.fn().mockResolvedValue({ message: 'available' }),
-            login: jest.fn().mockResolvedValue({ token: 'test-token' }),
-            verifyEmail: jest.fn().mockResolvedValue({ message: 'verified' }),
-            resendConfirmationEmail: jest.fn().mockResolvedValue({ message: 'resent' }),
+            checkEmailAvailability: jest
+              .fn()
+              .mockResolvedValue({ message: 'available' }),
+            login: jest.fn().mockResolvedValue({
+              token: 'test-token',
+              refreshToken: 'test-refresh-token',
+              is_social_login: false, // Changed from isSocialLogin to is_social_login
+            }),
+            verifyEmail: jest.fn().mockResolvedValue({
+              message: 'verified',
+              is_verified: true, // Changed from isVerified to is_verified
+            }),
+            resendConfirmationEmail: jest
+              .fn()
+              .mockResolvedValue({ message: 'resent' }),
             refreshToken: jest.fn().mockResolvedValue({ token: 'new-token' }),
-            forgotPassword: jest.fn().mockResolvedValue({ message: 'email sent' }),
-            resetPassword: jest.fn().mockResolvedValue({ message: 'valid token' }),
-            setNewPassword: jest.fn().mockResolvedValue({ message: 'password updated' }),
+            forgotPassword: jest
+              .fn()
+              .mockResolvedValue({ message: 'email sent' }),
+            resetPassword: jest
+              .fn()
+              .mockResolvedValue({ message: 'valid token' }),
+            setNewPassword: jest
+              .fn()
+              .mockResolvedValue({ message: 'password updated' }),
             googleLogin: jest.fn().mockResolvedValue({ token: 'google-token' }),
           },
         },
@@ -111,7 +128,7 @@ describe('AuthController', () => {
     it('should call authService.forgotPassword with DTO', async () => {
       const dto: ForgotPasswordDto = {
         email: 'test@example.com',
-        isAndroid: false,
+        isAndroid: false, // Use camelCase for DTO
       };
       await controller.forgotPassword(dto);
       expect(authService.forgotPassword).toHaveBeenCalledWith(dto);
@@ -141,7 +158,7 @@ describe('AuthController', () => {
     it('should call authService.googleLogin with DTO', async () => {
       const dto: SocialLoginDto = {
         idToken: 'google-id-token',
-        isAndroid: false,
+        isAndroid: false, // Use camelCase for DTO
       };
       await controller.googleLogin(dto);
       expect(authService.googleLogin).toHaveBeenCalledWith(dto);

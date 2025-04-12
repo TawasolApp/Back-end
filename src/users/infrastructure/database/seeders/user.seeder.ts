@@ -27,8 +27,8 @@ export class UserSeeder {
           'manager',
           'admin',
         ]),
-        isVerified: true,
-        isSocialLogin: false, 
+        is_verified: true, // Changed from isVerified to is_verified
+        is_social_login: false, // Changed from isSocialLogin to is_social_login
       });
     }
 

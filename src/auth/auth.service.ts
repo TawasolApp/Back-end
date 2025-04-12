@@ -114,7 +114,8 @@ export class AuthService {
       throw new BadRequestException('Invalid password');
     }
 
-    if (!user.isVerified) {
+    if (!user.is_verified) {
+      // Changed from isVerified to is_verified
       throw new ForbiddenException('Email not verified');
     }
 
@@ -125,7 +126,7 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      isSocialLogin: user.isSocialLogin,
+      is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
     };
   }
 
@@ -185,9 +186,9 @@ export class AuthService {
 
       if (!user)
         throw new BadRequestException('Invalid token or user does not exist');
-      if (user.isVerified) return { message: 'Email is already verified.' };
+      if (user.is_verified) return { message: 'Email is already verified.' }; // Changed from isVerified to is_verified
 
-      user.isVerified = true;
+      user.is_verified = true; // Changed from isVerified to is_verified
       await user.save();
       return { message: 'Email verified successfully.' };
     } catch (err) {
@@ -206,7 +207,8 @@ export class AuthService {
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('Email not found');
 
-    if (type === 'verifyEmail' && user.isVerified) {
+    if (type === 'verifyEmail' && user.is_verified) {
+      // Changed from isVerified to is_verified
       return { message: 'Email is already verified' };
     }
 
@@ -268,7 +270,8 @@ export class AuthService {
     const { email, isAndroid } = dto;
 
     const user = await this.userModel.findOne({ email });
-    if (user?.isVerified) {
+    if (user?.is_verified) {
+      // Changed from isVerified to is_verified
       const token = this.jwtService.sign(
         { sub: user._id },
         { expiresIn: '15m' },
@@ -334,7 +337,7 @@ export class AuthService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
-      user.isSocialLogin = false;
+      user.is_social_login = false; // Changed from isSocialLogin to is_social_login
       await user.save();
 
       return { message: 'Password reset successfully' };
@@ -350,10 +353,10 @@ export class AuthService {
   }
 
   async googleLogin(dto: SocialLoginDto) {
-    const { idToken, isAndroid } = dto;
+    const { idToken, isAndroid } = dto; // Reverted from is_android to isAndroid
 
     try {
-      const googleClient = isAndroid
+      const googleClient = isAndroid // Reverted from is_android to isAndroid
         ? this.googleClientAndroid
         : this.googleClientFrontend;
 
@@ -407,7 +410,7 @@ export class AuthService {
         token: token,
         refreshToken,
         email: user.email,
-        isSocialLogin: user.isSocialLogin,
+        is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
         isNewUser,
         message: 'Login successful',
       };
