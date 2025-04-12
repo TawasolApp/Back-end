@@ -5,7 +5,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Profile } from './infrastructure/database/schemas/profile.schema';
+import {
+  Profile,
+  ProfileDocument,
+} from './infrastructure/database/schemas/profile.schema';
+import {
+  UserConnection,
+  UserConnectionDocument,
+} from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { isValidObjectId, Model, Types } from 'mongoose';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
@@ -23,51 +30,24 @@ import {
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
-import {
-  CompanyConnection,
-  CompanyConnectionDocument,
-} from '../companies/infrastructure/database/schemas/company-connection.schema';
-import {
-  Company,
-  CompanyDocument,
-} from '../companies/infrastructure/database/schemas/company.schema';
-
-import { toGetCompanyDto } from '../companies/mappers/company.mapper';
 import { handleError } from '../common/utils/exception-handler';
-import { GetCompanyDto } from '../companies/dtos/get-company.dto';
 import {
   User,
   UserDocument,
 } from '../users/infrastructure/database/schemas/user.schema';
 import {
-  getConnection,
-  getPending,
-  getFollow,
-  getIgnored,
-} from '../connections/helpers/connection-helpers';
-import { ProfileStatus } from './enums/profile-enums';
-import {
-  UserConnection,
-  UserConnectionDocument,
-} from '../connections/infrastructure/database/schemas/user-connection.schema';
-import {
-  Post,
-  PostDocument,
-} from '../posts/infrastructure/database/schemas/post.schema';
-import { use } from 'passport';
+  setConnectionStatus,
+  setFollowStatus,
+} from './helpers/set-status.utils';
 
 @Injectable()
 export class ProfilesService {
   constructor(
-    @InjectModel(Profile.name) private readonly profileModel: Model<Profile>,
-    @InjectModel(CompanyConnection.name)
-    private readonly companyConnectionModel: Model<CompanyConnectionDocument>,
+    @InjectModel(Profile.name)
+    private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
-    @InjectModel(Post.name) private postModel: Model<PostDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -114,42 +94,16 @@ export class ProfilesService {
       throw new NotFoundException('Profile not found');
     }
     const profileDto = toGetProfileDto(profile);
-    console.log('getProfile service profileDto status: ' + profileDto.status);
-    if (id.toString() === loggedInUser) {
-      profileDto.status = ProfileStatus.ME;
-    } else if (
-      (await getConnection(
-        this.userConnectionModel,
-        id.toString(),
-        loggedInUser,
-      )) ||
-      (await getConnection(
-        this.userConnectionModel,
-        loggedInUser,
-        id.toString(),
-      ))
-    ) {
-      profileDto.status = ProfileStatus.CONNECTION;
-    } else if (
-      await getFollow(this.userConnectionModel, loggedInUser, id.toString())
-    ) {
-      profileDto.status = ProfileStatus.FOLLOWING;
-    } else if (
-      (await getPending(
-        this.userConnectionModel,
-        loggedInUser,
-        id.toString(),
-      )) ||
-      (await getIgnored(this.userConnectionModel, loggedInUser, id.toString()))
-    ) {
-      profileDto.status = ProfileStatus.PENDING;
-    } else if (
-      await getPending(this.userConnectionModel, id.toString(), loggedInUser)
-    ) {
-      profileDto.status = ProfileStatus.REQUEST;
-    } else {
-      profileDto.status = ProfileStatus.NULL;
-    }
+    profileDto.connectStatus = await setConnectionStatus(
+      this.userConnectionModel,
+      loggedInUser,
+      id.toString(),
+    );
+    profileDto.followStatus = await setFollowStatus(
+      this.userConnectionModel,
+      loggedInUser,
+      id.toString(),
+    );
     return profileDto;
   }
   /**
@@ -161,12 +115,7 @@ export class ProfilesService {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
     }
-    if (updateProfileDto.firstName != undefined) {
-      await this.updateUserFirstName(updateProfileDto.firstName, id);
-    }
-    if (updateProfileDto.lastName != undefined) {
-      await this.updateUserLastName(updateProfileDto.lastName, id);
-    }
+
     console.log('updateProfile service id: ' + id);
     console.log('updateProfile service name: ' + updateProfileDto.headline);
     const updateData = toUpdateProfileSchema(updateProfileDto);
@@ -181,6 +130,12 @@ export class ProfilesService {
 
     if (!updatedProfile) {
       throw new NotFoundException(`Profile not found`);
+    }
+    if (updateProfileDto.firstName != undefined) {
+      await this.updateUserFirstName(updateProfileDto.firstName, id);
+    }
+    if (updateProfileDto.lastName != undefined) {
+      await this.updateUserLastName(updateProfileDto.lastName, id);
     }
 
     return toGetProfileDto(updatedProfile);

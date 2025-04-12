@@ -7,5 +7,5 @@ export class SocialLoginDto {
 
   @IsNotEmpty()
   @IsBoolean()
-  isAndroid: boolean;
+  isAndroid: boolean; // Reverted from is_android to isAndroid
 }

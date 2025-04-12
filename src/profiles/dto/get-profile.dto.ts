@@ -9,10 +9,10 @@ import {
   PlanType,
   ProfileStatus,
 } from '../enums/profile-enums';
-import { N } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 class Education {
   _id: Types.ObjectId;
+
 
   school: string;
 
@@ -31,6 +31,7 @@ class Education {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
+
 }
 
 class Certification {
@@ -71,6 +72,7 @@ class WorkExperience {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
+
 }
 
 class PlanDetails {
@@ -124,5 +126,7 @@ export class GetProfileDto {
 
   connectionCount?: number;
 
-  status?: ProfileStatus = ProfileStatus.ME;
+  connectStatus?: ProfileStatus = ProfileStatus.ME;
+
+  followStatus?: ProfileStatus = ProfileStatus.ME;
 }

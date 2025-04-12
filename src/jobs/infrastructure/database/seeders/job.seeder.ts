@@ -48,6 +48,12 @@ export class JobSeeder {
         ),
         applicants: 0,
         location: faker.location.street(),
+        posted_at: faker.date
+          .past({
+            years: 2,
+            refDate: new Date('2025-04-05'),
+          })
+          .toISOString(),
       });
     }
 

@@ -30,6 +30,12 @@ export const mockProfiles = [
         endorsements: [profileId3],
       },
     ],
+    work_experience: [
+      {
+        company: 'Test Company',
+        title: 'Developer',
+      },
+    ],
   },
   {
     _id: profileId3,
