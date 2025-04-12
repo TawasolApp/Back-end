@@ -101,7 +101,7 @@ describe('ProfilesService', () => {
   const mockUserModel = {
     findById: jest.fn(),
     findByIdAndUpdate: jest.fn(),
-    find: jest.fn(), // Add the find method to mockUserModel
+    find: jest.fn(),
   };
   const mockCompaniesService = {
     getCompanyById: jest.fn(),
@@ -125,7 +125,6 @@ describe('ProfilesService', () => {
             save: jest.fn(),
             find: jest.fn(),
           },
-          // Add the find method to mock profileModel
         },
         {
           provide: CompaniesService,
@@ -134,7 +133,7 @@ describe('ProfilesService', () => {
         {
           provide: getModelToken(UserConnection.name),
           useValue: mockUserConnectionModel,
-        }, // Mock User model if needed
+        },
         { provide: getModelToken(User.name), useValue: mockUserModel },
       ],
     }).compile();
@@ -163,7 +162,6 @@ describe('ProfilesService', () => {
     it('should throw ConflictException if profile already exists (duplicate key error)', async () => {
       const dto: CreateProfileDto = {};
 
-      // Mock the `create` method to throw a duplicate key error (MongoDB error code 11000)
       jest.spyOn(profileModel, 'create').mockRejectedValue({ code: 11000 });
 
       jest
