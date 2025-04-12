@@ -133,6 +133,7 @@ export class UsersService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
+      user.is_social_login = false; // Changed from isSocialLogin to is_social_login
       await user.save();
 
       return { message: 'Password updated successfully' };

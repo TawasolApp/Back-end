@@ -79,7 +79,7 @@ export class AuthService {
       await user.save();
       console.log('User saved successfully:', user);
     } catch (error) {
-      console.error('Error saving user during registration:', error);
+      console.error('Error saving user during registration:');
       throw new InternalServerErrorException('Unexpected error occurred');
     }
 
@@ -132,7 +132,8 @@ export class AuthService {
       throw new BadRequestException('Invalid password');
     }
 
-    if (!user.isVerified) {
+    if (!user.is_verified) {
+      // Changed from isVerified to is_verified
       throw new ForbiddenException('Email not verified');
     }
 
@@ -143,7 +144,7 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      isSocialLogin: user.isSocialLogin,
+      is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
     };
   }
 
@@ -153,11 +154,15 @@ export class AuthService {
    * @returns True if valid, otherwise false
    */
   private async verifyCaptcha(token: string): Promise<boolean> {
-    console.log('Verifying CAPTCHA token:', token);
+    console.log('Starting CAPTCHA verification...');
+    console.log('CAPTCHA token received:', token);
 
-    if (token === 'test-token') return true;
+    if (token === 'test-token') {
+      console.log('Test token detected. Returning true.');
+      return true;
+    }
 
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
     console.log('Using reCAPTCHA secret key:', secretKey);
 
     try {
@@ -168,9 +173,19 @@ export class AuthService {
       );
 
       console.log('reCAPTCHA API response:', response.data);
+
+      if (response.data.success) {
+        console.log('CAPTCHA verification succeeded.');
+      } else {
+        console.error(
+          'CAPTCHA verification failed. Errors:',
+          response.data['error-codes'],
+        );
+      }
+
       return response.data.success === true;
     } catch (error) {
-      console.error('Error during reCAPTCHA verification:', error);
+      console.error('Error during reCAPTCHA verification:', error.message);
       return false;
     }
   }
@@ -189,9 +204,9 @@ export class AuthService {
 
       if (!user)
         throw new BadRequestException('Invalid token or user does not exist');
-      if (user.isVerified) return { message: 'Email is already verified.' };
+      if (user.is_verified) return { message: 'Email is already verified.' };
 
-      user.isVerified = true;
+      user.is_verified = true;
       await user.save();
       return { message: 'Email verified successfully.' };
     } catch (err) {
@@ -210,7 +225,8 @@ export class AuthService {
     const user = await this.userModel.findOne({ email });
     if (!user) throw new NotFoundException('Email not found');
 
-    if (type === 'verifyEmail' && user.isVerified) {
+    if (type === 'verifyEmail' && user.is_verified) {
+      // Changed from isVerified to is_verified
       return { message: 'Email is already verified' };
     }
 
@@ -272,7 +288,8 @@ export class AuthService {
     const { email, isAndroid } = dto;
 
     const user = await this.userModel.findOne({ email });
-    if (user?.isVerified) {
+    if (user?.is_verified) {
+      // Changed from isVerified to is_verified
       const token = this.jwtService.sign(
         { sub: user._id },
         { expiresIn: '15m' },
@@ -338,7 +355,7 @@ export class AuthService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
-      user.isSocialLogin = false;
+      user.is_social_login = false;
       await user.save();
 
       return { message: 'Password reset successfully' };
@@ -398,17 +415,11 @@ export class AuthService {
           last_name: profile.family_name || '',
           email: profile.email,
           password: hashedPassword,
-          isVerified: true,
-          isSocialLogin: true,
+          is_verified: true,
+          is_social_login: true,
         });
 
-        try {
-          await user.save();
-          console.log('New user saved successfully:', user);
-        } catch (error) {
-          console.error('Error saving user during Google login:', error);
-          throw new InternalServerErrorException('Google login failed');
-        }
+        await user.save();
       }
 
       const payload = { sub: user._id, email: user.email, role: user.role };
@@ -418,10 +429,10 @@ export class AuthService {
       console.log('Generated tokens for user:', { token, refreshToken });
 
       return {
-        token: token,
+        token,
         refreshToken,
         email: user.email,
-        isSocialLogin: user.isSocialLogin,
+        is_social_login: user.is_social_login,
         isNewUser,
         message: 'Login successful',
       };

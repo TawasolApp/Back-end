@@ -27,7 +27,6 @@ import { EducationDto } from './dto/education.dto';
 import { ApiBody } from '@nestjs/swagger';
 import { CertificationDto } from './dto/certification.dto';
 import { WorkExperienceDto } from './dto/work-experience.dto';
-import { PostsService } from '../posts/posts.service';
 import { handleError } from '../common/utils/exception-handler';
 
 @UseGuards(JwtAuthGuard)
@@ -58,7 +57,11 @@ export class ProfilesController {
       handleError(error, 'Failed to create profile.');
     }
   }
-
+  /**
+   * Retrieves a user profile by ID.
+   * @param req - The request object containing the authenticated user
+   * @param id - The ID of the profile to retrieve
+   */
   @Get(':userId')
   @UsePipes(new ValidationPipe())
   async getProfile(@Req() req, @Param('userId') id: string) {
@@ -77,7 +80,10 @@ export class ProfilesController {
       handleError(error, 'Failed to retrieve profile.');
     }
   }
-
+  /**
+   * Retrieves the authenticated user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Get()
   @UsePipes(new ValidationPipe())
   async getMyProfile(@Req() req) {
@@ -254,7 +260,10 @@ export class ProfilesController {
       handleError(error, 'Failed to add skill.');
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Patch('skills/:skillName')
   @UsePipes(new ValidationPipe())
   async editSkillPosition(
@@ -292,7 +301,10 @@ export class ProfilesController {
       handleError(error, `Failed to delete skill: ${skillName}`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Post('education')
   @UsePipes(new ValidationPipe())
   async addEducation(@Req() req, @Body() education: EducationDto) {
@@ -305,7 +317,10 @@ export class ProfilesController {
       handleError(error, 'Failed to add education.');
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Patch('education/:education_id')
   @UsePipes(new ValidationPipe())
   @ApiBody({
@@ -331,7 +346,10 @@ export class ProfilesController {
       handleError(error, `Failed to edit education.`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('education/:education_id')
   @UsePipes(new ValidationPipe())
   async deleteEducation(
@@ -350,7 +368,10 @@ export class ProfilesController {
       return handleError(error, `Failed to delete education.`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Post('certification')
   @UsePipes(new ValidationPipe())
   async addCertification(@Req() req, @Body() certification: CertificationDto) {
@@ -366,7 +387,10 @@ export class ProfilesController {
       handleError(error, 'Failed to add certification.');
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Patch('certification/:certificationId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
@@ -393,7 +417,10 @@ export class ProfilesController {
       handleError(error, `Failed to edit certification.`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('certification/:certificationId')
   @UsePipes(new ValidationPipe())
   async deleteCertification(
@@ -412,7 +439,10 @@ export class ProfilesController {
       handleError(error, `Failed to delete certification.`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Post('work-experience')
   @UsePipes(new ValidationPipe())
   async addWorkExperience(
@@ -431,7 +461,10 @@ export class ProfilesController {
       handleError(error, 'Failed to add work experience.');
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Patch('work-experience/:workExperienceId')
   @UsePipes(new ValidationPipe())
   @ApiBody({
@@ -457,7 +490,10 @@ export class ProfilesController {
       handleError(error, `Failed to edit work experience.`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Delete('work-experience/:workExperienceId')
   @UsePipes(new ValidationPipe())
   async deleteWorkExperience(
@@ -476,7 +512,10 @@ export class ProfilesController {
       handleError(error, `Failed to delete work experience.`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Get('skill-endorsements/:id')
   async getSkillEndorsements(
     @Req() req,
@@ -492,7 +531,10 @@ export class ProfilesController {
       handleError(error, `Failed to get endorsements for skill: ${skillName}`);
     }
   }
-
+  /**
+   * Retrieves all skills from the user's profile.
+   * @param req - The request object containing the authenticated user
+   */
   @Get('/followed-companies/:userId')
   async getFollowedCompanies(
     @Param('userId') userId: string,

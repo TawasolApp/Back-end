@@ -6,10 +6,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../../../../profiles/infrastructure/database/schemas/profile.schema';
-import {
-  Post,
-  PostDocument,
-} from '../schemas/post.schema';
+import { Post, PostDocument } from '../schemas/post.schema';
 import { faker } from '@faker-js/faker';
 
 @Injectable()
@@ -21,10 +18,7 @@ export class ShareSeeder {
   ) {}
 
   async seedShares(count: number): Promise<void> {
-    const users = await this.profileModel
-      .find()
-      .select('_id')
-      .lean();
+    const users = await this.profileModel.find().select('_id').lean();
     const posts = await this.postModel.find().select('_id').lean();
 
     if (users.length === 0 || posts.length === 0) {
@@ -41,6 +35,10 @@ export class ShareSeeder {
       shares.push({
         user: user._id,
         post: post._id,
+        shared_at: faker.date.recent({
+          days: 5,
+          refDate: new Date('2025-04-10'),
+        }),
       });
     }
 

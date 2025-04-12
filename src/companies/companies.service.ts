@@ -100,6 +100,7 @@ export class CompaniesService {
   /**
    * creates a new company in the database.
    *
+   * @param userId - string ID of the logged in user.
    * @param createCompanyDto - partial object containing company details.
    * @returns GetCompanyDto - created company object.
    * @throws ConflictException - if a company with the same name, website, email, or contact number already exists.
@@ -169,10 +170,12 @@ export class CompaniesService {
   /**
    * updates an existing company in the database.
    *
+   * @param userId - string ID of the logged in user.
    * @param companyId - ID of the company to update.
    * @param updateCompanyDto - partial object containing updated company details.
    * @returns GetCompanyDto - the updated company object.
    * @throws NotFoundException - if the company does not exist.
+   * @throws ForbiddenException - if the logged in user does not have management access to this company.
    * @throws ConflictException - if a company with the same name, website, email, or contact number already exists.
    *
    * function flow:
@@ -240,8 +243,10 @@ export class CompaniesService {
   /**
    * deletes a company and associated data from the database.
    *
+   * @param userId - string ID of the logged in user.
    * @param companyId - ID of the company to delete.
    * @throws NotFoundException - if the company does not exist.
+   * @throws ForbiddenException - if the logged in user does not have management access to this company.
    *
    * function flow:
    * 1. check if the company exists.
@@ -292,15 +297,17 @@ export class CompaniesService {
   /**
    * retrieves company details including follow status for the logged in user.
    *
+   * @param userId - string ID of the logged in user.
    * @param companyId - ID of the company.
    * @param userId - ID of the user to check follow status.
-   * @returns GetCompanyDto - detailed company information with follow status.
+   * @returns GetCompanyDto - detailed company information with follow and management status.
    * @throws NotFoundException - if the company does not exist.
    *
    * function flow:
    * 1. fetch company details by ID.
    * 2. check if the user is following the company.
-   * 3. return the company details with follow status.
+   * 3. check if user is managing the company.
+   * 4. return the company details with follow and management status.
    */
   async getCompanyDetails(
     userId: string,
@@ -338,7 +345,8 @@ export class CompaniesService {
    * 1. build a dynamic filter based on the input.
    * 2. retrieve matching companies from the database.
    * 3. check which companies the user is following.
-   * 4. return filtered companies with follow status.
+   * 4. check which companies the user manages.
+   * 5. return filtered companies with follow and management status.
    */
   async filterCompanies(
     userId: string,
@@ -392,7 +400,7 @@ export class CompaniesService {
   }
 
   /**
-   * retrieves the list of followers for a given company, can apply optional filter by name.
+   * retrieves the list of followers for a given company.
    *
    * @param companyId - ID of the company.
    * @returns array of GetUserDto - list of followers with profile information.
@@ -730,9 +738,6 @@ export class CompaniesService {
         .lean();
       return jobs.map(toGetJobDto);
     } catch (error) {
-      if (error instanceof HttpException) {
-        throw error;
-      }
       handleError(error, 'Failed to retrieve company jobs.');
     }
   }
