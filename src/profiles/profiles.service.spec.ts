@@ -236,6 +236,7 @@ describe('ProfilesService', () => {
       const dto: UpdateProfileDto = {
         headline: 'Updated Headline',
         firstName: '',
+        lastName: '',
       };
       jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockProfile),
@@ -415,6 +416,17 @@ describe('ProfilesService', () => {
     );
   });
   describe('editSkillPosition', () => {
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+
+      await expect(
+        service.editSkillPosition(
+          'JavaScript',
+          'Updated Position',
+          invalidId as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
     it('should edit a skill position successfully', async () => {
       const updatedSkill = {
         skill_name: 'JavaScript',
@@ -446,6 +458,14 @@ describe('ProfilesService', () => {
       );
 
       expect(result.skills?.[0]?.position).toBe('Updated Position');
+    });
+
+    it('should throw NotFoundException if updated profile is not found after edit', async () => {
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+      await expect(
+        service.editSkillPosition('JavaScript', 'Engineer', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
