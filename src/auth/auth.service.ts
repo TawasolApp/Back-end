@@ -144,12 +144,12 @@ export class AuthService {
       return true;
     }
 
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
     console.log('Using reCAPTCHA secret key:', secretKey);
 
     try {
       const response = await axios.post(
-        `https://www.google.com/recaptcha/siteverify`,
+        `https://www.google.com/recaptcha/api/siteverify`,
         null,
         { params: { secret: secretKey, response: token } },
       );
