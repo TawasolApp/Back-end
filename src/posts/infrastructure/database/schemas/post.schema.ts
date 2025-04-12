@@ -55,8 +55,8 @@ export class Post {
   @Prop({ enum: ['User', 'Company'], required: true })
   author_type: string;
 
-  @Prop({ type: Date, default: () => new Date().toISOString() })
-  posted_at: string;
+  @Prop({ type: Date, default: () => new Date() })
+  posted_at: Date;
 
   @Prop({ type: Types.ObjectId, ref: 'Post', default: null })
   parent_post_id: Types.ObjectId | null;
@@ -66,6 +66,9 @@ export class Post {
 
   @Prop({ default: false })
   is_edited: boolean;
+
+  @Prop()
+  editted_at: Date;
 }
 
 export const PostSchema = SchemaFactory.createForClass(Post);

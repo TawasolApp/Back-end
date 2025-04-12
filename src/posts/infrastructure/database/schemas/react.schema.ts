@@ -28,6 +28,9 @@ export class React {
     required: true,
   })
   react_type: string;
+
+  @Prop()
+  reacted_at: Date;
 }
 
 export const ReactSchema = SchemaFactory.createForClass(React);

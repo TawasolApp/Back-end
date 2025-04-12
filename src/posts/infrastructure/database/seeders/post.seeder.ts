@@ -50,6 +50,11 @@ export class PostSeeder {
               .map((user) => user._id)
           : [];
 
+      const post_date = faker.date.recent({
+        days: 5,
+        refDate: new Date('2025-04-10'),
+      });
+
       posts.push({
         author_type: isUser ? 'User' : 'Company',
         author_id: creator._id,
@@ -71,6 +76,8 @@ export class PostSeeder {
           'Connections',
           'Private',
         ]),
+        posted_at: post_date,
+        editted_at: post_date,
       });
     }
 
@@ -137,6 +144,10 @@ export class PostSeeder {
           'Private',
         ]),
         is_silent_repost: faker.datatype.boolean(), // Randomly decide if it's a silent repost
+        posted_at: faker.date.recent({
+          days: 5,
+          refDate: new Date('2025-04-10'),
+        }),
       });
     }
 

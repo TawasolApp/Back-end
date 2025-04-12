@@ -16,6 +16,9 @@ export class Share {
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
   post: Types.ObjectId;
+
+  @Prop()
+  shared_at: Date;
 }
 
 export const ShareSchema = SchemaFactory.createForClass(Share);

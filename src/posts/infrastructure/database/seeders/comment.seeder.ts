@@ -70,7 +70,10 @@ export class CommentSeeder {
           Support: 0,
         },
         content: faker.lorem.sentence(),
-        commented_at: faker.date.recent(),
+        commented_at: faker.date.recent({
+          days: 5,
+          refDate: new Date('2025-04-10'),
+        }),
       });
     }
 
@@ -122,7 +125,10 @@ export class CommentSeeder {
           Support: 0,
         },
         content: faker.lorem.sentence(),
-        commented_at: faker.date.recent(),
+        commented_at: faker.date.recent({
+          days: 5,
+          refDate: new Date('2025-04-10'),
+        }),
       });
     }
 

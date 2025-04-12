@@ -5,12 +5,12 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ description: 'first name', example: 'ziad' })
   @IsOptional()
   @IsString()
-  firstName: string;
+  firstName?: string;
 
   @ApiPropertyOptional({ description: 'last name', example: 'Asar' })
   @IsOptional()
   @IsString()
-  lastName: string;
+  lastName?: string;
 
   @ApiPropertyOptional({
     description: 'Profile picture URL',

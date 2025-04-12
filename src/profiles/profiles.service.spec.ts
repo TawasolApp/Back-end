@@ -2,66 +2,111 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
 import { Profile } from './infrastructure/database/schemas/profile.schema';
-import {  Model, Types } from 'mongoose';
-import { NotFoundException, BadRequestException, ConflictException, forwardRef } from '@nestjs/common';
+import { Model, Types } from 'mongoose';
+import {
+  NotFoundException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
-import {  Visibility, EmploymentType, LocationType, PlanType } from './enums/profile-enums';
+import {
+  Visibility,
+  EmploymentType,
+  LocationType,
+  PlanType,
+} from './enums/profile-enums';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { toGetProfileDto } from './dto/profile.mapper';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { SkillDto } from './dto/skill.dto';
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
-import { CompanyModule } from '@faker-js/faker/.';
+import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
+import { CompaniesService } from '../companies/companies.service';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
-  name: 'John Doe',
+  first_name: 'John',
+  last_name: 'Doe',
   headline: 'Software Engineer',
   bio: 'Passionate Developer',
   location: 'Cairo, Egypt',
   industry: 'Technology',
-  skills: [{ skill_name: 'JavaScript', endorsements: [] }],
+  skills: [
+    { skill_name: 'JavaScript', position: 'Microsoft', endorsements: [] },
+  ],
   profile_picture: '',
   cover_photo: '',
   resume: '',
   visibility: Visibility.PUBLIC,
   connection_count: 0,
-  education: [{ _id: new Types.ObjectId(), school: 'Test University', degree: 'BSc' ,field:'science',start_date: new Date(),end_date: new Date(),grade:'4',description:'easy'}],
-  certification: [{ _id: new Types.ObjectId(), name: 'AWS Certified',company:'',issue_date: new Date()}],
-  work_experience: [],
-  plan_details: 
+  education: [
     {
-      plan_type: PlanType.MONTHLY,
+      _id: new Types.ObjectId(),
+      school: 'Test University',
+      degree: 'BSc',
+      field: 'science',
       start_date: new Date(),
-      expiry_date: new Date(),
-      auto_renewal: false,
+      end_date: new Date(),
+      grade: '4',
+      description: 'easy',
+      company_id: new Types.ObjectId(),
+      company_logo: 'company_logo.png',
     },
-  
-  plan_statistics: 
+  ],
+  certification: [
     {
-      statistic_type: 'Connections',
-      value: 0,
-      message_count: 0,
-      application_count: 0,
+      _id: new Types.ObjectId(),
+      name: 'AWS Certified',
+      company: '',
+      issue_date: new Date(),
+      expiry_date: new Date(),
+      company_id: new Types.ObjectId(),
+      company_logo: 'company_logo.png',
     },
- 
+  ],
+  work_experience: [],
+  plan_details: {
+    plan_type: PlanType.MONTHLY,
+    start_date: new Date(),
+    expiry_date: new Date(),
+    auto_renewal: false,
+  },
+
+  plan_statistics: {
+    statistic_type: 'Connections',
+    value: 0,
+    message_count: 0,
+    application_count: 0,
+  },
+
   save: jest.fn(),
-  
 };
 
 describe('ProfilesService', () => {
   let service: ProfilesService;
   let profileModel: Model<Profile>;
 
+  const mockUserConnectionModel = {};
+  const mockUserModel = {
+    findById: jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    find: jest.fn(),
+  };
+  const mockCompaniesService = {
+    getCompanyById: jest.fn(),
+    createCompany: jest.fn(),
+    getFollowedCompanies: jest.fn(),
+  };
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [forwardRef(() => CompanyModule)],
+      imports: [],
       controllers: [ProfilesController],
       providers: [
         JwtService,
-        
+
         ProfilesService,
         {
           provide: getModelToken(Profile.name),
@@ -70,8 +115,18 @@ describe('ProfilesService', () => {
             findOneAndUpdate: jest.fn(),
             create: jest.fn(),
             save: jest.fn(),
+            find: jest.fn(),
           },
         },
+        {
+          provide: CompaniesService,
+          useValue: mockCompaniesService,
+        },
+        {
+          provide: getModelToken(UserConnection.name),
+          useValue: mockUserConnectionModel,
+        },
+        { provide: getModelToken(User.name), useValue: mockUserModel },
       ],
     }).compile();
 
@@ -81,37 +136,53 @@ describe('ProfilesService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+    jest
+      .spyOn(service, 'getUserFirstLastName')
+      .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
   });
-  
+
   describe('createProfile', () => {
     it('should create a profile', async () => {
-      const dto: CreateProfileDto = { name: 'John Doe' };
+      const dto: CreateProfileDto = {};
       jest.spyOn(profileModel, 'create').mockResolvedValue(mockProfile as any);
-      const result = await service.createProfile(new Types.ObjectId,dto);
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+      const result = await service.createProfile(new Types.ObjectId(), dto);
       expect(result).toEqual(toGetProfileDto(mockProfile));
     });
     it('should throw ConflictException if profile already exists (duplicate key error)', async () => {
-      const dto: CreateProfileDto = { name: 'John Doe' };
-      
-      // Mock the `create` method to throw a duplicate key error (MongoDB error code 11000)
+      const dto: CreateProfileDto = {};
+
       jest.spyOn(profileModel, 'create').mockRejectedValue({ code: 11000 });
-    
-      await expect(service.createProfile(new Types.ObjectId(), dto)).rejects.toThrow(ConflictException);
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+
+      await expect(
+        service.createProfile(new Types.ObjectId(), dto),
+      ).rejects.toThrow(ConflictException);
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-      const dto: CreateProfileDto = { name: 'John Doe' };
-      await expect(service.createProfile(invalidId as any, dto)).rejects.toThrow(
-        BadRequestException
-      );
+      const dto: CreateProfileDto = {};
+      await expect(
+        service.createProfile(invalidId as any, dto),
+      ).rejects.toThrow(BadRequestException);
     });
     it('should throw BadRequestException when profile creation fails', async () => {
       // Mock `create` to throw a generic error (not a duplicate key error)
-      jest.spyOn(profileModel, 'create').mockRejectedValue(new Error('Database error'));
-  
+      jest
+        .spyOn(profileModel, 'create')
+        .mockRejectedValue(new Error('Database error'));
+
       const id = new Types.ObjectId();
       const createProfileDto = { name: 'John Doe', bio: 'Software Engineer' };
-  
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+
       await expect(service.createProfile(id, createProfileDto)).rejects.toThrow(
         new BadRequestException('Failed to create profile'),
       );
@@ -123,9 +194,12 @@ describe('ProfilesService', () => {
         exec: jest.fn().mockResolvedValue(mockProfile),
       } as any);
 
-      const result = await service.getProfile(mockProfile._id);
+      const result = await service.getProfile(
+        mockProfile._id,
+        mockProfile._id.toString(),
+      );
       expect(result).toBeDefined();
-      expect(result.name).toBe('John Doe');
+      expect(result.firstName).toBe('John');
     });
 
     it('should throw NotFoundException if profile is not found', async () => {
@@ -133,17 +207,17 @@ describe('ProfilesService', () => {
         exec: jest.fn().mockResolvedValue(null),
       } as any);
 
-      await expect(service.getProfile(new Types.ObjectId())).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.getProfile(new Types.ObjectId(), mockProfile._id.toString()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-    
-      await expect(service.getProfile(invalidId as any)).rejects.toThrow(
-        BadRequestException,
-      );
+
+      await expect(
+        service.getProfile(invalidId as any, mockProfile._id.toString()),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -151,11 +225,14 @@ describe('ProfilesService', () => {
     it('should update a profile', async () => {
       const dto: UpdateProfileDto = {
         headline: 'Updated Headline',
-        name: ''
+        firstName: '',
+        lastName: '',
       };
       jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockProfile),
       } as any);
+      jest.spyOn(service, 'updateUserFirstName').mockResolvedValue(undefined);
+      jest.spyOn(service, 'updateUserLastName').mockResolvedValue(undefined);
 
       const result = await service.updateProfile(dto, mockProfile._id);
       expect(result).toEqual(toGetProfileDto(mockProfile));
@@ -165,16 +242,21 @@ describe('ProfilesService', () => {
       jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
         exec: jest.fn().mockResolvedValue(null),
       } as any);
-      await expect(service.updateProfile({
-        name: ''
-      }, new Types.ObjectId())).rejects.toThrow(NotFoundException);
+      await expect(
+        service.updateProfile(
+          {
+            firstName: '',
+          },
+          new Types.ObjectId(),
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-    
-      await expect(service.updateProfile({name:'' }, invalidId as any)).rejects.toThrow(
-        BadRequestException,
-      );
+
+      await expect(
+        service.updateProfile({ firstName: '' }, invalidId as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -185,11 +267,15 @@ describe('ProfilesService', () => {
       } as any);
 
       jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
-        exec: jest.fn().mockResolvedValue({ ...mockProfile, headline: undefined }),
+        exec: jest
+          .fn()
+          .mockResolvedValue({ ...mockProfile, headline: undefined }),
       } as any);
 
-
-      const result = await service.deleteProfileField(mockProfile._id, 'headline');
+      const result = await service.deleteProfileField(
+        mockProfile._id,
+        'headline',
+      );
       expect(result.headline).toBeNull();
     });
 
@@ -202,42 +288,42 @@ describe('ProfilesService', () => {
         service.deleteProfileField(new Types.ObjectId(), 'headline'),
       ).rejects.toThrow(NotFoundException);
     });
-    
 
-    it('should throw BadRequestException if field is already unset', async () => {
+    it('should throw NotFoundException if field is already unset', async () => {
       jest.spyOn(profileModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue({ _id: mockProfile._id }),
       } as any);
 
       await expect(
-
         service.deleteProfileField(mockProfile._id, 'headline'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(NotFoundException);
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-    
-      await expect(service.deleteProfileField(invalidId as any, 'headline')).rejects.toThrow(
-        BadRequestException,
-      );
+
+      await expect(
+        service.deleteProfileField(invalidId as any, 'headline'),
+      ).rejects.toThrow(BadRequestException);
     });
     it('should throw NotFoundException when updated profile is not found', async () => {
       const id = new Types.ObjectId();
       const field = 'bio';
-  
+
       // Mock `findById().exec()` to return a profile (valid profile)
       jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValue({ _id: id, [field]: 'Software Engineer' }),
+        exec: jest
+          .fn()
+          .mockResolvedValue({ _id: id, [field]: 'Software Engineer' }),
       } as any);
-  
+
       // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
       jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue(null),
-      } as any);      
+      } as any);
       jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue(null),
       } as any);
-  
+
       await expect(service.deleteProfileField(id, field)).rejects.toThrow(
         new NotFoundException('Updated Profile not found'),
       );
@@ -249,19 +335,25 @@ describe('ProfilesService', () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
-        skills: [...mockProfile.skills, { skill_name: 'NestJS', endorsements: [] }],
+        skills: [
+          ...mockProfile.skills,
+          { skill_name: 'NestJS', endorsements: [] },
+        ],
       });
 
-      const result = await service.addSkill({ skillName: 'NestJS' }, mockProfile._id);
+      const result = await service.addSkill(
+        { skillName: 'NestJS' },
+        mockProfile._id,
+      );
       expect(result.skills?.length).toBe(2);
     });
 
     it('should throw NotFoundException if profile is not found', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
 
-      await expect(service.addSkill({ skillName: 'NestJS' }, new Types.ObjectId())).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.addSkill({ skillName: 'NestJS' }, new Types.ObjectId()),
+      ).rejects.toThrow(NotFoundException);
     });
 
     it('should throw BadRequestException if skill already exists', async () => {
@@ -273,29 +365,98 @@ describe('ProfilesService', () => {
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-    
-      await expect(service.addSkill({ skillName: 'JavaScript' },invalidId as any)).rejects.toThrow(
-        BadRequestException,
-      );
+
+      await expect(
+        service.addSkill({ skillName: 'JavaScript' }, invalidId as any),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('should throw NotFoundException when updated profile is not found after adding skill', async () => {
       const id = new Types.ObjectId();
       const skill: SkillDto = { skillName: 'JavaScript' };
-  
+
       // Mock `findById().exec()` to return a profile (valid profile)
       jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue({ _id: id, skills: [] }),
       } as any);
-  
+
       // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
+
       await expect(service.addSkill(skill, id)).rejects.toThrow(
         new NotFoundException('updated Profile not found'),
       );
     });
-    
+  });
+
+  it('should throw NotFoundException when updated profile is not found after adding skill', async () => {
+    const id = new Types.ObjectId();
+    const skill: SkillDto = { skillName: 'JavaScript' };
+
+    // Mock `findById().exec()` to return a profile (valid profile)
+    jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+      exec: jest.fn().mockResolvedValue({ _id: id, skills: [] }),
+    } as any);
+
+    // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
+    jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+    await expect(service.addSkill(skill, id)).rejects.toThrow(
+      new NotFoundException('updated Profile not found'),
+    );
+  });
+  describe('editSkillPosition', () => {
+    it('should throw BadRequestException if ObjectId is invalid', async () => {
+      const invalidId = '12345'; // Not a valid MongoDB ObjectId
+
+      await expect(
+        service.editSkillPosition(
+          'JavaScript',
+          'Updated Position',
+          invalidId as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+    it('should edit a skill position successfully', async () => {
+      const updatedSkill = {
+        skill_name: 'JavaScript',
+        position: 'Updated Position',
+        endorsements: [],
+      };
+
+      const updatedProfile = {
+        ...mockProfile,
+        skills: [updatedSkill],
+      };
+
+      jest
+        .spyOn(profileModel, 'findOneAndUpdate')
+        .mockResolvedValue(updatedProfile as any);
+
+      // If you're calling toGetProfileDto directly in the service
+      const mockDto = {
+        ...mockProfile,
+        first_name: mockProfile.first_name,
+        last_name: mockProfile.last_name,
+        skills: [updatedSkill],
+      };
+
+      const result = await service.editSkillPosition(
+        'JavaScript',
+        'Updated Position',
+        mockProfile._id,
+      );
+
+      expect(result.skills?.[0]?.position).toBe('Updated Position');
+    });
+
+    it('should throw NotFoundException if updated profile is not found after edit', async () => {
+      jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+      await expect(
+        service.editSkillPosition('JavaScript', 'Engineer', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
   });
 
   describe('deleteSkill', () => {
@@ -312,16 +473,16 @@ describe('ProfilesService', () => {
     it('should throw NotFoundException if skill is not found', async () => {
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
 
-      await expect(service.deleteSkill('Python', mockProfile._id)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.deleteSkill('Python', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-    
-      await expect(service.deleteSkill('Python',invalidId as any)).rejects.toThrow(
-        BadRequestException,
-      );
+
+      await expect(
+        service.deleteSkill('Python', invalidId as any),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -329,16 +490,39 @@ describe('ProfilesService', () => {
     it('should call deleteProfileField with "headline"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          headline: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          headline: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
 
       await service.deleteHeadline(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'headline');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'headline',
+      );
     });
   });
 
@@ -346,103 +530,235 @@ describe('ProfilesService', () => {
     it('should call deleteProfileField with "bio"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          bio: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
-    
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          bio: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
       await service.deleteBio(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'bio');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'bio',
+      );
     });
   });
-  
-    describe('deleteLocation', () => {
+
+  describe('deleteLocation', () => {
     it('should call deleteProfileField with "location"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          location: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
-    
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          location: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
       await service.deleteLocation(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'location');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'location',
+      );
     });
   });
-  
-   describe('deleteIndustry', () => {
+
+  describe('deleteIndustry', () => {
     it('should call deleteProfileField with "industry"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          industry: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
-    
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          industry: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
       await service.deleteIndustry(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'industry');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'industry',
+      );
     });
   });
-  
-    describe('deleteProfilePicture', () => {
+
+  describe('deleteProfilePicture', () => {
     it('should call deleteProfileField with "profile_picture"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          profilePicture: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
-    
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          profilePicture: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
       await service.deleteProfilePicture(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'profile_picture');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'profile_picture',
+      );
     });
   });
-  
-    describe('deleteCoverPhoto', () => {
+
+  describe('deleteCoverPhoto', () => {
     it('should call deleteProfileField with "cover_photo"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          coverPhoto: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
-    
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          coverPhoto: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
-  
+
       await service.deleteCoverPhoto(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'cover_photo');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'cover_photo',
+      );
     });
   });
-  
-    describe('deleteResume', () => {
+
+  describe('deleteResume', () => {
     it('should call deleteProfileField with "resume"', async () => {
       const deleteProfileFieldSpy = jest
         .spyOn(service, 'deleteProfileField')
-        .mockResolvedValue({ 
-          ...mockProfile, 
-          resume: undefined, 
-          skills: mockProfile.skills.map(skill => ({ skillName: skill.skill_name, endorsements: skill.endorsements })),
-          education: mockProfile.education.map(education => ({ _id:mockProfile._id ,school: education.school, degree: education.degree, field: education.field, start_date: education.start_date, end_date: education.end_date, grade: education.grade, description: education.description })),
-          certification: mockProfile.certification.map(certification => ({ _id:mockProfile._id ,name: certification.name, company: certification.company, issueDate: certification.issue_date })),
-    
+        .mockResolvedValue({
+          ...mockProfile,
+          firstName: mockProfile.first_name,
+          lastName: mockProfile.last_name,
+          resume: undefined,
+          skills: mockProfile.skills.map((skill) => ({
+            skillName: skill.skill_name,
+            endorsements: skill.endorsements,
+          })),
+          education: mockProfile.education.map((education) => ({
+            _id: mockProfile._id,
+            school: education.school,
+            degree: education.degree,
+            field: education.field,
+            startDate: education.start_date.toISOString(),
+            endDate: education.end_date.toISOString(),
+            grade: education.grade,
+            description: education.description,
+          })),
+          certification: mockProfile.certification.map((certification) => ({
+            _id: mockProfile._id,
+            name: certification.name,
+            company: certification.company,
+            issueDate: certification.issue_date.toISOString(),
+            expiryDate: certification.expiry_date.toISOString(),
+          })),
         });
-  
+
       await service.deleteResume(mockProfile._id);
-      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(mockProfile._id, 'resume');
+      expect(deleteProfileFieldSpy).toHaveBeenCalledWith(
+        mockProfile._id,
+        'resume',
+      );
     });
   });
   describe('addEducation', () => {
@@ -450,137 +766,155 @@ describe('ProfilesService', () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
-        education: [...mockProfile.education, { 
-          school: 'New Uni', 
-          degree: 'MSc', 
-          field: '', 
-          startDate: new Date(), 
-          grade: '', 
-          description: '' 
-        }],
+        education: [
+          ...mockProfile.education,
+          {
+            school: 'New Uni',
+            degree: 'MSc',
+            field: '',
+            startDate: new Date(),
+            grade: '',
+            description: '',
+          },
+        ],
       });
-  
+
       const result = await service.addEducation(
-        { 
-          school: 'New Uni', 
-          degree: 'MSc', 
-          field: '', 
-          startDate: new Date(), 
-          grade: '', 
-          description: '' 
-        }, 
-        mockProfile._id
+        {
+          school: 'New Uni',
+          degree: 'MSc',
+          field: '',
+          startDate: new Date(),
+          grade: '',
+          description: '',
+        },
+        mockProfile._id,
       );
-  
+
       expect(result.education?.length).toBe(2);
     });
-  
+
     it('should throw NotFoundException if profile is not found', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
-  
-      await expect(service.addEducation(
-        { 
-          school: 'New Uni', 
-          degree: 'MSc', 
-          field: '', 
-          startDate: new Date(), 
-          grade: '', 
-          description: '' 
-        }, 
-        new Types.ObjectId()
-      )).rejects.toThrow(NotFoundException);
+
+      await expect(
+        service.addEducation(
+          {
+            school: 'New Uni',
+            degree: 'MSc',
+            field: '',
+            startDate: new Date(),
+            grade: '',
+            description: '',
+          },
+          new Types.ObjectId(),
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
-  
-   
+
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
-  
-      await expect(service.addEducation(
-        { 
-          school: 'New Uni', 
-          degree: 'MSc', 
-          field: '', 
-          startDate: new Date(), 
-          grade: '', 
-          description: '' 
-        }, 
-        invalidId as any
-      )).rejects.toThrow(BadRequestException);
+
+      await expect(
+        service.addEducation(
+          {
+            school: 'New Uni',
+            degree: 'MSc',
+            field: '',
+            startDate: new Date(),
+            grade: '',
+            description: '',
+          },
+          invalidId as any,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
-  
+
     it('should throw NotFoundException when updated profile is not found after adding education', async () => {
       const id = new Types.ObjectId();
-      const education: EducationDto = { 
-        school: 'New Uni', 
-        degree: 'MSc', 
-        field: '', 
-        startDate: new Date(), 
-        grade: '', 
-        description: '' 
+      const education: EducationDto = {
+        school: 'New Uni',
+        degree: 'MSc',
+        field: '',
+        startDate: new Date(),
+        grade: '',
+        description: '',
       };
-  
+
       // Mock `findById().exec()` to return a profile
       jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
         exec: jest.fn().mockResolvedValue({ _id: id, education: [] }),
       } as any);
-  
+
       // Mock `findOneAndUpdate().exec()` to return null (simulating update failure)
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
+
       await expect(service.addEducation(education, id)).rejects.toThrow(
         new NotFoundException('Updated Profile not found'),
       );
     });
-  
   });
-  
 
   describe('editEducation', () => {
     it('should edit an education entry successfully', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
-        education: [
-          { ...mockProfile.education[0], degree: 'Updated Degree' },
-        ],
+        education: [{ ...mockProfile.education[0], degree: 'Updated Degree' }],
       });
-  
+
       const result = await service.editEducation(
         { degree: 'Updated Degree' },
         mockProfile._id,
-        mockProfile.education[0]._id
+        mockProfile.education[0]._id,
       );
       expect(result.education?.[0]?.degree).toBe('Updated Degree');
     });
-  
+
     it('should throw BadRequestException if profile ID is invalid', async () => {
       await expect(
-        service.editEducation({ degree: 'Updated' }, 'invalidId' as any, new Types.ObjectId())
+        service.editEducation(
+          { degree: 'Updated' },
+          'invalidId' as any,
+          new Types.ObjectId(),
+        ),
       ).rejects.toThrow(BadRequestException);
     });
-  
+
     it('should throw NotFoundException if profile is not found', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
-  
+
       await expect(
-        service.editEducation({ degree: 'Updated' }, new Types.ObjectId(), new Types.ObjectId())
+        service.editEducation(
+          { degree: 'Updated' },
+          new Types.ObjectId(),
+          new Types.ObjectId(),
+        ),
       ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException if education entry is not found in profile', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
-  
+
       await expect(
-        service.editEducation({ degree: 'Updated' }, mockProfile._id, new Types.ObjectId())
+        service.editEducation(
+          { degree: 'Updated' },
+          mockProfile._id,
+          new Types.ObjectId(),
+        ),
       ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException if updated profile is not found after edit', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
+
       await expect(
-        service.editEducation({ degree: 'Updated' }, mockProfile._id, mockProfile.education[0]._id)
+        service.editEducation(
+          { degree: 'Updated' },
+          mockProfile._id,
+          mockProfile.education[0]._id,
+        ),
       ).rejects.toThrow(NotFoundException);
     });
   });
@@ -588,55 +922,59 @@ describe('ProfilesService', () => {
   describe('deleteEducation', () => {
     const educationId = new Types.ObjectId();
     const profileId = new Types.ObjectId();
-    
+
     it('should delete an education entry successfully', async () => {
       const mockProfile = { _id: profileId, education: [{ _id: educationId }] };
-  
+
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
         education: [], // Simulating education entry removal
       });
-  
+
       const result = await service.deleteEducation(educationId, profileId);
       expect(result?.education?.length).toBe(0);
     });
-  
+
     it('should throw BadRequestException if profile ID is invalid', async () => {
-      await expect(service.deleteEducation(educationId, '12345' as any)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.deleteEducation(educationId, '12345' as any),
+      ).rejects.toThrow(BadRequestException);
     });
-  
+
     it('should throw NotFoundException if profile is not found', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
-  
-      await expect(service.deleteEducation(educationId, profileId)).rejects.toThrow(
-        NotFoundException,
-      );
+
+      await expect(
+        service.deleteEducation(educationId, profileId),
+      ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException if education entry is not found', async () => {
       const mockProfile = { _id: profileId, education: [] };
-  
+
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
-      await expect(service.deleteEducation(educationId, profileId)).rejects.toThrow(
-        NotFoundException,
-      );
+
+      await expect(
+        service.deleteEducation(educationId, profileId),
+      ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException when updated profile is not found after deletion', async () => {
-      jest.spyOn(profileModel, 'findById').mockResolvedValue({ _id: profileId, education: [{ _id: educationId }] });
+      jest.spyOn(profileModel, 'findById').mockResolvedValue({
+        _id: profileId,
+        education: [{ _id: educationId }],
+      });
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
-      await expect(service.deleteEducation(educationId, profileId)).rejects.toThrow(
+
+      await expect(
+        service.deleteEducation(educationId, profileId),
+      ).rejects.toThrow(
         new NotFoundException('Education not found in profile'),
       );
     });
   });
-  
 
   describe('addCertification', () => {
     const profileId = new Types.ObjectId();
@@ -644,46 +982,48 @@ describe('ProfilesService', () => {
       name: 'AWS Certified Solutions Architect',
       company: 'Amazon',
       issueDate: new Date(),
+      expiryDate: new Date(),
     };
-  
+
     it('should add a certification successfully', async () => {
       const mockProfile = { _id: profileId, certification: [] };
-  
+
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
         certification: [certification], // Simulating addition of certification
       });
-  
+
       const result = await service.addCertification(certification, profileId);
       expect((result.certification ?? []).length).toBe(1);
       expect((result.certification ?? [])[0].name).toBe(certification.name);
     });
-  
+
     it('should throw BadRequestException if profile ID is invalid', async () => {
-      await expect(service.addCertification(certification, '12345' as any)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.addCertification(certification, '12345' as any),
+      ).rejects.toThrow(BadRequestException);
     });
-  
+
     it('should throw NotFoundException if profile is not found', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
-  
-      await expect(service.addCertification(certification, profileId)).rejects.toThrow(
-        NotFoundException,
-      );
+
+      await expect(
+        service.addCertification(certification, profileId),
+      ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException when updated profile is not found after adding certification', async () => {
-      jest.spyOn(profileModel, 'findById').mockResolvedValue({ _id: profileId, certification: [] });
+      jest
+        .spyOn(profileModel, 'findById')
+        .mockResolvedValue({ _id: profileId, certification: [] });
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
-      await expect(service.addCertification(certification, profileId)).rejects.toThrow(
-        new NotFoundException('Updated Profile not found'),
-      );
+
+      await expect(
+        service.addCertification(certification, profileId),
+      ).rejects.toThrow(new NotFoundException('Updated Profile not found'));
     });
   });
-  
 
   describe('editCertification', () => {
     const profileId = new Types.ObjectId();
@@ -693,94 +1033,587 @@ describe('ProfilesService', () => {
       company: 'Amazon',
       issueDate: new Date(),
     };
-  
+
     it('should edit a certification successfully', async () => {
       const mockProfile = {
         _id: profileId,
-        certification: [{ _id: certificationId, name: 'Old Cert', company: 'Old Company', issueDate: new Date() }],
+        certification: [
+          {
+            _id: certificationId,
+            name: 'Old Cert',
+            company: 'Old Company',
+            issueDate: new Date(),
+          },
+        ],
       };
-  
+
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
         certification: [{ _id: certificationId, ...updatedCertification }],
       });
-  
-      const result = await service.editCertification(updatedCertification, profileId, certificationId);
-      expect((result.certification ?? [])[0]?.name).toBe(updatedCertification.name);
-    });
-  
-    it('should throw BadRequestException if profile ID is invalid', async () => {
-      await expect(service.editCertification(updatedCertification, '12345' as any, certificationId)).rejects.toThrow(
-        BadRequestException,
+
+      const result = await service.editCertification(
+        updatedCertification,
+        profileId,
+        certificationId,
+      );
+      expect((result.certification ?? [])[0]?.name).toBe(
+        updatedCertification.name,
       );
     });
-  
+
+    it('should throw BadRequestException if profile ID is invalid', async () => {
+      await expect(
+        service.editCertification(
+          updatedCertification,
+          '12345' as any,
+          certificationId,
+        ),
+      ).rejects.toThrow(BadRequestException);
+    });
+
     it('should throw NotFoundException if profile is not found', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
-  
-      await expect(service.editCertification(updatedCertification, profileId, certificationId)).rejects.toThrow(
-        NotFoundException,
-      );
+
+      await expect(
+        service.editCertification(
+          updatedCertification,
+          profileId,
+          certificationId,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException if certification is not found in the profile', async () => {
       const mockProfile = { _id: profileId, certification: [] }; // No certification found
-  
+
       jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
-  
-      await expect(service.editCertification(updatedCertification, profileId, certificationId)).rejects.toThrow(
-        NotFoundException,
-      );
+
+      await expect(
+        service.editCertification(
+          updatedCertification,
+          profileId,
+          certificationId,
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
-  
+
     it('should throw NotFoundException when updated profile is not found after updating certification', async () => {
       jest.spyOn(profileModel, 'findById').mockResolvedValue({
         _id: profileId,
-        certification: [{ _id: certificationId, name: 'Old Cert', company: 'Old Company', issueDate: new Date() }],
+        certification: [
+          {
+            _id: certificationId,
+            name: 'Old Cert',
+            company: 'Old Company',
+            issueDate: new Date(),
+          },
+        ],
       });
-  
+
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
-      await expect(service.editCertification(updatedCertification, profileId, certificationId)).rejects.toThrow(
+
+      await expect(
+        service.editCertification(
+          updatedCertification,
+          profileId,
+          certificationId,
+        ),
+      ).rejects.toThrow(
         new NotFoundException('Certification not found in profile'),
       );
     });
   });
-  
 
   describe('deleteCertification', () => {
     const profileId = new Types.ObjectId();
     const certificationId = new Types.ObjectId();
-  
+
     it('should delete a certification successfully', async () => {
       const mockProfile = {
         _id: profileId,
-        certification: [{ _id: certificationId, name: 'AWS Certified Developer' }],
+        certification: [
+          { _id: certificationId, name: 'AWS Certified Developer' },
+        ],
       };
-  
+
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue({
         ...mockProfile,
         certification: [], // Certification removed
       });
-  
-      const result = await service.deleteCertification(certificationId, profileId);
+
+      const result = await service.deleteCertification(
+        certificationId,
+        profileId,
+      );
       expect((result.certification ?? []).length).toBe(0);
     });
-  
+
     it('should throw BadRequestException if profile ID is invalid', async () => {
-      await expect(service.deleteCertification(certificationId, '12345' as any)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.deleteCertification(certificationId, '12345' as any),
+      ).rejects.toThrow(BadRequestException);
     });
-  
+
     it('should throw NotFoundException if certification is not found in profile', async () => {
       jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
-  
-      await expect(service.deleteCertification(certificationId, profileId)).rejects.toThrow(
+
+      await expect(
+        service.deleteCertification(certificationId, profileId),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+  describe('Work Experience Methods', () => {
+    const mockWorkExperienceDto = {
+      title: 'Software Engineer',
+      company: 'Tech Corp',
+      startDate: new Date('2020-01-01'),
+      endDate: new Date('2022-01-01'),
+      employmentType: EmploymentType.FULL_TIME,
+      location: 'Remote',
+      locationType: LocationType.REMOTE,
+      description: 'Worked on cool stuff',
+      companyLogo: 'logo.png',
+      companyId: new Types.ObjectId(),
+    };
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
+
+    describe('addWorkExperience', () => {
+      it('should add work experience to the profile', async () => {
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(mockProfile as any);
+        jest
+          .spyOn(profileModel, 'findOneAndUpdate')
+          .mockResolvedValue(mockProfile as any);
+
+        const result = await service.addWorkExperience(
+          mockWorkExperienceDto,
+          mockProfile._id,
+        );
+        expect(result).toEqual(toGetProfileDto(mockProfile));
+      });
+
+      it('should throw NotFoundException if profile does not exist', async () => {
+        jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+
+        await expect(
+          service.addWorkExperience(mockWorkExperienceDto, mockProfile._id),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw BadRequestException for invalid ID', async () => {
+        await expect(
+          service.addWorkExperience(mockWorkExperienceDto, 'invalid-id' as any),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should throw NotFoundException when updated profile is not found after adding work experience', async () => {
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue({ _id: mockProfile._id, work_experience: [] });
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.addWorkExperience(mockWorkExperienceDto, mockProfile._id),
+        ).rejects.toThrow(new NotFoundException('Updated Profile not found'));
+      });
+    });
+
+    describe('editWorkExperience', () => {
+      const mockWorkExperienceId = new Types.ObjectId();
+
+      it('should edit work experience', async () => {
+        const profileWithExperience = {
+          ...mockProfile,
+          work_experience: [
+            {
+              _id: mockWorkExperienceId,
+              title: 'Old Title',
+              company: 'Old Company',
+              start_date: new Date('2020-01-01'),
+              end_date: new Date('2022-01-01'),
+              employment_type: EmploymentType.FULL_TIME,
+              location: 'Remote',
+              location_type: LocationType.REMOTE,
+              description: 'Worked on cool stuff',
+              company_logo: 'logo.png',
+              company_id: new Types.ObjectId(),
+            },
+          ],
+        };
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(profileWithExperience as any);
+        jest
+          .spyOn(profileModel, 'findOneAndUpdate')
+          .mockResolvedValue(profileWithExperience as any);
+
+        const result = await service.editWorkExperience(
+          mockWorkExperienceDto,
+          mockProfile._id,
+          mockWorkExperienceId,
+        );
+
+        expect(result).toEqual(toGetProfileDto(profileWithExperience));
+      });
+      it('should throw BadRequestException if profile ID is invalid', async () => {
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            '12345' as any,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(BadRequestException);
+      });
+
+      it('should throw NotFoundException if profile not found', async () => {
+        jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw NotFoundException if work experience not found in profile', async () => {
+        const profileWithNoMatch = {
+          ...mockProfile,
+          work_experience: [{ _id: new Types.ObjectId() }],
+        };
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(profileWithNoMatch as any);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw NotFoundException when updated profile is not found after updating work experience', async () => {
+        jest.spyOn(profileModel, 'findById').mockResolvedValue({
+          _id: mockProfile._id,
+          work_experience: [
+            {
+              _id: mockWorkExperienceId,
+              title: 'Old Title',
+              company: 'Old Company',
+              issueDate: new Date(),
+            },
+          ],
+        });
+
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(
+          new NotFoundException('Work experience not found in profile'),
+        );
+      });
+
+      it('should throw NotFoundException when updated profile is not found after editing work experience', async () => {
+        const profileWithExperience = {
+          ...mockProfile,
+          work_experience: [
+            {
+              _id: mockWorkExperienceId,
+              title: 'Old Title',
+              company: 'Old Company',
+              start_date: new Date('2020-01-01'),
+              end_date: new Date('2022-01-01'),
+              employment_type: EmploymentType.FULL_TIME,
+              location: 'Remote',
+              location_type: LocationType.REMOTE,
+              description: 'Worked on cool stuff',
+              company_logo: 'logo.png',
+              company_id: new Types.ObjectId(),
+            },
+          ],
+        };
+
+        jest
+          .spyOn(profileModel, 'findById')
+          .mockResolvedValue(profileWithExperience as any);
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.editWorkExperience(
+            mockWorkExperienceDto,
+            mockProfile._id,
+            mockWorkExperienceId,
+          ),
+        ).rejects.toThrow(
+          new NotFoundException('Work experience not found in profile'),
+        );
+      });
+    });
+
+    describe('deleteWorkExperience', () => {
+      const mockWorkExperienceId = new Types.ObjectId();
+
+      it('should delete work experience from the profile', async () => {
+        jest
+          .spyOn(profileModel, 'findOneAndUpdate')
+          .mockResolvedValue(mockProfile as any);
+
+        const result = await service.deleteWorkExperience(
+          mockWorkExperienceId,
+          mockProfile._id,
+        );
+        expect(result).toEqual(toGetProfileDto(mockProfile));
+      });
+
+      it('should throw NotFoundException if profile or work experience not found', async () => {
+        jest.spyOn(profileModel, 'findOneAndUpdate').mockResolvedValue(null);
+
+        await expect(
+          service.deleteWorkExperience(mockWorkExperienceId, mockProfile._id),
+        ).rejects.toThrow(NotFoundException);
+      });
+
+      it('should throw BadRequestException for invalid profile ID', async () => {
+        await expect(
+          service.deleteWorkExperience(
+            mockWorkExperienceId,
+            'invalid-id' as any,
+          ),
+        ).rejects.toThrow(BadRequestException);
+      });
+    });
+  });
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  describe('getUserFirstLastName', () => {
+    it('should return first and last name', async () => {
+      const mockUser = { first_name: 'John', last_name: 'Doe' };
+
+      jest.spyOn(mockUserModel, 'findById').mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+
+      const result = await service.getUserFirstLastName(mockProfile._id);
+      expect(result).toEqual({ firstName: 'John', lastName: 'Doe' });
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      jest.spyOn(mockUserModel, 'findById').mockReturnValueOnce({
+        select: jest.fn().mockReturnThis(),
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockImplementation(async () => {
+          throw new NotFoundException();
+        });
+
+      await expect(
+        service.getUserFirstLastName(mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException on error', async () => {
+      jest.spyOn(mockUserModel, 'findById').mockImplementation(() => {
+        throw new Error('Something went wrong');
+      });
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockImplementation(async () => {
+          throw new BadRequestException();
+        });
+      await expect(
+        service.getUserFirstLastName(mockProfile._id),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('getUserFirstLastName', () => {
+    const mockUserId = new Types.ObjectId();
+
+    it('should return user first and last name', async () => {
+      const user = {
+        _id: mockUserId,
+        first_name: 'Alice',
+        last_name: 'Smith',
+      };
+
+      const selectMock = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(user),
+      });
+
+      jest
+        .spyOn(mockUserModel, 'findById')
+        .mockReturnValue({ select: selectMock } as any);
+
+      jest
+        .spyOn(service, 'getUserFirstLastName')
+        .mockResolvedValue({ firstName: 'John', lastName: 'Doe' });
+
+      const result = await service.getUserFirstLastName(mockUserId);
+
+      expect(result).toEqual({
+        firstName: 'John',
+        lastName: 'Doe',
+      });
+    });
+
+    it('should throw NotFoundException if user is not found', async () => {
+      const selectMock = jest.fn().mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
+      });
+
+      jest
+        .spyOn(mockUserModel, 'findById')
+        .mockReturnValue({ select: selectMock } as any);
+
+      await expect(service.getUserFirstLastName(mockUserId)).rejects.toThrow(
         NotFoundException,
       );
     });
+
+    // it('should throw BadRequestException on general DB error', async () => {
+    //   const execMock = jest.fn().mockRejectedValue(new Error('DB crash'));
+    //   const selectMock = jest.fn(() => ({ exec: execMock }));
+
+    //   jest
+    //     .spyOn(mockUserModel, 'findById')
+    //     .mockReturnValue({ select: selectMock } as any);
+
+    //   await expect(
+    //     service.getUserFirstLastName(mockProfile._id),
+    //   ).rejects.toThrow(BadRequestException);
+    // });
   });
-  
+
+  describe('updateUserFirstName', () => {
+    it('should update first name', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: mockProfile._id }),
+      } as any);
+
+      await expect(
+        service.updateUserFirstName('Jane', mockProfile._id),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      await expect(
+        service.updateUserFirstName('Jane', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateUserLastName', () => {
+    it('should update last name', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue({ _id: mockProfile._id }),
+      } as any);
+
+      await expect(
+        service.updateUserLastName('Smith', mockProfile._id),
+      ).resolves.not.toThrow();
+    });
+
+    it('should throw NotFoundException if user not found', async () => {
+      jest.spyOn(mockUserModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        exec: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      await expect(
+        service.updateUserLastName('Smith', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('getSkillEndorsements', () => {
+    it('should return skill endorsements', async () => {
+      const endorsers = [
+        {
+          _id: new Types.ObjectId(),
+          profile_picture: 'pic1.png',
+          first_name: 'Alice',
+          last_name: 'Johnson',
+        },
+      ];
+
+      jest.spyOn(profileModel, 'findById').mockResolvedValueOnce({
+        ...mockProfile,
+        skills: [
+          {
+            skill_name: 'JavaScript',
+            endorsements: endorsers.map((e) => e._id),
+          },
+        ],
+      } as any);
+
+      jest.spyOn(profileModel, 'find').mockReturnValueOnce({
+        select: jest.fn().mockResolvedValue(endorsers),
+      } as any);
+
+      const result = await service.getSkillEndorsements(
+        'JavaScript',
+        mockProfile._id,
+      );
+
+      expect(result).toEqual([
+        {
+          _id: endorsers[0]._id,
+          profilePicture: 'pic1.png',
+          firstName: 'Alice',
+          lastName: 'Johnson',
+        },
+      ]);
+    });
+
+    it('should throw BadRequestException if ID is invalid', async () => {
+      await expect(
+        service.getSkillEndorsements('JavaScript', 'bad-id' as any),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if profile not found', async () => {
+      jest.spyOn(profileModel, 'findById').mockResolvedValueOnce(null);
+
+      await expect(
+        service.getSkillEndorsements('JavaScript', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw NotFoundException if skill not found', async () => {
+      jest
+        .spyOn(profileModel, 'findById')
+        .mockResolvedValueOnce({ ...mockProfile, skills: [] } as any);
+
+      await expect(
+        service.getSkillEndorsements('UnknownSkill', mockProfile._id),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
 });

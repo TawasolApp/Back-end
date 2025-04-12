@@ -16,6 +16,9 @@ export class Save {
 
   @Prop({ type: Types.ObjectId, ref: 'Post', required: true })
   post_id: Types.ObjectId;
+
+  @Prop()
+  saved_at: Date;
 }
 
 export const SaveSchema = SchemaFactory.createForClass(Save);
