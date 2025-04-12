@@ -35,7 +35,6 @@ import { handleError } from '../common/utils/exception-handler';
 export class ProfilesController {
   constructor(
     private readonly profilesService: ProfilesService,
-    private readonly postsService: PostsService,
     private readonly companiesService: CompaniesService,
   ) {}
 
@@ -348,7 +347,7 @@ export class ProfilesController {
         req.user.sub,
       );
     } catch (error) {
-      handleError(error, `Failed to delete education.`);
+      return handleError(error, `Failed to delete education.`);
     }
   }
 
@@ -390,6 +389,7 @@ export class ProfilesController {
         certificationId,
       );
     } catch (error) {
+      console.log('Error in addCertification:', error);
       handleError(error, `Failed to edit certification.`);
     }
   }
@@ -477,6 +477,22 @@ export class ProfilesController {
     }
   }
 
+  @Get('skill-endorsements/:id')
+  async getSkillEndorsements(
+    @Req() req,
+    @Param('id') id: Types.ObjectId,
+    @Query('skill') skillName: string,
+  ) {
+    try {
+      if (!req.user) {
+        throw new UnauthorizedException('User not authenticated');
+      }
+      return await this.profilesService.getSkillEndorsements(skillName, id);
+    } catch (error) {
+      handleError(error, `Failed to get endorsements for skill: ${skillName}`);
+    }
+  }
+
   @Get('/followed-companies/:userId')
   async getFollowedCompanies(
     @Param('userId') userId: string,
@@ -488,7 +504,11 @@ export class ProfilesController {
       if (!req.user) {
         throw new UnauthorizedException('User not authenticated.');
       }
-      return await this.companiesService.getFollowedCompanies(userId, page, limit);
+      return await this.companiesService.getFollowedCompanies(
+        userId,
+        page,
+        limit,
+      );
     } catch (error) {
       handleError(error, `Failed to get followed companies.`);
     }

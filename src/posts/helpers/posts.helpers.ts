@@ -14,6 +14,15 @@ import { GetPostDto } from '../dto/get-post.dto';
 import { ReactionDto } from '../dto/get-reactions.dto';
 import { mapPostToDto, mapReactionToDto } from '../mappers/post.map';
 
+/**
+ * Find a post by its ID with proper error handling
+ *
+ * Process:
+ * 1. Query the database for a post with the given ID
+ * 2. If the post doesn't exist, throw a NotFoundException
+ * 3. Handle invalid ID format with appropriate error message
+ * 4. Return the found post document
+ */
 export async function findPostById(
   postModel,
   id: string,
@@ -32,12 +41,26 @@ export async function findPostById(
   }
 }
 
+/**
+ * Enrich a comment with author information, reaction data, and connection status
+ *
+ * Process:
+ * 1. Determine if the author is a User or Company and fetch profile data
+ * 2. Extract author details (name, picture, bio) based on profile type
+ * 3. Check if the viewing user has reacted to this comment
+ * 4. Determine connection status between viewer and comment author:
+ *    - Are they the same person?
+ *    - Is the viewer following the author?
+ *    - Are they connected?
+ * 5. Map all collected data to a standardized comment DTO
+ */
 export async function getCommentInfo(
   comment: CommentDocument,
   userId: string,
   profileModel,
   companyModel,
   reactModel,
+  userConnectionModel,
 ): Promise<GetCommentDto> {
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
@@ -46,6 +69,8 @@ export async function getCommentInfo(
 
   if (comment.author_type === 'User') {
     authorProfile = await profileModel.findById(comment.author_id).exec();
+
+    console.log('authorProfile', authorProfile);
     if (authorProfile) {
       authorProfilePicture =
         'profile_picture' in authorProfile
@@ -55,10 +80,11 @@ export async function getCommentInfo(
         'first_name' in authorProfile && 'last_name' in authorProfile
           ? `${authorProfile.first_name} ${authorProfile.last_name}`
           : 'Unknown';
-      authorBio = 'bio' in authorProfile ? authorProfile.bio : '';
+      authorBio = 'headline' in authorProfile ? authorProfile.headline : '';
     }
   } else if (comment.author_type === 'Company') {
     authorProfile = await companyModel.findById(comment.author_id).exec();
+    console.log('authorProfile', authorProfile);
     if (authorProfile) {
       if ('logo' in authorProfile) {
         authorProfilePicture =
@@ -96,6 +122,32 @@ export async function getCommentInfo(
       : null;
   }
 
+  const isFollowed = userId
+    ? comment.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        sending_party: new Types.ObjectId(userId),
+        receiving_party: comment.author_id,
+        status: 'Following',
+      }))
+    : false;
+
+  const isConnected = userId
+    ? comment.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(userId),
+            receiving_party: comment.author_id,
+          },
+          {
+            sending_party: comment.author_id,
+            receiving_party: new Types.ObjectId(userId),
+          },
+        ],
+        status: 'Connected',
+      }))
+    : false;
+
   return mapCommentToDto(
     comment,
     authorName,
@@ -103,9 +155,25 @@ export async function getCommentInfo(
     authorBio,
     userReactionType,
     comment.replies.map((reply) => reply.toString()),
+    isFollowed,
+    isConnected,
   );
 }
 
+/**
+ * Enrich a post with complete metadata, author info, and user-specific context
+ *
+ * Process:
+ * 1. Fetch author profile data (User or Company)
+ * 2. If this is a repost, recursively fetch and enrich the parent post
+ * 3. Check if the viewing user has reacted to this post and get reaction type
+ * 4. Determine if the viewer has saved this post
+ * 5. Check connection status between viewer and post author:
+ *    - Following status
+ *    - Connection status
+ * 6. Map all collected data to a standardized post DTO
+ * 7. Attach parent post information for reposts
+ */
 export async function getPostInfo(
   post: PostDocument,
   userId: string,
@@ -114,11 +182,12 @@ export async function getPostInfo(
   companyModel,
   reactModel,
   saveModel,
+  userConnectionModel,
 ): Promise<GetPostDto> {
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
   let authorBio: string | undefined;
-
+  console.log('post', post);
   //   console.log(post);
   if (post.author_type === 'User') {
     authorProfile = await profileModel
@@ -135,6 +204,7 @@ export async function getPostInfo(
     authorProfile = await companyModel
       .findById(new Types.ObjectId(post.author_id))
       .exec();
+    console.log('authorProfile', authorProfile);
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
     }
@@ -161,6 +231,7 @@ export async function getPostInfo(
         companyModel,
         reactModel,
         saveModel,
+        userConnectionModel,
       );
     }
   }
@@ -189,16 +260,53 @@ export async function getPostInfo(
     user_id: new Types.ObjectId(userId),
   });
 
+  const isFollowed = userId
+    ? post.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        sending_party: new Types.ObjectId(userId),
+        receiving_party: post.author_id,
+        status: 'Following',
+      }))
+    : false;
+
+  const isConnected = userId
+    ? post.author_id.toString() === userId ||
+      (await userConnectionModel.exists({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(userId),
+            receiving_party: post.author_id,
+          },
+          {
+            sending_party: post.author_id,
+            receiving_party: new Types.ObjectId(userId),
+          },
+        ],
+        status: 'Connected',
+      }))
+    : false;
+
   const returnedDTo = mapPostToDto(
     post,
     authorProfile,
     userReactionType,
     !!isSaved,
+    isFollowed,
+    isConnected,
   );
 
   return { ...returnedDTo, parentPost: parentPostDto };
 }
 
+/**
+ * Retrieve detailed information about a reaction and its author
+ *
+ * Process:
+ * 1. Determine if the reactor is a User or Company
+ * 2. Fetch the reactor's profile data
+ * 3. Extract the appropriate profile picture (user photo or company logo)
+ * 4. Map reaction data and author information to a standardized DTO
+ */
 export async function getReactionInfo(
   reaction: ReactDocument,
   profileModel,

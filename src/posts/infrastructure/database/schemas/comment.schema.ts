@@ -70,6 +70,9 @@ export class Comment {
 
   @Prop({ default: Date.now })
   commented_at: Date;
+
+  @Prop({ default: false })
+  is_edited: boolean;
 }
 
 export const CommentSchema = SchemaFactory.createForClass(Comment);

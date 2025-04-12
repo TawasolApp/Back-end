@@ -29,7 +29,10 @@ export class User {
   role: string;
 
   @Prop({ default: false })
-  isVerified: boolean;
+  is_verified: boolean; // Changed from isVerified to is_verified
+
+  @Prop({ default: false })
+  is_social_login: boolean; // Changed from isSocialLogin to is_social_login
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

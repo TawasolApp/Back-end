@@ -1,4 +1,11 @@
-import { IsISO8601, IsNotEmpty, IsOptional, IsString, IsUrl } from 'class-validator';
+import {
+  IsBoolean,
+  IsISO8601,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  IsUrl,
+} from 'class-validator';
 
 export class GetUserDto {
   @IsString()
@@ -28,6 +35,9 @@ export class GetUserDto {
   // only used for connections module (date of connection creation)
   @IsString()
   @IsISO8601()
-  @IsNotEmpty()
   createdAt: string;
+
+  @IsBoolean()
+  @IsOptional()
+  isConnected?: boolean;
 }

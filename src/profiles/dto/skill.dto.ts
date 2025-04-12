@@ -16,5 +16,5 @@ export class SkillDto {
   })
   @IsOptional()
   @IsString()
-  position: string;
+  position?: string;
 }
