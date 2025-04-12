@@ -621,6 +621,8 @@ describe('PostsService', () => {
   // Test for getUserPosts
   it('[11] should get user posts', async () => {
     postModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([mockPost]),
     });
 
@@ -763,6 +765,405 @@ describe('PostsService', () => {
     });
     expect(commentInstance.save).toHaveBeenCalled();
   });
+
+  // // Test for deleteComment
+  // it('[15] should delete a comment', async () => {
+  //   // Mock the comment to be deleted
+  //   const commentInstance = {
+  //     _id: new Types.ObjectId(mockComment._id),
+  //     author_id: new Types.ObjectId(mockUserId),
+  //     post_id: new Types.ObjectId(mockPost.id),
+  //     replies: [],
+  //     save: jest.fn().mockResolvedValue(mockComment),
+  //   };
+  //   commentModelMock.findById
+  //     .mockReturnValueOnce({
+  //       exec: jest.fn().mockResolvedValue(commentInstance), // First call
+  //     })
+  //     .mockReturnValueOnce({
+  //       exec: jest.fn().mockResolvedValue(null), // Second call (parent comment)
+  //     });
+
+  //   // Mock the parent post
+  //   const postInstance = {
+  //     _id: new Types.ObjectId(mockPost.id),
+  //     comment_count: 1,
+  //     save: jest.fn().mockResolvedValue(mockPost),
+  //   };
+  //   postModelMock.findById.mockReturnValueOnce({
+  //     exec: jest.fn().mockResolvedValue(postInstance),
+  //   });
+
+  //   // Mock the delete operations
+  //   reactModelMock.deleteMany.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+  //   commentModelMock.deleteOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+  //   commentModelMock.deleteMany.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+
+  //   // Call the service method
+  //   await service.deleteComment(mockComment._id.toString(), mockUserId);
+
+  //   // Assertions
+  //   expect(commentModelMock.findById).toHaveBeenCalledWith(
+  //     new Types.ObjectId(mockComment._id.toString()),
+  //   );
+  //   expect(postModelMock.findById).toHaveBeenCalledWith(
+  //     new Types.ObjectId(mockPost.id),
+  //   );
+  //   expect(postInstance.save).toHaveBeenCalled();
+  //   expect(reactModelMock.deleteMany).toHaveBeenCalledWith({
+  //     post_id: new Types.ObjectId(mockComment._id.toString()),
+  //   });
+  //   expect(commentModelMock.deleteOne).toHaveBeenCalledWith({
+  //     _id: new Types.ObjectId(mockComment._id.toString()),
+  //   });
+  //   expect(commentModelMock.deleteMany).toHaveBeenCalledWith({
+  //     post_id: new Types.ObjectId(mockComment._id.toString()),
+  //   });
+  // });
+  // Test for updateReactions
+  // it('[16] should update reactions on a post', async () => {
+  //   const postInstance = {
+  //     ...mockPost,
+  //     react_count: { Like: 0 },
+  //     save: jest.fn().mockResolvedValue(mockPost),
+  //   };
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(postInstance),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const reactInstance = {
+  //     ...mockReaction,
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.mockImplementation(() => reactInstance);
+
+  //   const result = await service.updateReactions(
+  //     mockPost.id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Post',
+  //       reactions: {
+  //         Like: true,
+  //         Love: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({ ...mockPost, save: expect.any(Function) });
+  // });
+
+  // it('[17] should add reactions on a post', async () => {
+  //   const postInstance = {
+  //     ...mockPost,
+  //     react_count: { Like: 0 },
+  //     save: jest.fn().mockResolvedValue(mockPost),
+  //   };
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(postInstance),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const reactInstance = {
+  //     ...mockReaction,
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.mockImplementation(() => reactInstance);
+
+  //   const result = await service.updateReactions(
+  //     mockPost.id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Post',
+  //       reactions: {
+  //         Like: true,
+  //         Love: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({ ...mockPost, save: expect.any(Function) });
+  // });
+
+  // Test for updateReactions on an existing reaction
+  // it('[18] should update an existing reaction on a post', async () => {
+  //   const postInstance = {
+  //     ...mockPost,
+  //     react_count: { Like: 1, Love: 0 },
+  //     save: jest.fn().mockResolvedValue(mockPost),
+  //   };
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(postInstance),
+  //   });
+
+  //   const existingReaction = {
+  //     ...mockReaction,
+  //     react_type: 'Like',
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(existingReaction),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const result = await service.updateReactions(
+  //     mockPost.id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Post',
+  //       reactions: {
+  //         Like: false,
+  //         Love: true,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({ ...mockPost, save: expect.any(Function) });
+  // });
+  // it('[19] should add reaction on a comment', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     react_count: { Like: 0 },
+  //     save: jest.fn().mockResolvedValue(mockComment),
+  //   };
+  //   commentModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(commentInstance),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const reactInstance = {
+  //     ...mockReaction,
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.mockImplementation(() => reactInstance);
+
+  //   const result = await service.updateReactions(
+  //     mockComment._id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Comment',
+  //       reactions: {
+  //         Like: true,
+  //         Love: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({
+  //     ...mockComment,
+  //     save: expect.any(Function),
+  //   });
+  // });
+
+  // Test for updateReactions on an existing reaction
+  // it('[20] should update an existing reaction on a comment', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     react_count: { Like: 1, Love: 0 },
+  //     save: jest.fn().mockResolvedValue(mockComment),
+  //   };
+  //   commentModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(commentInstance),
+  //   });
+
+  //   const existingReaction = {
+  //     ...mockReaction,
+  //     react_type: 'Like',
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(existingReaction),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const result = await service.updateReactions(
+  //     mockComment._id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Comment',
+  //       reactions: {
+  //         Like: false,
+  //         Love: true,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({
+  //     ...mockComment,
+  //     save: expect.any(Function),
+  //   });
+  // });
+
+  // it('[21] should remove an existing reaction on a post', async () => {
+  //   const postInstance = {
+  //     ...mockPost,
+  //     react_count: { Like: 1 },
+  //     save: jest.fn().mockResolvedValue(mockPost),
+  //   };
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(postInstance),
+  //   });
+
+  //   const existingReaction = {
+  //     ...mockReaction,
+  //     react_type: 'Like',
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(existingReaction),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const result = await service.updateReactions(
+  //     mockPost.id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Post',
+  //       reactions: {
+  //         Like: false,
+  //         Love: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({
+  //     ...mockPost,
+  //     save: expect.any(Function),
+  //   });
+  // });
+
+  // it('[22] should remove an existing reaction on a comment', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     react_count: { Like: 1 },
+  //     save: jest.fn().mockResolvedValue(mockComment),
+  //   };
+  //   commentModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(commentInstance),
+  //   });
+
+  //   const existingReaction = {
+  //     ...mockReaction,
+  //     react_type: 'Like',
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(existingReaction),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const result = await service.updateReactions(
+  //     mockComment._id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Comment',
+  //       reactions: {
+  //         Like: false,
+  //         Love: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({
+  //     ...mockComment,
+  //     save: expect.any(Function),
+  //   });
+  // });
 
   // Test for getReactions
   it('[23] should get reactions to a post', async () => {
@@ -1256,6 +1657,217 @@ describe('PostsService', () => {
     });
   });
 
+  // Test for getComments
+  // it('[31] should get comments for a post', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     author_type: 'User',
+  //   };
+  //   commentModelMock.find.mockReturnValue({
+  //     skip: jest.fn().mockReturnThis(),
+  //     sort: jest.fn().mockReturnThis(),
+  //     limit: jest.fn().mockReturnThis(),
+  //     exec: jest.fn().mockResolvedValue([commentInstance]),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockCompany),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockReaction),
+  //   });
+
+  //   const result = await service.getComments(
+  //     mockPost.id.toString(),
+  //     1,
+  //     10,
+  //     mockUserId,
+  //   );
+
+  //   expect(result).toEqual([
+  //     {
+  //       id: commentInstance._id.toString(),
+  //       authorId: commentInstance.author_id,
+  //       content: commentInstance.content,
+  //       postId: commentInstance.post_id,
+  //       reactCount: commentInstance.react_count,
+  //       replies: commentInstance.replies,
+  //       authorName: 'Mock User',
+  //       authorPicture: 'http://example.com/profile.jpg',
+  //       authorBio: 'This is a mock bio',
+  //       authorType: 'User',
+  //       reactType: 'Like',
+  //       taggedUsers: [],
+  //       timestamp: commentInstance.commented_at.toISOString(),
+  //     },
+  //   ]);
+  // });
+
+  // it('[32] should get comments for a post', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     author_type: 'Company',
+  //   };
+  //   commentModelMock.find.mockReturnValue({
+  //     skip: jest.fn().mockReturnThis(),
+  //     sort: jest.fn().mockReturnThis(),
+  //     limit: jest.fn().mockReturnThis(),
+  //     exec: jest.fn().mockResolvedValue([commentInstance]),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockCompany),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockReaction),
+  //   });
+
+  //   const result = await service.getComments(
+  //     mockPost.id.toString(),
+  //     1,
+  //     10,
+  //     mockUserId,
+  //   );
+
+  //   expect(result).toEqual([
+  //     {
+  //       id: commentInstance._id.toString(),
+  //       authorId: commentInstance.author_id,
+  //       content: commentInstance.content,
+  //       postId: commentInstance.post_id,
+  //       reactCount: commentInstance.react_count,
+  //       replies: commentInstance.replies,
+  //       authorName: 'Mock Company',
+  //       authorPicture: 'http://example.com/logo.jpg',
+  //       authorBio: '',
+  //       authorType: 'Company',
+  //       reactType: 'Like',
+  //       taggedUsers: [],
+  //       timestamp: commentInstance.commented_at.toISOString(),
+  //     },
+  //   ]);
+  // });
+
+  // Test for editComment
+  // it('[33] should edit a comment', async () => {
+  //   const mockCommentId = mockComment._id.toString();
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     save: jest.fn().mockResolvedValue(mockComment),
+  //   };
+  //   commentModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(commentInstance),
+  //   });
+
+  //   commentModelMock.find.mockReturnValue({
+  //     skip: jest.fn().mockReturnThis(),
+  //     sort: jest.fn().mockReturnThis(),
+  //     limit: jest.fn().mockReturnThis(),
+  //     exec: jest.fn().mockResolvedValue([commentInstance]),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockCompany),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockReaction),
+  //   });
+  //   const result = await service.editComment(
+  //     mockCommentId,
+  //     mockCommentDto,
+  //     mockUserId,
+  //   );
+
+  //   expect(result).toEqual({
+  //     ...mockComment,
+  //     _id: mockCommentId,
+  //     author_id: mockComment.author_id,
+  //     content: 'This is a mock comment',
+  //   });
+
+  //   expect(commentInstance.save).toHaveBeenCalled();
+  // });
+
+  // Test for deleteComment
+
+  // it('[35] should update reactions on a comment', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     react_count: -5, // Adjusted to match the received value
+  //     save: jest.fn().mockResolvedValue({ ...mockComment, react_count: -5 }),
+  //   };
+  //   commentModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(commentInstance),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const reactInstance = {
+  //     ...mockReaction,
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.mockImplementation(() => reactInstance);
+
+  //   const existingReaction = {
+  //     ...mockReaction,
+  //     save: jest.fn().mockResolvedValue(mockReaction),
+  //   };
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(existingReaction),
+  //   });
+
+  //   reactModelMock.deleteOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   companyModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(null),
+  //   });
+
+  //   const result = await service.updateReactions(
+  //     mockComment._id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Comment',
+  //       reactions: {
+  //         Like: true,
+  //         Love: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+
+  //   expect(result).toEqual({
+  //     ...mockComment,
+  //     react_count: -10,
+  //     save: expect.any(Function),
+  //   });
+  // });
+
   it('[36] should throw an error if post ID is invalid', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(null),
@@ -1268,6 +1880,8 @@ describe('PostsService', () => {
 
   it('[37] should throw an error if no posts are found for the user', async () => {
     postModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([]),
     });
 
@@ -1720,6 +2334,26 @@ describe('PostsService', () => {
     ).rejects.toThrow('User not authorized to edit this post');
   });
 
+  // test('[81] should assign author_id and author_type properly in editPost', async () => {
+  //   const post = {
+  //     ...mockPost,
+  //     author_id: mockUserId,
+  //     save: jest.fn().mockResolvedValue(mockPost),
+  //   };
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(post),
+  //   });
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+  //   const result = await service.editPost(
+  //     post.id.toString(),
+  //     mockEditPostDto,
+  //     mockUserId,
+  //   );
+  //   expect(result.authorId).toBeInstanceOf(Types.ObjectId);
+  // });
+
   it('[77] should save a post and return success message', async () => {
     postModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockPost),
@@ -1742,6 +2376,28 @@ describe('PostsService', () => {
       Promise.resolve({}),
     );
   });
+
+  // it('[79] should increment comment count and return new comment', async () => {
+  //   const post = { ...mockPost, comment_count: 0, save: jest.fn() };
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(post),
+  //   });
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     save: jest.fn().mockResolvedValue(mockComment),
+  //   };
+  //   commentModelMock.mockImplementation(() => commentInstance);
+  //   const result = await service.addComment(
+  //     mockPost.id.toString(),
+  //     mockCommentDto,
+  //     mockUserId,
+  //   );
+  //   expect(post.save).toHaveBeenCalled();
+  //   expect(result).toEqual({ ...mockComment, save: expect.any(Function) });
+  // });
 
   describe('Additional Coverage - Error Scenarios', () => {
     // editPost - Invalid post ID format
@@ -1940,7 +2596,54 @@ describe('PostsService', () => {
       `Comment with id ${mockComment._id.toString()} not found`,
     );
   });
+  // it('[X] should update existing reaction with new type and update post reaction counts', async () => {
+  //   const oldReactionType = 'Like';
+  //   const newReactionType = 'Love';
 
+  //   const postInstance = {
+  //     ...mockPost,
+  //     react_count: { [oldReactionType]: 2, [newReactionType]: 0 },
+  //     save: jest.fn().mockResolvedValue(true),
+  //   };
+
+  //   const existingReaction = {
+  //     ...mockReaction,
+  //     react_type: oldReactionType,
+  //     save: jest.fn().mockResolvedValue(true),
+  //   };
+
+  //   postModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(postInstance),
+  //   });
+
+  //   reactModelMock.findOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(existingReaction),
+  //   });
+
+  //   profileModelMock.findById.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue(mockProfile),
+  //   });
+
+  //   reactModelMock.deleteOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+
+  //   const result = await service.updateReactions(
+  //     mockPost.id.toString(),
+  //     mockUserId,
+  //     {
+  //       postType: 'Post',
+  //       reactions: {
+  //         [newReactionType]: true,
+  //         Like: false,
+  //         Funny: false,
+  //         Celebrate: false,
+  //         Insightful: false,
+  //         Support: false,
+  //       },
+  //     },
+  //   );
+  // });
   it('[93] should throw InternalServerErrorException when deleteComment fails', async () => {
     commentModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockComment),
@@ -2054,6 +2757,8 @@ describe('PostsService', () => {
 
   it('[101] should throw InternalServerErrorException when getUserPosts fails', async () => {
     postModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockRejectedValue(new Error('Get user posts failed')),
     });
 
@@ -2610,4 +3315,3 @@ describe('PostsService', () => {
     expect(result).toEqual(commentInstance);
   });
 });
-
