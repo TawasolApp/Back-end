@@ -1,16 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ProfilesService } from './profiles.service';
 import { getModelToken } from '@nestjs/mongoose';
-import {
-  Profile,
-  WorkExperience,
-} from './infrastructure/database/schemas/profile.schema';
+import { Profile } from './infrastructure/database/schemas/profile.schema';
 import { Model, Types } from 'mongoose';
 import {
   NotFoundException,
   BadRequestException,
   ConflictException,
-  forwardRef,
 } from '@nestjs/common';
 import { ProfilesController } from './profiles.controller';
 import { JwtService } from '@nestjs/jwt';
@@ -23,16 +19,12 @@ import {
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { toGetProfileDto } from './dto/profile.mapper';
 import { UpdateProfileDto } from './dto/update-profile.dto';
-import * as profileMapper from './dto/profile.mapper';
 import { SkillDto } from './dto/skill.dto';
 import { EducationDto } from './dto/education.dto';
 import { CertificationDto } from './dto/certification.dto';
-import { get } from 'http';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesService } from '../companies/companies.service';
-import { WorkExperienceDto } from './dto/work-experience.dto';
-import { first } from 'rxjs';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
