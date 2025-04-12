@@ -26,6 +26,7 @@ import { CertificationDto } from './dto/certification.dto';
 import { get } from 'http';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
+import { CompaniesService } from '../companies/companies.service';
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -92,6 +93,11 @@ describe('ProfilesService', () => {
 
   const mockUserConnectionModel = {};
   const mockUserModel = {};
+  const mockCompaniesService = {
+    getCompanyById: jest.fn(),
+    createCompany: jest.fn(),
+    getFollowedCompanies: jest.fn(),
+  };
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [],
@@ -110,6 +116,10 @@ describe('ProfilesService', () => {
           },
         },
         {
+          provide: CompaniesService,
+          useValue: mockCompaniesService,
+        },
+        {
           provide: getModelToken(UserConnection.name),
           useValue: mockUserConnectionModel,
         }, // Mock User model if needed
@@ -119,10 +129,16 @@ describe('ProfilesService', () => {
 
     service = module.get<ProfilesService>(ProfilesService);
     profileModel = module.get<Model<Profile>>(getModelToken(Profile.name));
+    jest
+      .spyOn(service, 'getUserFirstLastName')
+      .mockResolvedValue({ firstName: 'Hohn', lastName: 'Doe' });
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+    jest
+      .spyOn(service, 'getUserFirstLastName')
+      .mockResolvedValue({ firstName: 'Hohn', lastName: 'Doe' });
   });
 
   describe('createProfile', () => {
@@ -205,6 +221,8 @@ describe('ProfilesService', () => {
       jest.spyOn(profileModel, 'findOneAndUpdate').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockProfile),
       } as any);
+      jest.spyOn(service, 'updateUserFirstName').mockResolvedValue(undefined);
+      jest.spyOn(service, 'updateUserLastName').mockResolvedValue(undefined);
 
       const result = await service.updateProfile(dto, mockProfile._id);
       expect(result).toEqual(toGetProfileDto(mockProfile));
@@ -261,14 +279,14 @@ describe('ProfilesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw BadRequestException if field is already unset', async () => {
+    it('should throw NotFoundException if field is already unset', async () => {
       jest.spyOn(profileModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue({ _id: mockProfile._id }),
       } as any);
 
       await expect(
         service.deleteProfileField(mockProfile._id, 'headline'),
-      ).rejects.toThrow(BadRequestException);
+      ).rejects.toThrow(NotFoundException);
     });
     it('should throw BadRequestException if ObjectId is invalid', async () => {
       const invalidId = '12345'; // Not a valid MongoDB ObjectId
