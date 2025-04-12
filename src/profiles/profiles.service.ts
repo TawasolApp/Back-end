@@ -260,12 +260,11 @@ export class ProfilesService {
       throw new BadRequestException('Invalid profile ID format');
     }
     console.log('editSkillPosition service profileId: ' + position);
-    // Find the profile by profileId and update the specific skill's position
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      { _id: new Types.ObjectId(profileId), 'skills.skill_name': skillName }, // Match profileId and skillId in skills array
+      { _id: new Types.ObjectId(profileId), 'skills.skill_name': skillName },
       {
         $set: {
-          'skills.$.position': position, // Update the position of the skill
+          'skills.$.position': position,
         },
       },
       { new: true, runValidators: true },
@@ -362,7 +361,7 @@ export class ProfilesService {
       {
         _id: new Types.ObjectId(id),
         'education._id': new Types.ObjectId(educationId),
-      }, // Find profile and specific education entry
+      },
       {
         $set: {
           'education.$.school': education.school,
@@ -595,7 +594,6 @@ export class ProfilesService {
     console.log(
       'editWorkExperience service title: ' + workExperience.companyLogo,
     );
-    // const updateData = toUpdateWorkExperienceSchema(workExperience);
 
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       {
@@ -741,7 +739,6 @@ export class ProfilesService {
     }
     console.log('skill endorsements: ' + skill.endorsements);
 
-    // Now fetch users from the endorsements list
     const endorsers = await this.profileModel
       .find({ _id: { $in: skill.endorsements } })
       .select('_id profile_picture first_name last_name');
