@@ -16,6 +16,8 @@ import { CompanyManagerSeeder } from './companies/infrastructure/database/seeder
 import { CompanyEmployerSeeder } from './jobs/infrastructure/database/seeders/company-employer.seeder';
 import { ReportSeeder } from './admin/infrastructure/database/seeders/report.seeder';
 import { faker } from '@faker-js/faker';
+import { ConversationSeeder } from './messages/infrastructure/database/seeders/conversation.seeder';
+import { MessageSeeder } from './messages/infrastructure/database/seeders/message.seeder';
 
 faker.seed(5050);
 async function bootstrap() {
@@ -35,6 +37,8 @@ async function bootstrap() {
   const applicationSeeder = app.get(ApplicationSeeder);
   const companyEmployerSeeder = app.get(CompanyEmployerSeeder);
   const reportSeeder = app.get(ReportSeeder);
+  const conversationSeeder = app.get(ConversationSeeder);
+  const messageSeeder = app.get(MessageSeeder);
 
   // await userSeeder.clearUsers();
   // await userSeeder.seedUsers(30);
@@ -82,6 +86,13 @@ async function bootstrap() {
 
   await reportSeeder.clearReports();
   await reportSeeder.seedReports(15);
+
+  await conversationSeeder.clearConversations();
+  await conversationSeeder.seedConversations(5);
+
+  await messageSeeder.clearMessages();
+  await messageSeeder.seedMessages(10);
+
   await app.close();
 }
 

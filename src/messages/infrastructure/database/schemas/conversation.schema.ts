@@ -1,7 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 
-export type ConversationSchema = Conversation & Document;
+export type ConversationDocument = Conversation & Document;
 
 @Schema({
   timestamps: false,
@@ -14,8 +14,8 @@ export class Conversation {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], required: true })
   participants: Types.ObjectId[];
 
-  @Prop({ type: Types.ObjectId, ref: 'Message', required: true })
-  last_message_id: Types.ObjectId;
+  // @Prop({ type: Types.ObjectId, ref: 'Message', required: true })
+  // last_message_id: Types.ObjectId;
 
   @Prop()
   unseen_count: number;

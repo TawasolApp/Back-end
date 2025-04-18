@@ -76,7 +76,7 @@ export class ReportSeeder {
     ] as const;
 
     for (let i = 0; i < count; i++) {
-      const reportingUser = faker.helpers.arrayElement(users);
+      const reportingUser = faker.helpers.arrayElement(profiles);
       const type = faker.helpers.arrayElement(reportedTypes);
 
       let reportedId: Types.ObjectId;
