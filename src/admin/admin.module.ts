@@ -58,4 +58,4 @@ import { ReportSeeder } from './infrastructure/database/seeders/report.seeder';
   exports: [ReportSeeder],
   //   controllers: [],
 })
-export class AdminModules {}
+export class AdminModule {}

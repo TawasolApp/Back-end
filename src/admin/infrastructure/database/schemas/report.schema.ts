@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { ReportStatus } from 'src/admin/enums/report-status.enum';
+import { ReportStatus } from '../../../enums/report-status.enum';
 
 export type ReportDocument = Report & Document;
 
@@ -24,7 +24,7 @@ export class Report {
   })
   reported_type: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'User' })
   admin_id: Types.ObjectId;
 
   @Prop({

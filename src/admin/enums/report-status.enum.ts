@@ -1,5 +1,6 @@
 export enum ReportStatus {
   Pending = 'Pending',
-  Review = 'Reviewed',
+  Assigned = 'Assigned',
+  Review = 'In Review',
   Resolved = 'Resolved',
 }
