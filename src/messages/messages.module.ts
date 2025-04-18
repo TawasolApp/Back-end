@@ -2,8 +2,14 @@ import { forwardRef, Module, ValidationPipe } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_PIPE } from '@nestjs/core';
-import { Conversation, ConversationSchema } from './infrastructure/database/schemas/conversation.schema';
-import { Message, MessageSchema } from './infrastructure/database/schemas/message.schema';
+import {
+  Conversation,
+  ConversationSchema,
+} from './infrastructure/database/schemas/conversation.schema';
+import {
+  Message,
+  MessageSchema,
+} from './infrastructure/database/schemas/message.schema';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
@@ -13,11 +19,11 @@ import { MessageSeeder } from './infrastructure/database/seeders/message.seeder'
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: Conversation.name, schema: ConversationSchema }, {name: Message.name, schema: MessageSchema}
+      { name: Conversation.name, schema: ConversationSchema },
+      { name: Message.name, schema: MessageSchema },
     ]),
     AuthModule,
     UsersModule,
-    forwardRef(() => ProfilesModule),
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
@@ -25,7 +31,7 @@ import { MessageSeeder } from './infrastructure/database/seeders/message.seeder'
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [MongooseModule, ConversationSeeder, MessageSeeder], // allows other modules to access user schema if needed
+  exports: [MongooseModule, ConversationSeeder, MessageSeeder],
   providers: [
     ConversationSeeder,
     MessageSeeder,
