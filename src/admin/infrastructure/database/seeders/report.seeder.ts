@@ -88,11 +88,10 @@ export class ReportSeeder {
             (p) => p._id.toString() !== reportingUser._id.toString(),
           );
           if (!filteredProfiles.length) continue;
-
           const profile = faker.helpers.arrayElement(filteredProfiles);
           reportedId = profile._id;
           entityCreatedAt =
-            userCreatedAtMap.get(profile._id.toString()) ?? new Date();
+            userCreatedAtMap.get(profile._id.toString())!;
           break;
         }
         case 'Company': {
