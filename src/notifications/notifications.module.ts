@@ -38,6 +38,13 @@ import {
   User,
   UserSchema,
 } from '../users/infrastructure/database/schemas/user.schema';
+import { NotificationsController } from './notifications.controller';
+import { NotificationsService } from './notifications.service';
+import {
+  Company,
+  CompanySchema,
+} from '../companies/infrastructure/database/schemas/company.schema';
+import { CompaniesModule } from '../companies/companies.module';
 
 @Module({
   imports: [
@@ -50,6 +57,7 @@ import {
       { name: Conversation.name, schema: ConversationSchema },
       { name: UserConnection.name, schema: UserConnectionSchema },
       { name: User.name, schema: UserSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     AuthModule,
     UsersModule,
@@ -59,10 +67,13 @@ import {
         '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
       signOptions: { expiresIn: '1h' },
     }),
+    CompaniesModule,
   ],
+  controllers: [NotificationsController],
   exports: [MongooseModule, NotificationSeeder],
   providers: [
     NotificationSeeder,
+    NotificationsService,
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,

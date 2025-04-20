@@ -54,6 +54,14 @@ import {
 } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { P } from '@faker-js/faker/dist/airline-CBNP41sR';
+import {
+  addNotification,
+  deleteNotification,
+} from '../notifications/helpers/notification.helper';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
 
 @Injectable()
 export class PostsService {
@@ -66,6 +74,8 @@ export class PostsService {
     @InjectModel(Comment.name) private commentModel: Model<CommentDocument>,
     @InjectModel(UserConnection.name)
     private userConnectionModel: Model<UserConnectionDocument>,
+    @InjectModel(Notification.name)
+    private notificationModel: Model<NotificationDocument>,
   ) {}
 
   /**
@@ -464,14 +474,48 @@ export class PostsService {
         }
       }
 
-      const result = await this.postModel.deleteOne({ _id: postId }).exec();
+      // Get IDs of reactions, comments, and saves
+      const reactions = await this.reactModel
+        .find({ post_id: new Types.ObjectId(postId) })
+        .select('_id')
+        .exec();
+      const comments = await this.commentModel
+        .find({ post_id: new Types.ObjectId(postId) })
+        .select('_id')
+        .exec();
+      const saves = await this.saveModel
+        .find({ post_id: new Types.ObjectId(postId) })
+        .select('_id')
+        .exec();
+
+      // Delete notifications for reactions, comments, saves, and the post itself
+      for (const reaction of reactions) {
+        await deleteNotification(this.notificationModel, reaction._id);
+      }
+      for (const comment of comments) {
+        await deleteNotification(this.notificationModel, comment._id);
+        await this.commentModel
+          .deleteMany({ post_id: new Types.ObjectId(comment._id) })
+          .exec();
+      }
+
+      // Perform cascade deletion
+      await this.reactModel
+        .deleteMany({ post_id: new Types.ObjectId(postId) })
+        .exec();
+      await this.commentModel
+        .deleteMany({ post_id: new Types.ObjectId(postId) })
+        .exec();
+      await this.saveModel
+        .deleteMany({ post_id: new Types.ObjectId(postId) })
+        .exec();
+
+      const result = await this.postModel
+        .deleteOne({ _id: new Types.ObjectId(postId) })
+        .exec();
       if (result.deletedCount === 0) {
         throw new NotFoundException('Post not found');
       }
-
-      await this.reactModel.deleteMany({ post_id: postId }).exec();
-      await this.commentModel.deleteMany({ post_id: postId }).exec();
-      await this.saveModel.deleteMany({ post_id: postId }).exec();
     } catch (err) {
       console.log(err);
       if (err instanceof HttpException) throw err;
@@ -573,6 +617,15 @@ export class PostsService {
               post.react_count[reactionType] =
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
+              addNotification(
+                this.notificationModel, // Pass the notification model
+                new Types.ObjectId(userId),
+                new Types.ObjectId(post.author_id),
+                new Types.ObjectId(newReaction._id),
+                'React',
+                `reacted to your post`,
+                new Date(),
+              );
               await post.save();
             }
 
@@ -581,6 +634,15 @@ export class PostsService {
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
+              addNotification(
+                this.notificationModel, // Pass the notification model
+                new Types.ObjectId(userId),
+                new Types.ObjectId(comment.author_id),
+                new Types.ObjectId(newReaction._id),
+                'React',
+                `reacted to your comment`,
+                new Date(),
+              );
               await comment.save();
             }
 
@@ -594,6 +656,21 @@ export class PostsService {
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
               await post.save();
+              existingReaction.react_type = reactionType;
+              deleteNotification(
+                this.notificationModel,
+                new Types.ObjectId(existingReaction._id),
+              );
+
+              addNotification(
+                this.notificationModel, // Pass the notification model
+                new Types.ObjectId(userId),
+                new Types.ObjectId(post.author_id),
+                new Types.ObjectId(existingReaction._id),
+                'React',
+                `reacted to your post`,
+                new Date(),
+              );
             }
 
             if (comment) {
@@ -605,9 +682,22 @@ export class PostsService {
               comment.markModified('react_count');
               console.log('Comment react count after :', comment.react_count);
               await comment.save();
-            }
+              existingReaction.react_type = reactionType;
+              deleteNotification(
+                this.notificationModel,
+                new Types.ObjectId(existingReaction._id),
+              );
 
-            existingReaction.react_type = reactionType;
+              addNotification(
+                this.notificationModel, // Pass the notification model
+                new Types.ObjectId(userId),
+                new Types.ObjectId(comment.author_id),
+                new Types.ObjectId(existingReaction._id),
+                'React',
+                `reacted to your comment`,
+                new Date(),
+              );
+            }
 
             await existingReaction.save();
           }
@@ -631,6 +721,10 @@ export class PostsService {
                 (post.react_count[reactionType] || 1) - 1;
               post.markModified('react_count');
               await post.save();
+              deleteNotification(
+                this.notificationModel,
+                new Types.ObjectId(existingReaction._id),
+              );
             }
 
             if (comment) {
@@ -638,6 +732,10 @@ export class PostsService {
                 (comment.react_count[reactionType] || 1) - 1;
               comment.markModified('react_count');
               await comment.save();
+              deleteNotification(
+                this.notificationModel,
+                new Types.ObjectId(existingReaction._id),
+              );
             }
           }
         }
@@ -918,9 +1016,27 @@ export class PostsService {
       await newComment.save();
       if (post) {
         post.comment_count++;
+        addNotification(
+          this.notificationModel, // Pass the notification model
+          new Types.ObjectId(userId),
+          new Types.ObjectId(post.author_id),
+          new Types.ObjectId(newComment._id),
+          'Comment',
+          `commented on your post`,
+          new Date(),
+        );
         await post.save();
-      } else {
+      } else if (comment) {
         comment?.replies.push(newComment._id);
+        addNotification(
+          this.notificationModel, // Pass the notification model
+          new Types.ObjectId(userId),
+          new Types.ObjectId(comment.author_id),
+          new Types.ObjectId(newComment._id),
+          'Comment',
+          `replied to your comment`,
+          new Date(),
+        );
         await comment?.save();
       }
 
@@ -1052,15 +1168,14 @@ export class PostsService {
       const comment = await this.commentModel
         .findById(new Types.ObjectId(commentId))
         .exec();
-      console.log(comment);
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
-      // console.log(comment);
+
       const authorId = comment.author_id.toString();
       if (authorId !== userId) {
         throw new UnauthorizedException(
-          'User not authorized to edit this comment',
+          'User not authorized to delete this comment',
         );
       }
 
@@ -1081,6 +1196,27 @@ export class PostsService {
         );
         await parentComment.save();
       }
+
+      // Get IDs of reactions and replies
+      const reactions = await this.reactModel
+        .find({ post_id: new Types.ObjectId(commentId) })
+        .select('_id')
+        .exec();
+      const replies = await this.commentModel
+        .find({ post_id: new Types.ObjectId(commentId) })
+        .select('_id')
+        .exec();
+
+      // Delete notifications for reactions and replies and comment itself
+      for (const reaction of reactions) {
+        await deleteNotification(this.notificationModel, reaction._id);
+      }
+      for (const reply of replies) {
+        await deleteNotification(this.notificationModel, reply._id);
+      }
+      await deleteNotification(this.notificationModel, comment._id);
+
+      // Perform cascade deletion
       await this.reactModel
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
@@ -1091,7 +1227,6 @@ export class PostsService {
         .deleteMany({ post_id: new Types.ObjectId(commentId) })
         .exec();
     } catch (err) {
-      //console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to delete comment');
     }
