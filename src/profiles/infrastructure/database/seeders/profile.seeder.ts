@@ -148,15 +148,6 @@ export class ProfileSeeder {
         }),
         visibility: faker.helpers.enumValue(Visibility),
         connection_count: 0,
-        plan_details: {
-          plan_type: faker.helpers.enumValue(PlanType),
-          start_date: faker.date.past({ years: 1 }),
-          expiry_date: faker.date.future({ years: 1 }),
-          auto_renewal: faker.datatype.boolean(),
-          cancel_date: faker.datatype.boolean()
-            ? faker.date.past({ years: 1 })
-            : undefined,
-        },
         plan_statistics: {
           message_count: faker.number.int({ min: 0, max: 1000 }),
           application_count: faker.number.int({ min: 0, max: 100 }),
