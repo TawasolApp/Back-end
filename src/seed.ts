@@ -86,18 +86,20 @@ async function bootstrap() {
   // await commentSeeder.updateCommentReplies();
   // await postSeeder.updateShareCounts();
 
-  await reportSeeder.clearReports();
-  await reportSeeder.seedReports(15);
+  // await reportSeeder.clearReports();
+  // await reportSeeder.seedReports(15);
 
-  await conversationSeeder.clearConversations();
-  await conversationSeeder.seedConversations(5);
+  // await conversationSeeder.clearConversations();
+  // await conversationSeeder.seedConversations(5);
 
-  await messageSeeder.clearMessages();
-  await messageSeeder.seedMessages(10);
+  // await messageSeeder.clearMessages();
+  // await messageSeeder.seedMessages(10);
 
 
-  await notificationSeeder.clearNotifications();
-  await notificationSeeder.seedNotifications(10);
+  // await notificationSeeder.clearNotifications();
+  // await notificationSeeder.seedNotifications(10);
+
+  await conversationSeeder.updateLastMessage();
   await app.close();
 }
 

@@ -15,7 +15,6 @@ import { ConnectionStatus } from '../../../../connections/enums/connection-statu
 import {
   EmploymentType,
   LocationType,
-  PlanType,
   Visibility,
 } from '../../../enums/profile-enums';
 import {
