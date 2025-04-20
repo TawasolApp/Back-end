@@ -493,8 +493,6 @@ export class PostsService {
    * 5. Update reaction counts on the target post or comment
    * 6. Return the updated post or comment with new reaction counts
    */
-
-  //TODO : Make the existingReaction call only once.
   async updateReactions(
     postId: string,
     userId: string,
@@ -914,7 +912,7 @@ export class PostsService {
           Insightful: 0,
           Support: 0,
         },
-        replies: [],
+        replies: 0,
       });
 
       await newComment.save();

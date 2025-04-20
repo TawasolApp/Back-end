@@ -621,8 +621,6 @@ describe('PostsService', () => {
   // Test for getUserPosts
   it('[11] should get user posts', async () => {
     postModelMock.find.mockReturnValue({
-      skip: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([mockPost]),
     });
 
@@ -1270,8 +1268,6 @@ describe('PostsService', () => {
 
   it('[37] should throw an error if no posts are found for the user', async () => {
     postModelMock.find.mockReturnValue({
-      skip: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([]),
     });
 
@@ -1678,6 +1674,26 @@ describe('PostsService', () => {
     expect(result).toEqual({ message: 'Post saved successfully' });
   });
 
+  // it('[73] should deleteComment and call all delete methods', async () => {
+  //   const commentInstance = {
+  //     ...mockComment,
+  //     author_id: new Types.ObjectId(mockUserId),
+  //   };
+  //   commentModelMock.findById.mockReturnValue(commentInstance);
+  //   commentModelMock.deleteOne.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+  //   reactModelMock.deleteMany.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+  //   commentModelMock.deleteMany.mockReturnValue({
+  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
+  //   });
+  //   await service.deleteComment(mockComment._id.toString(), mockUserId);
+  //   expect(commentModelMock.deleteOne).toHaveBeenCalled();
+  //   expect(reactModelMock.deleteMany).toHaveBeenCalled();
+  // });
+
   it('[74] should throw BadRequestException for invalid postId format in editPost', async () => {
     await expect(
       service.editPost('invalid-id', mockEditPostDto, mockUserId),
@@ -1924,54 +1940,7 @@ describe('PostsService', () => {
       `Comment with id ${mockComment._id.toString()} not found`,
     );
   });
-  // it('[X] should update existing reaction with new type and update post reaction counts', async () => {
-  //   const oldReactionType = 'Like';
-  //   const newReactionType = 'Love';
 
-  //   const postInstance = {
-  //     ...mockPost,
-  //     react_count: { [oldReactionType]: 2, [newReactionType]: 0 },
-  //     save: jest.fn().mockResolvedValue(true),
-  //   };
-
-  //   const existingReaction = {
-  //     ...mockReaction,
-  //     react_type: oldReactionType,
-  //     save: jest.fn().mockResolvedValue(true),
-  //   };
-
-  //   postModelMock.findById.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue(postInstance),
-  //   });
-
-  //   reactModelMock.findOne.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue(existingReaction),
-  //   });
-
-  //   profileModelMock.findById.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue(mockProfile),
-  //   });
-
-  //   reactModelMock.deleteOne.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
-  //   });
-
-  //   const result = await service.updateReactions(
-  //     mockPost.id.toString(),
-  //     mockUserId,
-  //     {
-  //       postType: 'Post',
-  //       reactions: {
-  //         [newReactionType]: true,
-  //         Like: false,
-  //         Funny: false,
-  //         Celebrate: false,
-  //         Insightful: false,
-  //         Support: false,
-  //       },
-  //     },
-  //   );
-  // });
   it('[93] should throw InternalServerErrorException when deleteComment fails', async () => {
     commentModelMock.findById.mockReturnValue({
       exec: jest.fn().mockResolvedValue(mockComment),
@@ -2085,8 +2054,6 @@ describe('PostsService', () => {
 
   it('[101] should throw InternalServerErrorException when getUserPosts fails', async () => {
     postModelMock.find.mockReturnValue({
-      skip: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockRejectedValue(new Error('Get user posts failed')),
     });
 
@@ -2643,3 +2610,4 @@ describe('PostsService', () => {
     expect(result).toEqual(commentInstance);
   });
 });
+
