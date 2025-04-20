@@ -66,10 +66,13 @@ export class ConnectionsService {
     try {
       const filter: any = {};
       if (name) {
-        filter.$or = [
-          { first_name: { $regex: name, $options: 'i' } },
-          { last_name: { $regex: name, $options: 'i' } },
-        ];
+        filter.$expr = {
+          $regexMatch: {
+            input: { $concat: ['$first_name', ' ', '$last_name'] },
+            regex: name,
+            options: 'i',
+          },
+        };
       }
       if (company) {
         filter['work_experience.company'] = {
