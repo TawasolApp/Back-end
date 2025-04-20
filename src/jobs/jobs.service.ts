@@ -58,7 +58,7 @@ export class JobsService {
       .lean();
     const allowedEmployer = await this.companyEmployerModel
       .findOne({
-        employer_id_id: new Types.ObjectId(userId),
+        employer_id: new Types.ObjectId(userId),
         company_id: new Types.ObjectId(companyId),
       })
       .lean();
@@ -94,7 +94,7 @@ export class JobsService {
       if (!existingCompany) {
         throw new NotFoundException('Company not found.');
       }
-      if (!this.checkAccess(userId, companyId)) {
+      if (!(await this.checkAccess(userId, companyId))) {
         throw new ForbiddenException(
           'Logged in user does not have management or employer access to this company.',
         );

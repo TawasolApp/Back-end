@@ -163,7 +163,9 @@ describe('CompaniesService', () => {
         },
       ],
     }).compile();
+
     service = module.get<CompaniesService>(CompaniesService);
+    
     companyModel = module.get(getModelToken(Company.name));
     companyConnectionModel = module.get(getModelToken(CompanyConnection.name));
     companyManagerModel = module.get(getModelToken(CompanyManager.name));
@@ -457,11 +459,11 @@ describe('CompaniesService', () => {
       const userId = mockProfiles[0]._id.toString();
       const companyId = mockCompanies[0]._id.toString();
       companyModel.findById.mockImplementationOnce(() => {
-        throw new Error('Unexpected error');
+        throw new Error('Unexpected Error');
       });
       await service.getCompanyDetails(userId, companyId);
       expect(handleError).toHaveBeenCalledWith(
-        new Error('Unexpected error'),
+        new Error('Unexpected Error'),
         'Failed to retrieve company details.',
       );
     });
@@ -579,11 +581,11 @@ describe('CompaniesService', () => {
       const page = 1;
       const limit = 5;
       companyModel.find.mockImplementationOnce(() => {
-        throw new Error('Unexpected error');
+        throw new Error('Unexpected Error');
       });
       await service.filterCompanies(userId, page, limit);
       expect(handleError).toHaveBeenCalledWith(
-        new Error('Unexpected error'),
+        new Error('Unexpected Error'),
         'Failed to retrieve list of companies.',
       );
     });
