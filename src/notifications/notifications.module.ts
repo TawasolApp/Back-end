@@ -45,6 +45,7 @@ import {
   CompanySchema,
 } from '../companies/infrastructure/database/schemas/company.schema';
 import { CompaniesModule } from '../companies/companies.module';
+import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Module({
   imports: [
@@ -74,6 +75,7 @@ import { CompaniesModule } from '../companies/companies.module';
   providers: [
     NotificationSeeder,
     NotificationsService,
+    NotificationGateway,
     {
       provide: APP_PIPE,
       useClass: ValidationPipe,

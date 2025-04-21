@@ -62,6 +62,7 @@ import {
   Notification,
   NotificationDocument,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
+import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Injectable()
 export class PostsService {
@@ -76,6 +77,7 @@ export class PostsService {
     private userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway, // Inject NotificationGateway
   ) {}
 
   /**
@@ -627,6 +629,9 @@ export class PostsService {
                 'React',
                 `reacted to your post`,
                 new Date(),
+                this.notificationGateway, // Pass NotificationGateway
+                this.profileModel, // Pass Profile model
+                this.companyModel, // Pass Company model
               );
               await post.save();
             }
@@ -644,6 +649,9 @@ export class PostsService {
                 'React',
                 `reacted to your comment`,
                 new Date(),
+                this.notificationGateway, // Pass NotificationGateway
+                this.profileModel, // Pass Profile model
+                this.companyModel, // Pass Company model
               );
               await comment.save();
             }
@@ -672,6 +680,9 @@ export class PostsService {
                 'React',
                 `reacted to your post`,
                 new Date(),
+                this.notificationGateway, // Pass NotificationGateway
+                this.profileModel, // Pass Profile model
+                this.companyModel, // Pass Company model
               );
             }
 
@@ -698,6 +709,9 @@ export class PostsService {
                 'React',
                 `reacted to your comment`,
                 new Date(),
+                this.notificationGateway, // Pass NotificationGateway
+                this.profileModel, // Pass Profile model
+                this.companyModel, // Pass Company model
               );
             }
 
@@ -1026,6 +1040,9 @@ export class PostsService {
           'Comment',
           `commented on your post`,
           new Date(),
+          this.notificationGateway, // Pass NotificationGateway
+          this.profileModel, // Pass Profile model
+          this.companyModel, // Pass Company model
         );
         await post.save();
       } else if (comment) {
@@ -1038,6 +1055,9 @@ export class PostsService {
           'Comment',
           `replied to your comment`,
           new Date(),
+          this.notificationGateway, // Pass NotificationGateway
+          this.profileModel, // Pass Profile model
+          this.companyModel, // Pass Company model
         );
         await comment?.save();
       }

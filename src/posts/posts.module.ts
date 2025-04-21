@@ -50,6 +50,7 @@ import {
   Notification,
   NotificationSchema,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
+import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Module({
   imports: [
@@ -87,6 +88,7 @@ import {
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    NotificationGateway,
   ],
   exports: [
     PostSeeder,
