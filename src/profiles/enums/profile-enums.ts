@@ -20,11 +20,6 @@ export enum LocationType {
   REMOTE = 'remote',
 }
 
-export enum PlanType {
-  MONTHLY = 'monthly',
-  YEARLY = 'yearly',
-}
-
 export enum ProfileStatus {
   ME = 'Owner',
   CONNECTION = 'Connection',

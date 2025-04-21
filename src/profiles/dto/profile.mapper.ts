@@ -15,7 +15,6 @@ import {
   Visibility,
   EmploymentType,
   LocationType,
-  PlanType,
   ProfileStatus,
 } from '../enums/profile-enums';
 import { Company } from 'src/companies/infrastructure/database/schemas/company.schema';

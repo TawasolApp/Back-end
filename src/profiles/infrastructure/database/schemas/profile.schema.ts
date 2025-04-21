@@ -4,7 +4,6 @@ import {
   Visibility,
   EmploymentType,
   LocationType,
-  PlanType,
 } from '../../../enums/profile-enums';
 
 export type ProfileDocument = Profile & Document;
@@ -117,24 +116,6 @@ export class WorkExperience {
 }
 
 @Schema({ _id: false })
-export class PlanDetails {
-  @Prop({ enum: PlanType, default: 'monthly' })
-  plan_type: PlanType;
-
-  @Prop({ required: true })
-  start_date: Date;
-
-  @Prop({ required: true })
-  expiry_date: Date;
-
-  @Prop({ required: true })
-  auto_renewal: boolean;
-
-  @Prop()
-  cancel_date?: Date;
-}
-
-@Schema({ _id: false })
 export class PlanStatistics {
   @Prop({ required: true })
   message_count: number;
@@ -193,12 +174,11 @@ export class Profile {
   @Prop()
   connection_count: number;
 
-  @Prop({ type: PlanDetails })
-  plan_details: PlanDetails;
+  @Prop({ default: false })
+  is_premium: boolean;
 
   @Prop({
     type: PlanStatistics,
-    required: true,
     default: { message_count: 0, application_count: 0 },
   })
   plan_statistics: PlanStatistics;

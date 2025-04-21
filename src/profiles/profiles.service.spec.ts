@@ -14,7 +14,6 @@ import {
   Visibility,
   EmploymentType,
   LocationType,
-  PlanType,
 } from './enums/profile-enums';
 import { CreateProfileDto } from './dto/create-profile.dto';
 import { toGetProfileDto } from './dto/profile.mapper';
@@ -68,20 +67,13 @@ const mockProfile = {
     },
   ],
   work_experience: [],
-  plan_details: {
-    plan_type: PlanType.MONTHLY,
-    start_date: new Date(),
-    expiry_date: new Date(),
-    auto_renewal: false,
-  },
-
   plan_statistics: {
     statistic_type: 'Connections',
     value: 0,
     message_count: 0,
     application_count: 0,
   },
-
+  is_premium: false,
   save: jest.fn(),
 };
 

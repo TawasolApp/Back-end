@@ -6,6 +6,7 @@ import {
   Conversation,
   ConversationDocument,
 } from '../schemas/conversation.schema';
+import { Message, MessageDocument } from '../schemas/message.schema';
 import {
   Profile,
   ProfileDocument,
@@ -16,6 +17,8 @@ export class ConversationSeeder {
   constructor(
     @InjectModel(Conversation.name)
     private conversationModel: Model<ConversationDocument>,
+    @InjectModel(Message.name)
+    private messageModel: Model<MessageDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
   ) {}
 
@@ -71,5 +74,29 @@ export class ConversationSeeder {
   async clearConversations(): Promise<void> {
     await this.conversationModel.deleteMany({});
     console.log('Conversations collection cleared.');
+  }
+
+  async updateLastMessage(): Promise<void> {
+    const conversations = await this.conversationModel
+      .find()
+      .select('_id')
+      .lean();
+
+    for (const conversation of conversations) {
+      const latestMessage = await this.messageModel
+        .findOne({ conversation_id: conversation._id })
+        .sort({ sent_at: -1 })
+        .select('_id')
+        .lean();
+
+      if (latestMessage) {
+        await this.conversationModel.updateOne(
+          { _id: conversation._id },
+          { last_message_id: latestMessage._id },
+        );
+      }
+    } 
+
+    console.log('Updated last message ID for all conversations.');
   }
 }

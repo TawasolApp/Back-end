@@ -289,6 +289,18 @@ export class CompaniesService {
       await this.companyEmployerModel.deleteMany({
         company_id: new Types.ObjectId(companyId),
       });
+      await this.profileModel.updateMany(
+        { 'work_experience.company_id': new Types.ObjectId(companyId) },
+        {
+          $set: {
+            'work_experience.$[elem].company_id': null,
+            'work_experience.$[elem].company_logo': null,
+          },
+        },
+        {
+          arrayFilters: [{ 'elem.company_id': new Types.ObjectId(companyId) }],
+        },
+      );
     } catch (error) {
       handleError(error, 'Failed to delete company.');
     }
