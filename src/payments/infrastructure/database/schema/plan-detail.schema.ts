@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { PlanType } from '../../../../payments/enums/plan-type.enum';
+import { PlanType } from '../../../enums/plan-type.enum';
 
 export type PlanDetailDocument = PlanDetail & Document;
 
