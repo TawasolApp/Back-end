@@ -51,6 +51,10 @@ import {
   NotificationSchema,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  CompanyManager,
+  CompanyManagerSchema,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 @Module({
   imports: [
@@ -64,6 +68,7 @@ import { NotificationGateway } from '../gateway/notification.gateway';
       { name: Profile.name, schema: ProfileSchema },
       { name: UserConnection.name, schema: UserConnectionSchema },
       { name: Notification.name, schema: NotificationSchema },
+      { name: CompanyManager.name, schema: CompanyManagerSchema },
     ]),
     AuthModule,
     CompaniesModule,

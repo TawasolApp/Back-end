@@ -47,6 +47,7 @@ import {
   getCommentInfo,
   getPostInfo,
   getReactionInfo,
+  getUserAccessed,
 } from './helpers/posts.helpers';
 import {
   UserConnection,
@@ -63,6 +64,7 @@ import {
   NotificationDocument,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 @Injectable()
 export class PostsService {
@@ -78,6 +80,8 @@ export class PostsService {
     @InjectModel(Notification.name)
     private notificationModel: Model<NotificationDocument>,
     private readonly notificationGateway: NotificationGateway, // Inject NotificationGateway
+    @InjectModel(CompanyManager.name)
+    private companyManagerModel: Model<CompanyManager>,
   ) {}
 
   /**
@@ -96,6 +100,7 @@ export class PostsService {
     id: string,
     editPostDto: EditPostDto,
     userId: string,
+    companyId: string,
   ): Promise<GetPostDto> {
     try {
       if (!isValidObjectId(id)) {
@@ -105,12 +110,23 @@ export class PostsService {
         throw new BadRequestException('Invalid user ID format');
       }
 
+      if (!isValidObjectId(companyId)) {
+        throw new BadRequestException('Invalid company ID format');
+      }
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+
+      console.log('authorId:', authorId);
+
       const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
 
-      if (post.author_id.toString() !== userId) {
+      if (post.author_id.toString() !== authorId) {
         throw new UnauthorizedException(
           'User not authorized to edit this post',
         );
@@ -118,21 +134,22 @@ export class PostsService {
 
       let authorType: 'User' | 'Company';
       const authorProfile = await this.profileModel
-        .findById(new Types.ObjectId(userId))
+        .findById(new Types.ObjectId(authorId))
         .exec();
       if (authorProfile) {
         authorType = 'User';
       } else {
         const authorCompany = await this.companyModel
-          .findById({ _id: new Types.ObjectId(userId) })
+          .findById(new Types.ObjectId(authorId))
           .exec();
+        console.log(authorCompany);
         if (authorCompany) {
           authorType = 'Company';
         } else {
           throw new NotFoundException('Author not found');
         }
       }
-      post.author_id = new Types.ObjectId(userId);
+      post.author_id = new Types.ObjectId(authorId);
       post.author_type = authorType;
 
       Object.assign(post, editPostDto);
@@ -140,7 +157,7 @@ export class PostsService {
       await post.save();
       return getPostInfo(
         post,
-        userId,
+        authorId,
         this.postModel,
         this.profileModel,
         this.companyModel,
@@ -167,23 +184,33 @@ export class PostsService {
    */
   async addPost(
     createPostDto: CreatePostDto,
-    author_id: string,
+    userId: string,
+    companyId: string,
   ): Promise<GetPostDto> {
     try {
-      if (!Types.ObjectId.isValid(author_id)) {
+      if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid author ID format');
       }
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format');
+      }
+
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
 
       let authorType: 'User' | 'Company';
       let authorCompany;
       const authorProfile = await this.profileModel
-        .findById(new Types.ObjectId(author_id))
+        .findById(new Types.ObjectId(authorId))
         .exec();
       if (authorProfile) {
         authorType = 'User';
       } else {
         authorCompany = await this.companyModel
-          .findById(new Types.ObjectId(author_id))
+          .findById(new Types.ObjectId(authorId))
           .exec();
         //console.log(authorCompany);
         if (authorCompany) {
@@ -214,7 +241,7 @@ export class PostsService {
         media: createPostDto.media,
         tags: createPostDto.taggedUsers,
         visibility: createPostDto.visibility,
-        author_id: new Types.ObjectId(author_id),
+        author_id: new Types.ObjectId(authorId),
         author_type: authorType,
         parent_post_id: createPostDto.parentPostId
           ? new Types.ObjectId(createPostDto.parentPostId)
@@ -225,7 +252,7 @@ export class PostsService {
       await createdPost.save();
       return getPostInfo(
         createdPost,
-        author_id,
+        authorId,
         this.postModel,
         this.profileModel,
         this.companyModel,
@@ -260,6 +287,7 @@ export class PostsService {
     page: number,
     limit: number,
     userId: string,
+    companyId: string,
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
 
@@ -267,8 +295,16 @@ export class PostsService {
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid user ID format.');
       }
+      if (!Types.ObjectId.isValid(companyId)) {
+        throw new BadRequestException('Invalid company ID format.');
+      }
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
 
-      const objectId = new Types.ObjectId(userId);
+      const objectId = new Types.ObjectId(authorId);
 
       // Step 1: Get connected users (both directions)
       const connected = await this.userConnectionModel
@@ -308,7 +344,7 @@ export class PostsService {
       const filteredPosts = candidatePosts.filter((post) => {
         const authorIdStr = post.author_id.toString();
 
-        if (authorIdStr === userId) return true; // Always include own posts
+        if (authorIdStr === authorId) return true; // Always include own posts
 
         if (connectedUserIds.some((id) => id.toString() === authorIdStr)) {
           return true; // All posts of connected users
@@ -341,7 +377,7 @@ export class PostsService {
         paginatedPosts.map((post) =>
           getPostInfo(
             post,
-            userId,
+            authorId,
             this.postModel,
             this.profileModel,
             this.companyModel,
@@ -367,18 +403,33 @@ export class PostsService {
    * 4. Enrich the post with author info, reaction data, and connection status
    * 5. Return the fully formatted post DTO with all metadata
    */
-  async getPost(id: string, userId: string): Promise<GetPostDto> {
+  async getPost(
+    id: string,
+    userId: string,
+    companyId: string,
+  ): Promise<GetPostDto> {
     try {
       if (!isValidObjectId(id)) {
         throw new BadRequestException('Invalid post ID format');
       }
+      if (!isValidObjectId(userId)) {
+        throw new BadRequestException('Invalid user ID format');
+      }
+      if (!isValidObjectId(companyId)) {
+        throw new BadRequestException('Invalid company ID format');
+      }
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const post = await this.postModel.findById(new Types.ObjectId(id)).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
       return getPostInfo(
         post,
-        userId,
+        authorId,
         this.postModel,
         this.profileModel,
         this.companyModel,
@@ -410,6 +461,7 @@ export class PostsService {
     userId: string,
     page: number,
     limit: number,
+    companyId: string,
   ): Promise<GetPostDto[]> {
     try {
       const skip = (page - 1) * limit;
@@ -419,6 +471,12 @@ export class PostsService {
         .limit(limit)
         .exec();
 
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+
       if (!posts || posts.length === 0) {
         return [];
       }
@@ -427,7 +485,7 @@ export class PostsService {
         posts.map((post) =>
           getPostInfo(
             post,
-            userId,
+            authorId,
             this.postModel,
             this.profileModel,
             this.companyModel,
@@ -456,13 +514,22 @@ export class PostsService {
    *    - Saved references to the post
    * 6. Handle potential errors during deletion process
    */
-  async deletePost(postId: string, userId: string): Promise<void> {
+  async deletePost(
+    postId: string,
+    userId: string,
+    companyId: string,
+  ): Promise<void> {
     try {
       const post = await this.postModel.findById(postId).exec();
       if (!post) {
         throw new NotFoundException('Post not found');
       }
-      if (post.author_id.toString() !== userId) {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+      if (post.author_id.toString() !== authorId) {
         throw new ForbiddenException('User not authorized to delete this post');
       }
 
@@ -545,6 +612,7 @@ export class PostsService {
     postId: string,
     userId: string,
     updateReactionsDto: UpdateReactionsDto,
+    companyId: string,
   ): Promise<Post | Comment> {
     try {
       //console.log('updateReactionsDto:', updateReactionsDto);
@@ -554,8 +622,13 @@ export class PostsService {
       if (!Types.ObjectId.isValid(postId)) {
         throw new BadRequestException('Invalid post ID format');
       }
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
 
-      const objectIdUserId = new Types.ObjectId(userId);
+      const objectIdUserId = new Types.ObjectId(authorId);
       const objectIdPostId = new Types.ObjectId(postId);
 
       const reactions = updateReactionsDto.reactions;
@@ -623,7 +696,7 @@ export class PostsService {
               post.markModified('react_count');
               addNotification(
                 this.notificationModel, // Pass the notification model
-                new Types.ObjectId(userId),
+                new Types.ObjectId(authorId),
                 new Types.ObjectId(post.author_id),
                 new Types.ObjectId(newReaction._id),
                 'React',
@@ -643,7 +716,7 @@ export class PostsService {
               comment.markModified('react_count');
               addNotification(
                 this.notificationModel, // Pass the notification model
-                new Types.ObjectId(userId),
+                new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(newReaction._id),
                 'React',
@@ -674,7 +747,7 @@ export class PostsService {
 
               addNotification(
                 this.notificationModel, // Pass the notification model
-                new Types.ObjectId(userId),
+                new Types.ObjectId(authorId),
                 new Types.ObjectId(post.author_id),
                 new Types.ObjectId(existingReaction._id),
                 'React',
@@ -703,7 +776,7 @@ export class PostsService {
 
               addNotification(
                 this.notificationModel, // Pass the notification model
-                new Types.ObjectId(userId),
+                new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(existingReaction._id),
                 'React',
@@ -789,6 +862,7 @@ export class PostsService {
     limit: number,
     reactionType: string,
     userId: string,
+    companyId: string,
   ): Promise<ReactionDto[]> {
     try {
       const skip = (page - 1) * limit;
@@ -837,7 +911,11 @@ export class PostsService {
    * 3. Create a new Save document linking the user to the post
    * 4. Return a success message upon completion
    */
-  async savePost(postId: string, userId: string): Promise<{ message: string }> {
+  async savePost(
+    postId: string,
+    userId: string,
+    companyId: string,
+  ): Promise<{ message: string }> {
     try {
       const post = await this.postModel
         .findById(new Types.ObjectId(postId))
@@ -846,9 +924,14 @@ export class PostsService {
         throw new NotFoundException('Post not found');
       }
 
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const existing = await this.saveModel.exists({
         post_id: new Types.ObjectId(post._id),
-        user_id: new Types.ObjectId(userId),
+        user_id: new Types.ObjectId(authorId),
       });
 
       if (existing) {
@@ -857,7 +940,7 @@ export class PostsService {
 
       const save = new this.saveModel({
         _id: new Types.ObjectId(),
-        user_id: new Types.ObjectId(userId),
+        user_id: new Types.ObjectId(authorId),
         post_id: new Types.ObjectId(postId),
       });
 
@@ -880,13 +963,19 @@ export class PostsService {
   async unsavePost(
     postId: string,
     userId: string,
+    companyId: string,
   ): Promise<{ message: string }> {
     try {
       // console.log('Unsave post:', postId, userId);
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const savedPost = await this.saveModel
         .findOneAndDelete({
           post_id: new Types.ObjectId(postId),
-          user_id: new Types.ObjectId(userId),
+          user_id: new Types.ObjectId(authorId),
         })
         .exec();
 
@@ -918,11 +1007,17 @@ export class PostsService {
     userId: string,
     page: number,
     limit: number,
+    companyId: string,
   ): Promise<GetPostDto[]> {
     const offset = (page - 1) * limit;
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const savedPosts = await this.saveModel
-        .find({ user_id: new Types.ObjectId(userId) })
+        .find({ user_id: new Types.ObjectId(authorId) })
         .skip(offset)
         .sort({ saved_at: -1 })
         .limit(limit)
@@ -942,7 +1037,7 @@ export class PostsService {
           }
           return getPostInfo(
             post,
-            userId,
+            authorId,
             this.postModel,
             this.profileModel,
             this.companyModel,
@@ -975,8 +1070,14 @@ export class PostsService {
     postId: string,
     createCommentDto: CreateCommentDto,
     userId: string,
+    companyId: string,
   ): Promise<GetCommentDto> {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       let post: PostDocument | null = null;
       let comment: CommentDocument | null = null;
       // console.log(createCommentDto);
@@ -996,13 +1097,13 @@ export class PostsService {
 
       let authorType: 'User' | 'Company';
       const authorProfile = await this.profileModel
-        .findById(new Types.ObjectId(userId))
+        .findById(new Types.ObjectId(authorId))
         .exec();
       if (authorProfile) {
         authorType = 'User';
       } else {
         const authorCompany = await this.companyModel
-          .findById(new Types.ObjectId(userId))
+          .findById(new Types.ObjectId(authorId))
           .exec();
         if (authorCompany) {
           authorType = 'Company';
@@ -1015,7 +1116,7 @@ export class PostsService {
         _id: new Types.ObjectId(),
         post_id: new Types.ObjectId(postId),
         author_type: authorType,
-        author_id: new Types.ObjectId(userId),
+        author_id: new Types.ObjectId(authorId),
         content: createCommentDto.content,
         tags: createCommentDto.tagged,
         react_count: {
@@ -1034,7 +1135,7 @@ export class PostsService {
         post.comment_count++;
         addNotification(
           this.notificationModel, // Pass the notification model
-          new Types.ObjectId(userId),
+          new Types.ObjectId(authorId),
           new Types.ObjectId(post.author_id),
           new Types.ObjectId(newComment._id),
           'Comment',
@@ -1049,7 +1150,7 @@ export class PostsService {
         comment?.replies.push(newComment._id);
         addNotification(
           this.notificationModel, // Pass the notification model
-          new Types.ObjectId(userId),
+          new Types.ObjectId(authorId),
           new Types.ObjectId(comment.author_id),
           new Types.ObjectId(newComment._id),
           'Comment',
@@ -1064,7 +1165,7 @@ export class PostsService {
 
       return getCommentInfo(
         newComment,
-        userId,
+        authorId,
         this.profileModel,
         this.companyModel,
         this.reactModel,
@@ -1095,8 +1196,14 @@ export class PostsService {
     page: number,
     limit: number,
     userId: string,
+    companyId: string,
   ): Promise<GetCommentDto[]> {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const skip = (page - 1) * limit;
       const comments = await this.commentModel
         .find({ post_id: new Types.ObjectId(postId) })
@@ -1113,7 +1220,7 @@ export class PostsService {
         comments.map((comment) =>
           getCommentInfo(
             comment,
-            userId,
+            authorId,
             this.profileModel,
             this.companyModel,
             this.reactModel,
@@ -1141,16 +1248,22 @@ export class PostsService {
     commentId: string,
     editCommentDto: EditCommentDto,
     userId: string,
+    companyId: string,
   ): Promise<GetCommentDto> {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const comment = await this.commentModel
         .findById(new Types.ObjectId(commentId))
         .exec();
       if (!comment) {
         throw new NotFoundException('Comment not found');
       }
-      const authorId = comment.author_id.toString();
-      if (authorId !== userId) {
+
+      if (comment.author_id.toString() !== authorId) {
         throw new UnauthorizedException(
           'User not authorized to edit this comment',
         );
@@ -1161,7 +1274,7 @@ export class PostsService {
       await comment.save();
       return await getCommentInfo(
         comment,
-        userId,
+        authorId,
         this.profileModel,
         this.companyModel,
         this.reactModel,
@@ -1185,8 +1298,17 @@ export class PostsService {
    *    - The comment itself
    *    - Any replies to the comment
    */
-  async deleteComment(commentId: string, userId: string): Promise<void> {
+  async deleteComment(
+    commentId: string,
+    userId: string,
+    companyId: string,
+  ): Promise<void> {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       const comment = await this.commentModel
         .findById(new Types.ObjectId(commentId))
         .exec();
@@ -1194,8 +1316,7 @@ export class PostsService {
         throw new NotFoundException('Comment not found');
       }
 
-      const authorId = comment.author_id.toString();
-      if (authorId !== userId) {
+      if (comment.author_id.toString() !== authorId) {
         throw new UnauthorizedException(
           'User not authorized to delete this comment',
         );
@@ -1274,6 +1395,7 @@ export class PostsService {
     timeframe: '24h' | 'week' | 'all',
     page = 1,
     limit = 10,
+    companyId: string,
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
 
@@ -1287,11 +1409,16 @@ export class PostsService {
     //   limit,
     // );
     try {
-      if (!Types.ObjectId.isValid(userId)) {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+      if (!Types.ObjectId.isValid(authorId)) {
         throw new BadRequestException('Invalid user ID format');
       }
 
-      const objectId = new Types.ObjectId(userId);
+      const objectId = new Types.ObjectId(authorId);
 
       const searchWords = query.trim().split(/\s+/);
 
@@ -1337,7 +1464,7 @@ export class PostsService {
               : conn.sending_party.toString(),
           ),
           ...following.map((conn) => conn.receiving_party.toString()),
-          userId, // include self
+          authorId, // include self
         ]);
 
         // 🔁 Convert all IDs to ObjectId before querying
@@ -1360,7 +1487,7 @@ export class PostsService {
         posts.map((post) =>
           getPostInfo(
             post,
-            userId,
+            authorId,
             this.postModel,
             this.profileModel,
             this.companyModel,
@@ -1397,17 +1524,23 @@ export class PostsService {
     userId: string,
     page: number,
     limit: number,
+    companyId: string,
   ): Promise<GetPostDto[]> {
     const offset = (page - 1) * limit;
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
       if (!Types.ObjectId.isValid(postId)) {
         throw new BadRequestException('Invalid post ID format');
       }
-      if (!Types.ObjectId.isValid(userId)) {
+      if (!Types.ObjectId.isValid(authorId)) {
         throw new BadRequestException('Invalid user ID format');
       }
 
-      const objectId = new Types.ObjectId(userId);
+      const objectId = new Types.ObjectId(authorId);
 
       // Step 1: Get connected users
       const connected = await this.userConnectionModel
@@ -1440,7 +1573,7 @@ export class PostsService {
         ...new Set([
           ...connectedUserIds.map((id) => id.toString()),
           ...followingUserIds.map((id) => id.toString()),
-          userId,
+          authorId,
         ]),
       ].map((id) => new Types.ObjectId(id));
 
@@ -1466,7 +1599,7 @@ export class PostsService {
         reposts.map((post) =>
           getPostInfo(
             post,
-            userId,
+            authorId,
             this.postModel,
             this.profileModel,
             this.companyModel,
@@ -1504,17 +1637,23 @@ export class PostsService {
     page: number,
     limit: number,
     viewerId: string,
+    companyId: string,
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
 
     try {
-      if (!Types.ObjectId.isValid(userId)) {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+      if (!Types.ObjectId.isValid(authorId)) {
         throw new BadRequestException('Invalid user ID format');
       }
 
       const reposts = await this.postModel
         .find({
-          author_id: new Types.ObjectId(userId),
+          author_id: new Types.ObjectId(authorId),
           parent_post_id: { $ne: null },
         })
         .sort({ posted_at: -1 })

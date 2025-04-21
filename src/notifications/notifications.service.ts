@@ -60,10 +60,13 @@ export class NotificationsService {
     return { message: 'Notification marked as read' };
   }
 
-  async getUnseenCount(userId: string) {
-    return this.notificationModel.countDocuments({
-      receiver_id: new Types.ObjectId(userId),
-      seen: false,
-    });
+  async getUnseenCount(userId: string): Promise<{ unseenCount: number }> {
+    {
+      const unseenCount = await this.notificationModel.countDocuments({
+        receiver_id: new Types.ObjectId(userId),
+        seen: false,
+      });
+      return { unseenCount };
+    }
   }
 }

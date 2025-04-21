@@ -331,3 +331,19 @@ export async function getReactionInfo(
 
   return mapReactionToDto(reaction, authorProfile, authorProfilePicture);
 }
+
+export async function getUserAccessed(
+  userId: string,
+  companyId: string,
+  companyManagerModel,
+): Promise<string> {
+  if (userId === companyId) return userId;
+  await companyManagerModel.findOne({
+    user_id: new Types.ObjectId(userId),
+    company_id: new Types.ObjectId(companyId),
+  });
+  if (!companyManagerModel) {
+    throw new NotFoundException('User does not have access to this company');
+  }
+  return companyId;
+}

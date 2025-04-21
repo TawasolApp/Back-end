@@ -32,53 +32,61 @@ import { EditCommentDto } from './dto/edit-comment.dto';
 
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe())
-@Controller('posts')
+@Controller('posts/:companyId')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async addPost(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
-    // Example API request: POST http://localhost:3000/api/posts
-    // Body: { "title": "Post Title", "content": "Post Content" }
+  async addPost(
+    @Param('companyId') companyId: string,
+    @Body() createPostDto: CreatePostDto,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     const userId = req.user['sub'];
-    return await this.postsService.addPost(createPostDto, userId);
+    return await this.postsService.addPost(createPostDto, userId, companyId);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
   async getAllPosts(
+    @Param('companyId') companyId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts?page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.getAllPosts(page, limit, req.user['sub']);
+    return await this.postsService.getAllPosts(
+      page,
+      limit,
+      req.user['sub'],
+      companyId,
+    );
   }
 
   @Post('react/:postId')
   @HttpCode(HttpStatus.OK)
   async updateReactions(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Body() updateReactionsDto: UpdateReactionsDto,
     @Req() req: Request,
   ) {
-    // Example API request: POST http://localhost:3000/api/posts/react/:postId
-    // Body: { "reactionType": "Like" }
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     const userIdFromToken = req.user['sub'];
     return await this.postsService.updateReactions(
       postId,
       userIdFromToken,
       updateReactionsDto,
+      companyId,
     );
   }
 
   @Get('search')
   @HttpCode(HttpStatus.OK)
   async searchPosts(
+    @Param('companyId') companyId: string,
     @Req() req: Request,
     @Query('q') query: string,
     @Query('network') network?: string,
@@ -86,7 +94,6 @@ export class PostsController {
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
   ): Promise<GetPostDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/search?q=developer&network=true&timeframe=week&page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
 
     if (!query || query.trim().length === 0) {
@@ -100,19 +107,20 @@ export class PostsController {
       timeframe ?? 'all',
       page,
       limit,
+      companyId,
     );
   }
 
   @Get('reactions/:postId')
   @HttpCode(HttpStatus.OK)
   async getReactions(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Query('reactionType') reactionType: string = 'All',
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<ReactionDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/reactions/:postId?reactionType=Like&page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getReactions(
       postId,
@@ -120,179 +128,210 @@ export class PostsController {
       limit,
       reactionType,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Get('comments/:postId')
   @HttpCode(HttpStatus.OK)
   async getComments(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetCommentDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/comments/:postId?page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getComments(
       postId,
       page,
       limit,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Post('save/:postId')
   @HttpCode(HttpStatus.OK)
-  async savePost(@Param('postId') postId: string, @Req() req: Request) {
-    // Example API request: POST http://localhost:3000/api/posts/save/:postId
+  async savePost(
+    @Param('companyId') companyId: string,
+    @Param('postId') postId: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.savePost(postId, req.user['sub']);
+    return await this.postsService.savePost(postId, req.user['sub'], companyId);
   }
 
   @Get('saved')
   @HttpCode(HttpStatus.OK)
   async getSavedPosts(
+    @Param('companyId') companyId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/saved?page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.getSavedPosts(req.user['sub'], page, limit);
+    return await this.postsService.getSavedPosts(
+      req.user['sub'],
+      page,
+      limit,
+      companyId,
+    );
   }
 
   @Post('comment/:postId')
   @HttpCode(HttpStatus.CREATED)
   async addComment(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request,
   ) {
-    // Example API request: POST http://localhost:3000/api/posts/comment/:postId
-    // Body: { "content": "Comment Content" }
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.addComment(
       postId,
       createCommentDto,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async getPost(@Param('id') id: string, @Req() req: Request) {
-    // Example API request: GET http://localhost:3000/api/posts/:id
+  async getPost(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.getPost(id, req.user['sub']);
+    return await this.postsService.getPost(id, req.user['sub'], companyId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deletePost(@Param('id') id: string, @Req() req: Request) {
-    // Example API request: DELETE http://localhost:3000/api/posts/:id
+  async deletePost(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    await this.postsService.deletePost(id, req.user['sub']);
+    await this.postsService.deletePost(id, req.user['sub'], companyId);
   }
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   async editPost(
+    @Param('companyId') companyId: string,
     @Param('id') id: string,
     @Body() editPostDto: EditPostDto,
     @Req() req: Request,
   ) {
-    // Example API request: PATCH http://localhost:3000/api/posts/:id
-    // Body: { "title": "Updated Title", "content": "Updated Content" }
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.editPost(id, editPostDto, req.user['sub']);
+    return await this.postsService.editPost(
+      id,
+      editPostDto,
+      req.user['sub'],
+      companyId,
+    );
   }
 
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
   async getUserPosts(
+    @Param('companyId') companyId: string,
     @Param('userId') searchedUserId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/user/:userId?page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getUserPosts(
       searchedUserId,
       req.user['sub'],
       page,
       limit,
+      companyId,
     );
   }
 
   @Delete('save/:postId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async unsavePost(@Param('postId') postId: string, @Req() req: Request) {
-    // Example API request: DELETE http://localhost:3000/api/posts/save/:postId
+  async unsavePost(
+    @Param('companyId') companyId: string,
+    @Param('postId') postId: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    await this.postsService.unsavePost(postId, req.user['sub']);
+    await this.postsService.unsavePost(postId, req.user['sub'], companyId);
   }
 
   @Patch('comment/:commentId')
   @HttpCode(HttpStatus.OK)
   async editComment(
+    @Param('companyId') companyId: string,
     @Param('commentId') commentId: string,
     @Body() editCommentDto: EditCommentDto,
     @Req() req: Request,
   ) {
-    // Example API request: PATCH http://localhost:3000/api/posts/comment/:commentId
-    // Body: { "content": "Updated Comment Content" }
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.editComment(
       commentId,
       editCommentDto,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Delete('comment/:commentId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteComment(
+    @Param('companyId') companyId: string,
     @Param('commentId') commentId: string,
     @Req() req: Request,
   ) {
-    // Example API request: DELETE http://localhost:3000/api/posts/comment/:commentId
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    await this.postsService.deleteComment(commentId, req.user['sub']);
+    await this.postsService.deleteComment(
+      commentId,
+      req.user['sub'],
+      companyId,
+    );
   }
+
   @Get(':postId/reposts')
   @HttpCode(HttpStatus.OK)
   async getReposts(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/:postId/reposts?page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getRepostsOfPost(
       postId,
       req.user['sub'],
       page,
       limit,
+      companyId,
     );
   }
 
   @Get('reposts/:userId')
   @HttpCode(HttpStatus.OK)
   async getUserReposts(
+    @Param('companyId') companyId: string,
     @Param('userId') userId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
-    // Example API request: GET http://localhost:3000/api/posts/reposts/:userId?page=1&limit=10
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     return await this.postsService.getRepostsByUser(
       userId,
       page,
       limit,
       req.user['sub'],
+      companyId,
     );
   }
 }
