@@ -18,6 +18,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from './users/users.module';
 import { MediaModule } from './common/media/media.module';
+import { NotificationGateway } from './gateway/notification.gateway';
 
 @Module({
   imports: [
@@ -45,6 +46,6 @@ import { MediaModule } from './common/media/media.module';
     MediaModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, NotificationGateway],
 })
 export class AppModule {}
