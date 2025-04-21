@@ -46,6 +46,7 @@ import {
 } from '../companies/infrastructure/database/schemas/company.schema';
 import { CompaniesModule } from '../companies/companies.module';
 import { NotificationGateway } from '../gateway/notification.gateway';
+import { firebaseAdminProvider } from './firebase-admin.provider';
 
 @Module({
   imports: [
@@ -80,6 +81,7 @@ import { NotificationGateway } from '../gateway/notification.gateway';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    firebaseAdminProvider,
   ],
 })
 export class NotificationsModule {}

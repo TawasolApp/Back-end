@@ -5,6 +5,8 @@ import { mapToGetNotificationsDto } from '../mappers/notification.mapper';
 import { profile } from 'console';
 import { ProfileDocument } from 'src/profiles/infrastructure/database/schemas/profile.schema';
 import { CompanyDocument } from 'src/companies/infrastructure/database/schemas/company.schema';
+import * as admin from 'firebase-admin';
+import { firebaseAdminProvider } from '../firebase-admin.provider'; // Import the provider
 
 export async function addNotification(
   notificationModel: Model<NotificationDocument>,
@@ -58,6 +60,24 @@ export async function addNotification(
     targetClient.emit('newNotification', getNotification);
   } else {
     console.warn(`User with ID ${userId} is not connected.`);
+  }
+
+  // Send notification via Firebase using sendNotificationToUser
+  try {
+    const message = {
+      title: 'New Notification',
+      body: content,
+    };
+
+    //TODO: Register the user with a valid FCM token before sending the notification
+    //TODO: Complete this when the cross teams are done with the FCM token
+
+    await firebaseAdminProvider
+      .useFactory()
+      .sendNotificationToUser(receiverId.toString(), message);
+    console.log(`Notification sent via Firebase to user ID ${receiverId}`);
+  } catch (error) {
+    console.error(`Error sending notification via Firebase:`, error);
   }
 
   return savedNotification;

@@ -185,7 +185,7 @@ export class PostsService {
         authorCompany = await this.companyModel
           .findById(new Types.ObjectId(author_id))
           .exec();
-        console.log(authorCompany);
+        //console.log(authorCompany);
         if (authorCompany) {
           authorType = 'Company';
         } else {
@@ -547,7 +547,7 @@ export class PostsService {
     updateReactionsDto: UpdateReactionsDto,
   ): Promise<Post | Comment> {
     try {
-      console.log('updateReactionsDto:', updateReactionsDto);
+      //console.log('updateReactionsDto:', updateReactionsDto);
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid user ID format');
       }
@@ -587,10 +587,10 @@ export class PostsService {
         .exec();
       const reactorType = reactorProfile ? 'User' : 'Company';
 
-      console.log(updateReactionsDto);
+      //console.log(updateReactionsDto);
       for (const [reactionType, value] of Object.entries(reactions)) {
-        console.log("'reactionType':", reactionType);
-        console.log("'value':", value);
+        //console.log("'reactionType':", reactionType);
+        //console.log("'value':", value);
         if (value) {
           const existingReaction = await this.reactModel
             .findOne({
@@ -637,7 +637,7 @@ export class PostsService {
             }
 
             if (comment) {
-              console.log('Comment react count:', comment.react_count);
+              //console.log('Comment react count:', comment.react_count);
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
@@ -658,7 +658,7 @@ export class PostsService {
 
             await newReaction.save();
           } else if (existingReaction.react_type !== reactionType) {
-            console.log('got here');
+            //console.log('got here');
             if (post) {
               post.react_count[existingReaction.react_type] =
                 (post.react_count[existingReaction.react_type] || 1) - 1;
@@ -687,13 +687,13 @@ export class PostsService {
             }
 
             if (comment) {
-              console.log('Comment react count:', comment.react_count);
+              //console.log('Comment react count:', comment.react_count);
               comment.react_count[existingReaction.react_type] =
                 (comment.react_count[existingReaction.react_type] || 1) - 1;
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
-              console.log('Comment react count after :', comment.react_count);
+              //console.log('Comment react count after :', comment.react_count);
               await comment.save();
               existingReaction.react_type = reactionType;
               deleteNotification(
