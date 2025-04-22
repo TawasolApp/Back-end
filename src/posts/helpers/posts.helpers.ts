@@ -70,7 +70,7 @@ export async function getCommentInfo(
   if (comment.author_type === 'User') {
     authorProfile = await profileModel.findById(comment.author_id).exec();
 
-    console.log('authorProfile', authorProfile);
+    //console.log('authorProfile', authorProfile);
     if (authorProfile) {
       authorProfilePicture =
         'profile_picture' in authorProfile
@@ -84,7 +84,7 @@ export async function getCommentInfo(
     }
   } else if (comment.author_type === 'Company') {
     authorProfile = await companyModel.findById(comment.author_id).exec();
-    console.log('authorProfile', authorProfile);
+    //console.log('authorProfile', authorProfile);
     if (authorProfile) {
       if ('logo' in authorProfile) {
         authorProfilePicture =
@@ -187,7 +187,7 @@ export async function getPostInfo(
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
   let authorBio: string | undefined;
-  console.log('post', post);
+  //console.log('post', post);
   //   console.log(post);
   if (post.author_type === 'User') {
     authorProfile = await profileModel
@@ -204,7 +204,7 @@ export async function getPostInfo(
     authorProfile = await companyModel
       .findById(new Types.ObjectId(post.author_id))
       .exec();
-    console.log('authorProfile', authorProfile);
+    //console.log('authorProfile', authorProfile);
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
     }
@@ -221,7 +221,7 @@ export async function getPostInfo(
     parentPost = await postModel.findOne({ _id: post.parent_post_id }).exec();
 
     if (!parentPost) {
-      console.log('Parent post not found');
+      //console.log('Parent post not found');
     } else {
       parentPostDto = await getPostInfo(
         parentPost,
@@ -330,4 +330,20 @@ export async function getReactionInfo(
   }
 
   return mapReactionToDto(reaction, authorProfile, authorProfilePicture);
+}
+
+export async function getUserAccessed(
+  userId: string,
+  companyId: string,
+  companyManagerModel,
+): Promise<string> {
+  if (userId === companyId) return userId;
+  await companyManagerModel.findOne({
+    user_id: new Types.ObjectId(userId),
+    company_id: new Types.ObjectId(companyId),
+  });
+  if (!companyManagerModel) {
+    throw new NotFoundException('User does not have access to this company');
+  }
+  return companyId;
 }

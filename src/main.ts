@@ -13,7 +13,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: '*', // Allow any origin
-  });  
+  });
 
   // Swagger configuration
   const config = new DocumentBuilder()

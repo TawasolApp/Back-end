@@ -1485,19 +1485,6 @@ describe('ProfilesService', () => {
         NotFoundException,
       );
     });
-
-    // it('should throw BadRequestException on general DB error', async () => {
-    //   const execMock = jest.fn().mockRejectedValue(new Error('DB crash'));
-    //   const selectMock = jest.fn(() => ({ exec: execMock }));
-
-    //   jest
-    //     .spyOn(mockUserModel, 'findById')
-    //     .mockReturnValue({ select: selectMock } as any);
-
-    //   await expect(
-    //     service.getUserFirstLastName(mockProfile._id),
-    //   ).rejects.toThrow(BadRequestException);
-    // });
   });
 
   describe('updateUserFirstName', () => {

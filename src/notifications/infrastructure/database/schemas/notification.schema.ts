@@ -12,10 +12,13 @@ export class Notification {
   _id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })
-  user_id: Types.ObjectId;
+  sender_id: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  receiver_id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, required: true, refPath: 'reported_type' })
-  reference_id: Types.ObjectId;
+  item_id: Types.ObjectId;
 
   @Prop({
     enum: ['React', 'Comment', 'Message', 'UserConnection'],

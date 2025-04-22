@@ -93,7 +93,7 @@ export class NotificationSeeder {
 
     for (let i = 0; i < count; i++) {
       const type = faker.helpers.arrayElement(types);
-      let referenceId, sentAt, receiver, content;
+      let referenceId, sentAt, receiver, content, senderId;
 
       switch (type) {
         case 'React': {
@@ -111,12 +111,14 @@ export class NotificationSeeder {
             const comment = commentsMap.get(react.post_id.toString());
             if (!comment) continue;
             receiver = comment.author_id;
-            content = `${senderName} reacted to your comment`;
+            content = `reacted to your comment`;
+            senderId = react.user_id;
           } else {
             const post = postsMap.get(react.post_id.toString());
             if (!post) continue;
             receiver = post.author_id;
-            content = `${senderName} reacted to your post`;
+            content = `reacted to your post`;
+            senderId = react.user_id;
           }
           break;
         }
@@ -136,7 +138,8 @@ export class NotificationSeeder {
           if (!post) continue;
 
           receiver = post.author_id;
-          content = `${commenterName} commented on your post`;
+          senderId = comment.author_id;
+          content = `commented on your post`;
           break;
         }
 
@@ -163,7 +166,8 @@ export class NotificationSeeder {
           if (!receiverId) continue;
 
           receiver = receiverId;
-          content = `${senderName} sent you a message`;
+          senderId = message.sender_id;
+          content = `sent you a message`;
           break;
         }
 
@@ -179,11 +183,12 @@ export class NotificationSeeder {
 
           const senderName = `${sender.first_name} ${sender.last_name}`;
           receiver = connection.receiving_party;
+          senderId = connection.sending_party;
 
           content =
             connection.status === ConnectionStatus.Pending
-              ? `${senderName} sent you a connection request`
-              : `${senderName} followed you`;
+              ? `sent you a connection request`
+              : `followed you`;
           break;
         }
       }
@@ -191,8 +196,9 @@ export class NotificationSeeder {
       if (!receiver || !referenceId) continue;
 
       notifications.push({
-        user_id: receiver,
-        reference_id: referenceId,
+        sender_id: senderId,
+        receiver_id: receiver,
+        item_id: referenceId,
         reference_type: type,
         content,
         seen: faker.datatype.boolean(),

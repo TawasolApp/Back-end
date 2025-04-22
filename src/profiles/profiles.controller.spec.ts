@@ -120,11 +120,6 @@ describe('ProfilesController', () => {
         UnauthorizedException,
       );
     });
-    // it('should throw BadRequestException for invalid ObjectId', async () => {
-    //   await expect(controller.getMyProfile(req)).rejects.toThrow(
-    //     BadRequestException,
-    //   );
-    // });
   });
 
   describe('updateProfile', () => {
@@ -964,22 +959,6 @@ describe('ProfilesController - Work-Experience Methods', () => {
           ),
         ).rejects.toThrow(UnauthorizedException);
       });
-
-      // it('should throw InternalServerErrorException if service fails', async () => {
-      //   mockProfilesService.editWorkExperience.mockImplementation(() => {
-      //     throw new Error('Edit failed');
-      //   });
-
-      //   const req = { user: { sub: mockUserId } };
-
-      //   await expect(
-      //     controller.editWorkExperience(
-      //       req,
-      //       mockUpdatedDto,
-      //       new Types.ObjectId(mockWorkExperienceId),
-      //     ),
-      //   ).rejects.toThrow(InternalServerErrorException);
-      // });
     });
 
     describe('deleteWorkExperience', () => {
@@ -1006,18 +985,6 @@ describe('ProfilesController - Work-Experience Methods', () => {
           controller.deleteWorkExperience(req, mockWorkExperienceId),
         ).rejects.toThrow(UnauthorizedException);
       });
-
-      // it('should throw InternalServerErrorException if service fails', async () => {
-      //   mockProfilesService.deleteWorkExperience.mockImplementation(() => {
-      //     throw new Error('Delete failed');
-      //   });
-
-      //   const req = { user: { sub: mockUserId } };
-
-      //   await expect(
-      //     controller.deleteWorkExperience(req, mockWorkExperienceId),
-      //   ).rejects.toThrow(InternalServerErrorException);
-      // });
     });
   });
 });
