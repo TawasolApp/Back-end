@@ -6,7 +6,6 @@ import {
   Visibility,
   EmploymentType,
   LocationType,
-  PlanType,
   ProfileStatus,
 } from '../enums/profile-enums';
 
@@ -75,23 +74,6 @@ class WorkExperience {
 
 }
 
-class PlanDetails {
-  planType: PlanType;
-
-  startDate: string;
-
-  expiryDate: string;
-
-  autoRenewal: boolean;
-
-  cancelDate?: string;
-}
-
-class PlanStatistics {
-  messageCount: number;
-
-  applicationCount: number;
-}
 
 export class GetProfileDto {
   _id: Types.ObjectId;

@@ -163,7 +163,9 @@ describe('CompaniesService', () => {
         },
       ],
     }).compile();
+
     service = module.get<CompaniesService>(CompaniesService);
+
     companyModel = module.get(getModelToken(Company.name));
     companyConnectionModel = module.get(getModelToken(CompanyConnection.name));
     companyManagerModel = module.get(getModelToken(CompanyManager.name));
@@ -457,11 +459,11 @@ describe('CompaniesService', () => {
       const userId = mockProfiles[0]._id.toString();
       const companyId = mockCompanies[0]._id.toString();
       companyModel.findById.mockImplementationOnce(() => {
-        throw new Error('Unexpected error');
+        throw new Error('Unexpected Error');
       });
       await service.getCompanyDetails(userId, companyId);
       expect(handleError).toHaveBeenCalledWith(
-        new Error('Unexpected error'),
+        new Error('Unexpected Error'),
         'Failed to retrieve company details.',
       );
     });
@@ -579,11 +581,11 @@ describe('CompaniesService', () => {
       const page = 1;
       const limit = 5;
       companyModel.find.mockImplementationOnce(() => {
-        throw new Error('Unexpected error');
+        throw new Error('Unexpected Error');
       });
       await service.filterCompanies(userId, page, limit);
       expect(handleError).toHaveBeenCalledWith(
-        new Error('Unexpected error'),
+        new Error('Unexpected Error'),
         'Failed to retrieve list of companies.',
       );
     });
@@ -1254,6 +1256,36 @@ describe('CompaniesService', () => {
       expect(handleError).toHaveBeenCalledWith(
         new ForbiddenException(
           'Logged in user does not have management access to this company.',
+        ),
+        'Failed to provide company employer access to user.',
+      );
+    });
+
+    it('should throw ConflictException if the new user is already a manager of the company (profileId1 → companyId1)', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const companyId = mockCompanies[0]._id.toString();
+      const addAccessDto = { newUserId: mockProfiles[0]._id.toString() };
+      companyModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
+      });
+      userModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockUsers[0]),
+      });
+      companyManagerModel.findOne = jest
+        .fn()
+        .mockImplementationOnce(() => ({
+          lean: jest.fn().mockResolvedValueOnce(mockCompanyManagers[0]),
+        }))
+        .mockImplementationOnce(() => ({
+          lean: jest.fn().mockResolvedValueOnce(mockCompanyManagers[0]),
+        }));
+      companyEmployerModel.findOne = jest.fn().mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(null),
+      });
+      await service.addCompanyEmployer(userId, companyId, addAccessDto);
+      expect(handleError).toHaveBeenCalledWith(
+        new ConflictException(
+          'User already has management access to this company.',
         ),
         'Failed to provide company employer access to user.',
       );

@@ -29,7 +29,8 @@
     "@nestjs/mongoose": "^11.0.1",
     "@nestjs/passport": "^11.0.5",
     "@nestjs/platform-express": "^11.0.13",
-    "@nestjs/swagger": "^11.0.7",
+    "@nestjs/platform-socket.io": "^11.0.20",
+    "@nestjs/swagger": "^11.1.4",
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "class-transformer": "^0.5.1",
@@ -37,6 +38,7 @@
     "cloudinary": "^2.6.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
+    "firebase-admin": "^13.2.0",
     "google-auth-library": "^9.15.1",
     "jsonwebtoken": "^9.0.2",
     "lodash": "^4.17.21",
@@ -48,6 +50,8 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

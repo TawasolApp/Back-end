@@ -46,6 +46,15 @@ import {
   UserConnection,
   UserConnectionSchema,
 } from '../connections/infrastructure/database/schemas/user-connection.schema';
+import {
+  Notification,
+  NotificationSchema,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  CompanyManager,
+  CompanyManagerSchema,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 @Module({
   imports: [
@@ -58,6 +67,8 @@ import {
       { name: Company.name, schema: CompanySchema },
       { name: Profile.name, schema: ProfileSchema },
       { name: UserConnection.name, schema: UserConnectionSchema },
+      { name: Notification.name, schema: NotificationSchema },
+      { name: CompanyManager.name, schema: CompanyManagerSchema },
     ]),
     AuthModule,
     CompaniesModule,
@@ -82,6 +93,7 @@ import {
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    NotificationGateway,
   ],
   exports: [
     PostSeeder,

@@ -17,7 +17,6 @@ import {
   Visibility,
   EmploymentType,
   LocationType,
-  PlanType,
 } from '../enums/profile-enums';
 
 // class Education {
@@ -123,51 +122,6 @@ import {
 //   @IsString()
 //   description?: string;
 // }
-
-class PlanDetails {
-  @ApiProperty({
-    description: 'Subscription plan type',
-    example: 'monthly',
-    enum: PlanType,
-  })
-  @IsNotEmpty()
-  @IsEnum(PlanType)
-  planType: PlanType;
-
-  @ApiProperty({ description: 'Start date of the plan', example: '2023-01-01' })
-  @IsNotEmpty()
-  @IsString()
-  startDate: string;
-
-  @ApiProperty({
-    description: 'Expiry date of the plan',
-    example: '2023-12-31',
-  })
-  @IsNotEmpty()
-  @IsString()
-  expiryDate: string;
-
-  @ApiProperty({ description: 'Whether the plan auto-renews', example: true })
-  @IsNotEmpty()
-  @IsBoolean()
-  autoRenewal: boolean;
-
-  @ApiPropertyOptional({
-    description: 'Cancel date of the plan',
-    example: '2023-12-31',
-  })
-  @IsOptional()
-  @IsString()
-  cancelDate?: string;
-}
-
-class PlanStatistics {
-  @ApiProperty({ description: 'Message count', example: 10 })
-  messageCount: number;
-
-  @ApiProperty({ description: 'Application count', example: 5 })
-  applicationCount: number;
-}
 
 export class CreateProfileDto {
   @ApiPropertyOptional({
