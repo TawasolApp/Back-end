@@ -108,8 +108,8 @@ export class WorkExperience {
   @Prop()
   location: string;
 
-  @Prop({ enum: ['on_site', 'hybrid', 'remote'] })
-  location_type: string;
+  @Prop({ enum: [LocationType] })
+  location_type: LocationType;
 
   @Prop()
   description: string;

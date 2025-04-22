@@ -1,7 +1,6 @@
 import { Types } from 'mongoose';
 import {
   Certification,
-  Education,
   Profile,
 } from '../infrastructure/database/schemas/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
@@ -17,7 +16,6 @@ import {
   LocationType,
   ProfileStatus,
 } from '../enums/profile-enums';
-import { Company } from 'src/companies/infrastructure/database/schemas/company.schema';
 
 /**
  * Maps CreateProfileDto to the Profile schema.

@@ -16,8 +16,6 @@ import {
   UserSchema,
 } from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesModule } from '../companies/companies.module';
-import { PostsService } from '../posts/posts.service';
-import { PostsModule } from '../posts/posts.module';
 
 @Module({
   imports: [
