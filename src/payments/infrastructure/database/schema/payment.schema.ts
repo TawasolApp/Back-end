@@ -17,8 +17,8 @@ export class Payment {
   @Prop()
   amount: number;
 
-  @Prop({ required: true })
-  status: 'Success' | 'Failed' | 'Pending';
+  @Prop()
+  status: boolean; // 1 for success, 0 for failed
 
   @Prop()
   transaction_id?: string;
