@@ -18,10 +18,7 @@ export class Payment {
   amount: number;
 
   @Prop()
-  status: boolean; // 1 for success, 0 for failed
-
-  @Prop()
-  transaction_id?: string;
+  is_success: boolean; // 1 for success, 0 for failed
   
   @Prop()
   session_id?: string;
