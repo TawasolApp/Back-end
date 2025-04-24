@@ -114,7 +114,7 @@ export class JobsService {
     }
   }
 
-  async getJob(jobId: string): Promise<GetJobDto> {
+  async getJob(jobId: string, userId: string): Promise<GetJobDto> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
@@ -122,7 +122,24 @@ export class JobsService {
       if (!job) {
         throw new NotFoundException('Job not found.');
       }
-      return toGetJobDto(job);
+
+      const jobDto = toGetJobDto(job);
+
+    
+      jobDto.isSaved =
+        job.saved_by?.some((id) => id.toString() === userId) || false;
+
+      // Check if the user has applied for this job and get the status
+      const application = await this.applicationModel
+        .findOne({
+          job_id: new Types.ObjectId(jobId),
+          user_id: new Types.ObjectId(userId),
+        })
+        .lean();
+
+      jobDto.status = application?.status || null;
+
+      return jobDto;
     } catch (error) {
       handleError(error, 'Failed to retrieve job details.');
     }
@@ -145,7 +162,7 @@ export class JobsService {
     userId: string,
     jobId: string,
     page: number,
-    limit: number
+    limit: number,
   ): Promise<GetUserDto[]> {
     try {
       const job = await this.jobModel

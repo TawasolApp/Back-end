@@ -57,12 +57,15 @@ export class Job {
 
   @Prop()
   open: boolean;
-  
+
   @Prop({
     type: String,
     default: () => new Date().toISOString(),
   })
   posted_at: string;
+
+  @Prop({ type: [Types.ObjectId], ref: 'User', default: [] })
+  saved_by: Types.ObjectId[];
 }
 
 export const JobSchema = SchemaFactory.createForClass(Job);
