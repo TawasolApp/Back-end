@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import {
@@ -24,49 +24,65 @@ export class NotificationsService {
   ) {}
 
   async getNotifications(userId: string): Promise<GetNotificationsDto[]> {
-    const notifications = await this.notificationModel
-      .find({ receiver_id: new Types.ObjectId(userId) }) // Fetch notifications for the authenticated user
-      .sort({ timestamp: -1 })
-      .lean();
+    try {
+      const notifications = await this.notificationModel
+        .find({ receiver_id: new Types.ObjectId(userId) })
+        .sort({ timestamp: -1 })
+        .lean();
 
-    const mappedNotifications = await Promise.all(
-      notifications.map((notification) =>
-        mapToGetNotificationsDto(
-          notification,
-          this.profileModel,
-          this.companyModel,
+      const mappedNotifications = await Promise.all(
+        notifications.map((notification) =>
+          mapToGetNotificationsDto(
+            notification,
+            this.profileModel,
+            this.companyModel,
+          ),
         ),
-      ),
-    );
+      );
 
-    // Filter out null values (notifications with missing senders)
-    return mappedNotifications.filter(
-      (notification) => notification !== null,
-    ) as GetNotificationsDto[];
+      return mappedNotifications.filter(
+        (notification) => notification !== null,
+      ) as GetNotificationsDto[];
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch notifications');
+    }
   }
 
   async markAsRead(notificationId: string, userId: string) {
-    const notification = await this.notificationModel
-      .findOne({
-        _id: new Types.ObjectId(notificationId),
-        receiver_id: new Types.ObjectId(userId),
-      })
-      .exec();
-    if (!notification) {
-      throw new Error('Notification not found or access denied');
+    try {
+      const notification = await this.notificationModel
+        .findOne({
+          _id: new Types.ObjectId(notificationId),
+          receiver_id: new Types.ObjectId(userId),
+        })
+        .exec();
+      if (!notification) {
+        throw new Error('Notification not found or access denied');
+      }
+      notification.seen = true;
+      await notification.save();
+      return { message: 'Notification marked as read' };
+    } catch (error) {
+      if (error.message === 'Notification not found or access denied') {
+        throw new InternalServerErrorException(error.message);
+      }
+      throw new InternalServerErrorException(
+        'Failed to mark notification as read',
+      );
     }
-    notification.seen = true;
-    await notification.save();
-    return { message: 'Notification marked as read' };
   }
 
   async getUnseenCount(userId: string): Promise<{ unseenCount: number }> {
-    {
+    try {
       const unseenCount = await this.notificationModel.countDocuments({
         receiver_id: new Types.ObjectId(userId),
         seen: false,
       });
       return { unseenCount };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to fetch unseen notification count',
+      );
     }
   }
 }
