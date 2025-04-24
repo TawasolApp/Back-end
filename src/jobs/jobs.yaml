@@ -50,35 +50,9 @@ components:
           format: date-time
         status:
           type: string
-          enum: [Pending, Viewed, Rejected, Accepted, null]
+          enum: [Pending, Viewed, Rejected, Accepted]
 
-    Job:
-      type: object
-      properties:
-        id:
-          type: string
-        title:
-          type: string
-        company:
-          type: string
-        company_logo:
-          type: string
-          description: Retrieved from associated Company model (not stored directly in Job schema)
-        location:
-          type: string
-        description:
-          type: string
-        salary:
-          type: number
-        industry:
-          type: string
-        postedDate:
-          type: string
-          format: date-time
-        employment_type:
-          type: string
-          enum: [Full-time, Part-time, Internship, Apprenticeship, Contract]
-
+  
     Application:
       type: object
       properties:
@@ -129,7 +103,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Job'
+                  $ref: '#/components/schemas/GetJobDto'
 
  
   /jobs/{jobId}:
@@ -206,18 +180,7 @@ paths:
         '200':
           description: Job unsaved
 
-  /jobs/saved:
-    get:
-      summary: Get saved jobs
-      responses:
-        '200':
-          description: List of saved jobs
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Job'
+  
 
   /jobs/{jobId}/applications:
     get:
@@ -239,24 +202,35 @@ paths:
         '403':
           description: Forbidden (non-manager access)
 
-  /applications/status:
+
+  /jobs/saved:
     get:
-      summary: Get your application statuses
+      summary: Get all jobs saved by the user
+      description: Retrieve a list of jobs that the authenticated user has saved.
       responses:
         '200':
-          description: Applications list with job status
+          description: Successfully retrieved saved jobs
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    jobId:
-                      type: string
-                    jobTitle:
-                      type: string
-                    status:
-                      type: string
-                    appliedDate:
-                      type: string
+                  $ref: '#/components/schemas/GetJobDto'
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /applications/applied:
+    get:
+      summary: Get all applications made by the user
+      description: Retrieve a list of all job applications submitted by the authenticated user.
+      responses:
+        '200':
+          description: Successfully retrieved applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Application'
+        '401':
+          description: Unauthorized (user not logged in)

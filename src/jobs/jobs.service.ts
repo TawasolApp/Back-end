@@ -210,4 +210,5 @@ export class JobsService {
       handleError(error, 'Failed to retrieve job applicants.');
     }
   }
+
 }

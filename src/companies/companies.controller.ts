@@ -263,7 +263,7 @@ export class CompaniesController {
     }
     validateId(jobId, 'job');
     const userId = request.user['sub'];
-    const jobDto = await this.jobsService.getJob(jobId);
+    const jobDto = await this.jobsService.getJob(jobId,userId);
     return jobDto;
   }
 
