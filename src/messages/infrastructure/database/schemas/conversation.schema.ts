@@ -14,7 +14,7 @@ export class Conversation {
   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], required: true })
   participants: Types.ObjectId[];
 
-  @Prop({ type: Types.ObjectId, ref: 'Message', required: true })
+  @Prop({ type: Types.ObjectId, ref: 'Message'})
   last_message_id: Types.ObjectId;
 
   @Prop()
