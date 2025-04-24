@@ -113,10 +113,13 @@ describe('ConnectionsService', () => {
       result.map((profile) => profile.firstName + ' ' + profile.lastName),
     ).toEqual(['Testing User1', 'Testing User3']);
     expect(profileModel.find).toHaveBeenCalledWith({
-      $or: [
-        { first_name: { $regex: 'testing', $options: 'i' } },
-        { last_name: { $regex: 'testing', $options: 'i' } },
-      ],
+      $expr: {
+        $regexMatch: {
+          input: { $concat: ['$first_name', ' ', '$last_name'] },
+          regex: 'testing',
+          options: 'i',
+        },
+      },
     });
   });
 
