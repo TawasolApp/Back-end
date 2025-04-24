@@ -11,7 +11,7 @@ import {
   Delete,
   UsePipes,
 } from '@nestjs/common';
-import { PaymentService } from './payment.service';
+import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
@@ -19,8 +19,8 @@ import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe())
 @Controller('premium-plan')
-export class PaymentController {
-  constructor(private readonly paymentService: PaymentService) {}
+export class PaymentsController {
+  constructor(private readonly paymentService: PaymentsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)

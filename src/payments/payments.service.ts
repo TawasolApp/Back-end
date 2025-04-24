@@ -23,12 +23,12 @@ import {
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @Injectable()
-export class PaymentService {
+export class PaymentsService {
   private stripe: Stripe;
 
   private readonly MONTHLY_PRICE = 70;
   private readonly YEARLY_PRICE = 700;
-  private readonly CURRENCY = 'EGP';
+  private readonly CURRENCY = 'usd';
   private readonly SUCCESS_URL = 'http://localhost:3000/payment-success';
   private readonly CANCEL_URL = 'http://localhost:3000/payment-cancel';
 
@@ -38,7 +38,9 @@ export class PaymentService {
     private planDetailModel: Model<PlanDetailDocument>,
     @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
   ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+    this.stripe = new Stripe(
+      'sk_test_51RGSKsRxKmlmf6E0fkG88mb8kL7R7sDwmlsquKH1MRIjAgWfqt61uuoBfqXeaQc7683YPpQP5FoEZ4LX4VYt31hk00NdyOorkD',
+    );
   }
 
   async createCheckoutSession(userId: string, upgradePlanDto: UpgradePlanDto) {
