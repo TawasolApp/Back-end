@@ -359,11 +359,20 @@ export class PostsService {
 
         if (
           post.visibility === 'Public' &&
-          !followingUserIds.some((id) => id.toString() === authorIdStr) &&
-          !connectedUserIds.some((id) => id.toString() === authorIdStr)
+          !isIdInArray(followingUserIds, authorIdStr) &&
+          !isIdInArray(connectedUserIds, authorIdStr)
         ) {
           // 50% chance to show public post of unrelated user
           return Math.random() < 0.5;
+        }
+
+        function isIdInArray(array: Types.ObjectId[], id: string): boolean {
+          for (const item of array) {
+            if (item.toString() === id) {
+              return true;
+            }
+          }
+          return false;
         }
 
         return false;
@@ -529,6 +538,8 @@ export class PostsService {
         companyId,
         this.companyManagerModel,
       );
+      console.log('authorId:', authorId);
+      console.log('post.author_id:', post.author_id.toString());
       if (post.author_id.toString() !== authorId) {
         throw new ForbiddenException('User not authorized to delete this post');
       }
@@ -742,14 +753,14 @@ export class PostsService {
               existingReaction.react_type = reactionType;
               deleteNotification(
                 this.notificationModel,
-                new Types.ObjectId(existingReaction._id),
+                new Types.ObjectId(existingReaction._id), // Pass the item
               );
 
               addNotification(
                 this.notificationModel, // Pass the notification model
-                new Types.ObjectId(authorId),
-                new Types.ObjectId(post.author_id),
-                new Types.ObjectId(existingReaction._id),
+                new Types.ObjectId(authorId), // Pass the sender
+                new Types.ObjectId(post.author_id), // Pass the receiver
+                new Types.ObjectId(existingReaction._id), // Pass the item
                 'React',
                 `reacted to your post`,
                 new Date(),
@@ -1399,15 +1410,6 @@ export class PostsService {
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
 
-    // console.log(
-    //   'searchPosts',
-    //   userId,
-    //   query,
-    //   networkOnly,
-    //   timeframe,
-    //   page,
-    //   limit,
-    // );
     try {
       const authorId = await getUserAccessed(
         userId,
