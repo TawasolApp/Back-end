@@ -1,0 +1,236 @@
+openapi: 3.0.0
+info:
+  title: Jobs & Hiring API
+  description: API documentation for Module 7 (Jobs & Hiring).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    GetJobDto:
+      type: object
+      properties:
+        jobId:
+          type: string
+        companyId:
+          type: string
+        position:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        experienceLevel:
+          type: string
+          enum: [Entry, Mid, Senior]
+        employmentType:
+          type: string
+          enum: [Full-time, Part-time, Internship, Apprenticeship, Contract]
+        locationType:
+          type: string
+          enum: [On-site, Remote, Hybrid]
+        applicationLink:
+          type: string
+          format: uri
+        applicants:
+          type: number
+        isOpen:
+          type: boolean
+        isSaved:
+          type: boolean
+        postedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Pending, Viewed, Rejected, Accepted]
+
+  
+    Application:
+      type: object
+      properties:
+        applicantId:
+          type: string
+        status:
+          type: string
+          enum: [Pending, Viewed, Rejected, Accepted]
+        appliedDate:
+          type: string
+          format: date-time
+
+security:
+  - BearerAuth: []
+
+paths:
+  /jobs:
+    get:
+      summary: Get a list of job postings
+      description: Filter by keyword, location, industry, experience level, company, or salary range
+      parameters:
+        - name: keyword
+          in: query
+          schema: { type: string }
+        - name: location
+          in: query
+          schema: { type: string }
+        - name: industry
+          in: query
+          schema: { type: string }
+        - name: experienceLevel
+          in: query
+          schema: { type: string }
+        - name: company
+          in: query
+          schema: { type: string }
+        - name: minSalary
+          in: query
+          schema: { type: number }
+        - name: maxSalary
+          in: query
+          schema: { type: number }
+      responses:
+        '200':
+          description: Successfully retrieved jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetJobDto'
+
+ 
+  /jobs/{jobId}:
+    get:
+      summary: Get job details
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetJobDto'
+        '404':
+          description: Job not found
+
+
+    delete:
+      summary: Delete a job (only manager)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted successfully
+        '403':
+          description: Forbidden (not a manager)
+
+  /jobs/apply:
+    post:
+      summary: Apply for a job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                jobId:
+                  type: string
+      responses:
+        '201':
+          description: Applied successfully
+        '400':
+          description: Missing required fields
+
+  /jobs/{jobId}/save:
+    patch:
+      summary: Save a job (user is inferred from token)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Job saved
+
+  /jobs/{jobId}/unsave:
+    delete:
+      summary: Unsave a job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Job unsaved
+
+  
+
+  /jobs/{jobId}/applications:
+    get:
+      summary: Get applications for a job (manager only)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Applications retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Application'
+        '403':
+          description: Forbidden (non-manager access)
+
+
+  /jobs/saved:
+    get:
+      summary: Get all jobs saved by the user
+      description: Retrieve a list of jobs that the authenticated user has saved.
+      responses:
+        '200':
+          description: Successfully retrieved saved jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GetJobDto'
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /applications/applied:
+    get:
+      summary: Get all applications made by the user
+      description: Retrieve a list of all job applications submitted by the authenticated user.
+      responses:
+        '200':
+          description: Successfully retrieved applications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Application'
+        '401':
+          description: Unauthorized (user not logged in)

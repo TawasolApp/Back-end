@@ -36,7 +36,7 @@ export class GetJobDto {
 
   @IsString()
   @IsNotEmpty()
-  location: string
+  location: string;
 
   @IsEnum(ExperienceLevel)
   @IsOptional()
@@ -54,7 +54,7 @@ export class GetJobDto {
   @IsOptional()
   applicationLink?: string;
 
-  // only display for posting company
+
   @IsNumber()
   @IsOptional()
   applicants: number;
@@ -63,8 +63,16 @@ export class GetJobDto {
   @IsNotEmpty()
   isOpen: boolean;
 
+  @IsBoolean()
+  @IsNotEmpty()
+  isSaved: boolean;
+
   @IsString()
   @IsISO8601()
   @IsNotEmpty()
   postedAt: string;
+
+  @IsEnum(ApplicationStatus)
+  @IsOptional()
+  status?: ApplicationStatus | null;
 }
