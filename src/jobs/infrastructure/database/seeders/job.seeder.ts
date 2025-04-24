@@ -14,6 +14,10 @@ import {
   Company,
   CompanyDocument,
 } from '../../../../companies/infrastructure/database/schemas/company.schema';
+import {
+  User,
+  UserDocument,
+} from '../../../../users/infrastructure/database/schemas/user.schema';
 
 @Injectable()
 export class JobSeeder {
@@ -22,15 +26,23 @@ export class JobSeeder {
     @InjectModel(Application.name)
     private applicationModel: Model<ApplicationDocument>,
     @InjectModel(Company.name) private companyModel: Model<CompanyDocument>,
+    @InjectModel(User.name) private userModel: Model<UserDocument>, // Inject User model
   ) {}
 
   async seedJobs(count: number): Promise<void> {
     const companies = await this.companyModel.find().select('_id').lean();
+    const users = await this.userModel.find().select('_id').lean(); // Fetch user IDs
 
     if (companies.length === 0) {
       console.log('No eligible companies found. Seeding aborted.');
       return;
     }
+
+    if (users.length === 0) {
+      console.log('No users found. Seeding aborted.');
+      return;
+    }
+
     const jobs: Partial<JobDocument>[] = [];
 
     for (let i = 0; i < count; i++) {
@@ -54,6 +66,12 @@ export class JobSeeder {
             refDate: new Date('2025-04-05'),
           })
           .toISOString(),
+        saved_by: faker.helpers
+          .arrayElements(users, {
+            min: 0,
+            max: Math.min(users.length, 5), 
+          })
+          .map((user) => user._id), 
       });
     }
 
