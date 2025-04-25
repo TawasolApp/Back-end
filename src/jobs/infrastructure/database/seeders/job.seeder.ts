@@ -72,7 +72,7 @@ export class JobSeeder {
             max: Math.min(users.length, 5),
           })
           .map((user) => user._id),
-        is_flagged: false, // Seed with isFlagged set to false
+        is_flagged: Math.random() < 0.2, // 20% chance for true, 80% for false
       });
     }
 
