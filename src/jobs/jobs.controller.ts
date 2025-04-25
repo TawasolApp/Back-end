@@ -51,16 +51,16 @@ export class JobsController {
     return await this.jobsService.getJobs(userId, filters);
   }
 
-  @Get('/jobs/:jobId')
-    @HttpCode(HttpStatus.OK)
-    async getJob(@Param('jobId') jobId: string, @Req() request: Request) {
-      if (!request.user) {
-        throw new UnauthorizedException('User not authenticated.');
-      }
-      const userId = request.user['sub'];
-      const jobDto = await this.jobsService.getJob(jobId,userId);
-      return jobDto;
+  @Get('/:jobId') // Fix the route to match /jobs/:jobId
+  @HttpCode(HttpStatus.OK)
+  async getJob(@Param('jobId') jobId: string, @Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
     }
+    const userId = request.user['sub'];
+    const jobDto = await this.jobsService.getJob(jobId, userId);
+    return jobDto;
+  }
 
   @Delete('/:jobId')
   @HttpCode(HttpStatus.NO_CONTENT)
