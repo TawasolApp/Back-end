@@ -123,13 +123,20 @@ export class JobsService {
         throw new NotFoundException('Job not found.');
       }
 
-      const jobDto = toGetJobDto(job);
+      const company = await this.companyModel.findById(job.company_id).lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
 
-    
+      const jobDto = toGetJobDto(job);
+      jobDto.companyName = company.name;
+      jobDto.companyLogo = company.logo;
+      jobDto.companyLocation = company.location;
+      jobDto.companyDescription = company.description;
+
       jobDto.isSaved =
         job.saved_by?.some((id) => id.toString() === userId) || false;
 
-      // Check if the user has applied for this job and get the status
       const application = await this.applicationModel
         .findOne({
           job_id: new Types.ObjectId(jobId),
@@ -211,4 +218,57 @@ export class JobsService {
     }
   }
 
+  async getJobs(userId: string, filters: any): Promise<GetJobDto[]> {
+    try {
+      const query: any = {};
+
+      if (filters.keyword) {
+        query.position = { $regex: filters.keyword, $options: 'i' };
+      }
+      if (filters.location) {
+        query.location = { $regex: filters.location, $options: 'i' };
+      }
+      if (filters.industry) {
+        const companies = await this.companyModel
+          .find({ industry: { $regex: filters.industry, $options: 'i' } })
+          .select('_id')
+          .lean();
+        query.company_id = { $in: companies.map((c) => c._id) };
+      }
+      if (filters.experienceLevel) {
+        query.experience_level = filters.experienceLevel;
+      }
+      if (filters.company) {
+        const companies = await this.companyModel
+          .find({ name: { $regex: filters.company, $options: 'i' } })
+          .select('_id')
+          .lean();
+        query.company_id = { $in: companies.map((c) => c._id) };
+      }
+      if (filters.minSalary || filters.maxSalary) {
+        query.salary = {};
+        if (filters.minSalary) query.salary.$gte = filters.minSalary;
+        if (filters.maxSalary) query.salary.$lte = filters.maxSalary;
+      }
+
+      const jobs = await this.jobModel.find(query).lean();
+
+      const jobDtos: GetJobDto[] = [];
+      for (const job of jobs) {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company?.name || null;
+        jobDto.companyLogo = company?.logo || null;
+        jobDto.companyLocation = company?.location || null;
+        jobDto.companyDescription = company?.description || null;
+        jobDto.isSaved =
+          job.saved_by?.some((id) => id.toString() === userId) || false;
+        jobDtos.push(jobDto);
+      }
+
+      return jobDtos;
+    } catch (error) {
+      handleError(error, 'Failed to retrieve jobs.');
+    }
+  }
 }

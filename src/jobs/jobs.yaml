@@ -21,6 +21,15 @@ components:
           type: string
         companyId:
           type: string
+        companyName:
+          type: string
+        companyLogo:
+          type: string
+        companyLocation:
+          type: string
+        companyDescription:
+          type: string
+          description: A brief description of the company.
         position:
           type: string
         description:
@@ -52,12 +61,38 @@ components:
           type: string
           enum: [Pending, Viewed, Rejected, Accepted]
 
-  
-    Application:
+    ApplyJobDto:
       type: object
       properties:
+        jobId:
+          type: string
+        phoneNumber:
+          type: string
+        resumeURL:
+          type: string
+          description: "Optional field for the applicant's resume URL"
+
+    ApplicationDto:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          description: The unique ID of the application.
         applicantId:
           type: string
+        applicantName:
+          type: string
+        applicantEmail:
+          type: string
+        applicantPicture:
+          type: string
+        applicantHeadline:
+          type: string
+        applicantPhoneNumber:
+          type: string
+        resumeURL:
+          type: string
+          description: "Optional field for the applicant's resume URL"
         status:
           type: string
           enum: [Pending, Viewed, Rejected, Accepted]
@@ -104,8 +139,11 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/GetJobDto'
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized (user not logged in)
 
- 
   /jobs/{jobId}:
     get:
       summary: Get job details
@@ -123,7 +161,8 @@ paths:
                 $ref: '#/components/schemas/GetJobDto'
         '404':
           description: Job not found
-
+        '401':
+          description: Unauthorized (user not logged in)
 
     delete:
       summary: Delete a job (only manager)
@@ -136,7 +175,11 @@ paths:
         '204':
           description: Deleted successfully
         '403':
-          description: Forbidden (not a manager)
+          description: Forbidden (non-manager access)
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
 
   /jobs/apply:
     post:
@@ -146,15 +189,16 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              properties:
-                jobId:
-                  type: string
+              $ref: '#/components/schemas/ApplyJobDto'
       responses:
         '201':
           description: Applied successfully
         '400':
           description: Missing required fields
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
 
   /jobs/{jobId}/save:
     patch:
@@ -166,7 +210,11 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Job saved
+          description: Job saved successfully
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
 
   /jobs/{jobId}/unsave:
     delete:
@@ -178,9 +226,11 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Job unsaved
-
-  
+          description: Job unsaved successfully
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
 
   /jobs/{jobId}/applications:
     get:
@@ -192,16 +242,19 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Applications retrieved
+          description: Applications retrieved successfully
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Application'
+                  $ref: '#/components/schemas/ApplicationDto'
         '403':
           description: Forbidden (non-manager access)
-
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
 
   /jobs/saved:
     get:
@@ -231,6 +284,40 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Application'
+                  $ref: '#/components/schemas/ApplicationDto'
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /applications/{applicationId}/status:
+    patch:
+      summary: Update the status of an application
+      description: Accept or reject an application by updating its status.
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the application.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Accepted, Rejected]
+                  description: The new status of the application.
+      responses:
+        '200':
+          description: Application status updated successfully
+        '400':
+          description: Invalid input or missing required fields
+        '403':
+          description: Forbidden (non-manager access)
+        '404':
+          description: Application not found
         '401':
           description: Unauthorized (user not logged in)

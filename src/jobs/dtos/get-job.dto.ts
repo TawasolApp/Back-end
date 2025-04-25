@@ -27,6 +27,22 @@ export class GetJobDto {
   companyId: string;
 
   @IsString()
+  @IsOptional()
+  companyName?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyLogo?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyLocation?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyDescription?: string | null;
+
+  @IsString()
   @IsNotEmpty()
   position: string;
 
@@ -53,7 +69,6 @@ export class GetJobDto {
   @IsUrl()
   @IsOptional()
   applicationLink?: string;
-
 
   @IsNumber()
   @IsOptional()
