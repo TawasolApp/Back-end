@@ -7,8 +7,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
-import { Payment, PaymentSchema } from './infrastructure/database/schema/payment.schema';
-import { PlanDetail, PlanDetailSchema } from './infrastructure/database/schema/plan-detail.schema';
+import {
+  Payment,
+  PaymentSchema,
+} from './infrastructure/database/schema/payment.schema';
+import {
+  PlanDetail,
+  PlanDetailSchema,
+} from './infrastructure/database/schema/plan-detail.schema';
 import { PaymentsService } from './payments.service';
 
 @Module({
