@@ -36,11 +36,15 @@ export class GetJobDto {
 
   @IsString()
   @IsOptional()
-  companyLocation?: string | null;
+  companyAddress?: string | null;
 
   @IsString()
   @IsOptional()
   companyDescription?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyLocation?: string | null; // Keep the name as companyLocation
 
   @IsString()
   @IsNotEmpty()

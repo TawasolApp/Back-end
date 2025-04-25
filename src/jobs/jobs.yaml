@@ -25,8 +25,12 @@ components:
           type: string
         companyLogo:
           type: string
+        companyAddress:
+          type: string
+          description: The address of the company.
         companyLocation:
           type: string
+          description: The address of the company.
         companyDescription:
           type: string
           description: A brief description of the company.

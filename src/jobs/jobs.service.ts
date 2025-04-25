@@ -131,7 +131,7 @@ export class JobsService {
       const jobDto = toGetJobDto(job);
       jobDto.companyName = company.name;
       jobDto.companyLogo = company.logo;
-      jobDto.companyLocation = company.location;
+      jobDto.companyLocation = company.address; // Map company.address to companyLocation
       jobDto.companyDescription = company.description;
 
       jobDto.isSaved =
@@ -261,7 +261,7 @@ export class JobsService {
         const jobDto = toGetJobDto(job);
         jobDto.companyName = company?.name || null;
         jobDto.companyLogo = company?.logo || null;
-        jobDto.companyLocation = company?.location || null;
+        jobDto.companyLocation = company?.address || null;
         jobDto.companyDescription = company?.description || null;
         jobDto.isSaved =
           job.saved_by?.some((id) => id.toString() === userId) || false;
