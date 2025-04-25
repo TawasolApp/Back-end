@@ -69,9 +69,10 @@ export class JobSeeder {
         saved_by: faker.helpers
           .arrayElements(users, {
             min: 0,
-            max: Math.min(users.length, 5), 
+            max: Math.min(users.length, 5),
           })
-          .map((user) => user._id), 
+          .map((user) => user._id),
+        is_flagged: false, // Seed with isFlagged set to false
       });
     }
 

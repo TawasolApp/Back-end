@@ -55,4 +55,5 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 .qodo
 documentation.yaml
+jobs.yaml
 

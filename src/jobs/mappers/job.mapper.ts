@@ -31,6 +31,7 @@ export function toGetJobDto(job: Partial<Job>): GetJobDto {
   if (job.applicants != undefined) dto.applicants = job.applicants;
   if (job.open !== undefined) dto.isOpen = job.open;
   if (job.posted_at) dto.postedAt = job.posted_at;
+  if (job.is_flagged !== undefined) dto.isFlagged = job.is_flagged; // Map isFlagged
 
   return dto as GetJobDto;
 }

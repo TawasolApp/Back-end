@@ -68,7 +68,7 @@ export class Job {
   saved_by: Types.ObjectId[];
 
   @Prop({ type: Boolean, default: false }) // Add isFlagged with default value false
-  isFlagged: boolean;
+  is_flagged: boolean;
 }
 
 export const JobSchema = SchemaFactory.createForClass(Job);

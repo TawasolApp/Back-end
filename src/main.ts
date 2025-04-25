@@ -27,6 +27,5 @@ async function bootstrap() {
 
   // Start the application
   await app.listen(process.env.PORT ?? 3000);
-  console.log(process.env.MONGO_URI);
 }
 bootstrap();

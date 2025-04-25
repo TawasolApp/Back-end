@@ -115,7 +115,6 @@ export class AuthService {
     }
 
     if (!user.is_verified) {
-      // Changed from isVerified to is_verified
       throw new ForbiddenException('Email not verified');
     }
 
@@ -126,7 +125,8 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
+      role: user.role, // Include the user's role in the response
+      is_social_login: user.is_social_login,
     };
   }
 

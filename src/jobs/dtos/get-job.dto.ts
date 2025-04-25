@@ -86,6 +86,10 @@ export class GetJobDto {
   @IsNotEmpty()
   isSaved: boolean;
 
+  @IsBoolean()
+  @IsNotEmpty()
+  isFlagged: boolean;
+
   @IsString()
   @IsISO8601()
   @IsNotEmpty()
