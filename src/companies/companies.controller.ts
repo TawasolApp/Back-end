@@ -231,6 +231,16 @@ export class CompaniesController {
     return await this.companiesService.getCommonFollowers(userId, companyId);
   }
 
+  @Get('/managed/list')
+  @HttpCode(HttpStatus.OK)
+  async getManagedCompanies(@Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    const userId = request.user['sub'];
+    return await this.companiesService.getManagedCompanies(userId);
+  }
+
   @Post('/:companyId/jobs')
   @HttpCode(HttpStatus.CREATED)
   async postJob(
@@ -263,7 +273,7 @@ export class CompaniesController {
     }
     validateId(jobId, 'job');
     const userId = request.user['sub'];
-    const jobDto = await this.jobsService.getJob(jobId,userId);
+    const jobDto = await this.jobsService.getJob(jobId, userId);
     return jobDto;
   }
 
@@ -309,7 +319,7 @@ export class CompaniesController {
       userId,
       jobId,
       page,
-      limit
+      limit,
     );
     return applicantsDto;
   }

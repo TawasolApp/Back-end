@@ -1069,4 +1069,35 @@ export class CompaniesService {
       handleError(error, 'Failed to retrieve list of employers.');
     }
   }
+
+  /**
+   * retrieves list of companies managed by a user.
+   *
+   * @param userId - ID of currently logged in user.
+   * @returns array of GetCompanyDto - managed companies.
+   *
+   * function flow:
+   * 1. fetches the companies managed by userId.
+   * 2. returns the managed companies.
+   */
+  async getManagedCompanies(
+    id: string,
+  ): Promise<GetCompanyDto[]> {
+    try {
+      const managedCompanies = await this.companyManagerModel
+        .find({ manager_id: new Types.ObjectId(id) })
+        .select('company_id')
+        .lean();
+      const managedCompanyIds = managedCompanies.map(
+        (connection) => connection.company_id,
+      );
+      const companies = await this.companyModel
+        .find({ _id: { $in: managedCompanyIds } })
+        .select('_id name logo banner')
+        .lean();
+      return companies.map(toGetCompanyDto);
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of managed companies.');
+    }
+  }
 }
