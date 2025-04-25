@@ -247,8 +247,10 @@ export class JobsService {
       }
       if (filters.minSalary || filters.maxSalary) {
         query.salary = {};
-        if (filters.minSalary) query.salary.$gte = filters.minSalary;
-        if (filters.maxSalary) query.salary.$lte = filters.maxSalary;
+        if (filters.minSalary !== undefined)
+          query.salary.$gte = Number(filters.minSalary);
+        if (filters.maxSalary !== undefined)
+          query.salary.$lte = Number(filters.maxSalary);
       }
 
       const jobs = await this.jobModel.find(query).lean();
@@ -269,6 +271,35 @@ export class JobsService {
       return jobDtos;
     } catch (error) {
       handleError(error, 'Failed to retrieve jobs.');
+    }
+  }
+
+  async deleteJob(userId: string, jobId: string): Promise<void> {
+    try {
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      const hasAccess = await this.checkAccess(
+        userId,
+        job.company_id.toString(),
+      );
+      if (!hasAccess) {
+        throw new ForbiddenException(
+          'You do not have permission to delete this job.',
+        );
+      }
+
+      // Delete all applications associated with the job
+      await this.applicationModel.deleteMany({
+        job_id: new Types.ObjectId(jobId),
+      });
+
+      // Delete the job itself
+      await this.jobModel.deleteOne({ _id: new Types.ObjectId(jobId) });
+    } catch (error) {
+      handleError(error, 'Failed to delete job.');
     }
   }
 }
