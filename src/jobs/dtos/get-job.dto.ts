@@ -27,6 +27,26 @@ export class GetJobDto {
   companyId: string;
 
   @IsString()
+  @IsOptional()
+  companyName?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyLogo?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyAddress?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyDescription?: string | null;
+
+  @IsString()
+  @IsOptional()
+  companyLocation?: string | null; // Keep the name as companyLocation
+
+  @IsString()
   @IsNotEmpty()
   position: string;
 
@@ -54,7 +74,6 @@ export class GetJobDto {
   @IsOptional()
   applicationLink?: string;
 
-
   @IsNumber()
   @IsOptional()
   applicants: number;
@@ -66,6 +85,10 @@ export class GetJobDto {
   @IsBoolean()
   @IsNotEmpty()
   isSaved: boolean;
+
+  @IsBoolean()
+  @IsNotEmpty()
+  isFlagged: boolean;
 
   @IsString()
   @IsISO8601()
