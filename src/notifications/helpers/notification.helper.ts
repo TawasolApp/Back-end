@@ -13,7 +13,13 @@ export async function addNotification(
   senderId: Types.ObjectId,
   receiverId: Types.ObjectId,
   referenceId: Types.ObjectId,
-  referenceType: 'React' | 'Comment' | 'UserConnection' | 'Message',
+  rootId: Types.ObjectId,
+  referenceType:
+    | 'React'
+    | 'Comment'
+    | 'UserConnection'
+    | 'Message'
+    | 'JobOffer',
   content: string,
   sentAt: Date,
   notificationGateway: NotificationGateway, // Inject NotificationGateway
@@ -40,6 +46,7 @@ export async function addNotification(
     content,
     seen: false, // Always save as unread
     sent_at: sentAt,
+    root_item_id: rootId,
   });
   console.log(
     `Notification created: ${senderId} -> ${receiverId}, type: ${referenceType}`,

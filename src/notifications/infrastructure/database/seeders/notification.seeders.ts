@@ -93,7 +93,7 @@ export class NotificationSeeder {
 
     for (let i = 0; i < count; i++) {
       const type = faker.helpers.arrayElement(types);
-      let referenceId, sentAt, receiver, content, senderId;
+      let referenceId, sentAt, receiver, content, senderId, rootItemId;
 
       switch (type) {
         case 'React': {
@@ -113,12 +113,14 @@ export class NotificationSeeder {
             receiver = comment.author_id;
             content = `reacted to your comment`;
             senderId = react.user_id;
+            rootItemId = comment.post_id;
           } else {
             const post = postsMap.get(react.post_id.toString());
             if (!post) continue;
             receiver = post.author_id;
             content = `reacted to your post`;
             senderId = react.user_id;
+            rootItemId = post._id;
           }
           break;
         }
@@ -140,6 +142,7 @@ export class NotificationSeeder {
           receiver = post.author_id;
           senderId = comment.author_id;
           content = `commented on your post`;
+          rootItemId = post._id;
           break;
         }
 
@@ -168,6 +171,7 @@ export class NotificationSeeder {
           receiver = receiverId;
           senderId = message.sender_id;
           content = `sent you a message`;
+          rootItemId = conversation._id;
           break;
         }
 
@@ -189,6 +193,7 @@ export class NotificationSeeder {
             connection.status === ConnectionStatus.Pending
               ? `sent you a connection request`
               : `followed you`;
+          rootItemId = connection._id;
           break;
         }
       }
@@ -199,6 +204,7 @@ export class NotificationSeeder {
         sender_id: senderId,
         receiver_id: receiver,
         item_id: referenceId,
+        root_item_id: rootItemId,
         reference_type: type,
         content,
         seen: faker.datatype.boolean(),

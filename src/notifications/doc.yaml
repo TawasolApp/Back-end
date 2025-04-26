@@ -7,12 +7,19 @@ servers:
   - url: http://localhost:3000
     description: Local Development Server
 paths:
-  /notifications:
+  /notifications/{companyId}:
     get:
       summary: Get notifications
-      description: Retrieves notifications for the authenticated user.
+      description: Retrieves notifications for the authenticated user and company.
       security:
         - BearerAuth: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the company.
       responses:
         '200':
           description: List of notifications
@@ -22,12 +29,19 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Notification'
-  /notifications/unseen:
+  /notifications/{companyId}/unseen:
     get:
       summary: Get unseen notifications count
-      description: Returns the number of unseen notifications for the authenticated user.
+      description: Returns the number of unseen notifications for the authenticated user and company.
       security:
         - BearerAuth: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the company.
       responses:
         '200':
           description: Unseen notifications count
@@ -39,21 +53,36 @@ paths:
                   unseenCount:
                     type: integer
                     description: Number of unseen notifications
-  /notifications/{notificationId}/read:
+  /notifications/{companyId}/{notificationId}/read:
     patch:
       summary: Mark a notification as read
-      description: Marks a specific notification as read.
+      description: Marks a specific notification as read for the authenticated user and company.
       security:
         - BearerAuth: []
       parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the company.
         - name: notificationId
           in: path
           required: true
           schema:
             type: string
+          description: The ID of the notification.
       responses:
         '200':
           description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Success message
 components:
   securitySchemes:
     BearerAuth:
@@ -73,9 +102,12 @@ components:
         profilePicture:
           type: string
           description: URL or path to the user's profile picture
-        refrenceId:
+        referenceId:
           type: string
           description: User who triggered the notification
+        rootItemId:
+          type: string
+          description: Root item ID associated with the notification
         senderType:
           type: string
           enum:
