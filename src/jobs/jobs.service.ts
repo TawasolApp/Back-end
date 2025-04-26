@@ -26,6 +26,10 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
 import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
@@ -47,9 +51,17 @@ export class JobsService {
     private readonly companyEmployerModel: Model<CompanyEmployerDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
   ) {}
 
   async checkAccess(userId: string, companyId: string) {
+    const user = await this.userModel
+      .findById(new Types.ObjectId(userId))
+      .lean();
+    if (user?.role === 'admin') {
+      return true; 
+    }
+
     const allowedManager = await this.companyManagerModel
       .findOne({
         manager_id: new Types.ObjectId(userId),
@@ -62,11 +74,8 @@ export class JobsService {
         company_id: new Types.ObjectId(companyId),
       })
       .lean();
-    if (allowedManager || allowedEmployer) {
-      return true;
-    } else {
-      return false;
-    }
+
+    return !!(allowedManager || allowedEmployer);
   }
 
   /**
@@ -258,9 +267,9 @@ export class JobsService {
       if (filters.minSalary || filters.maxSalary) {
         query.salary = {};
         if (filters.minSalary !== undefined)
-          query.salary.$gte = parseFloat(filters.minSalary); 
+          query.salary.$gte = parseFloat(filters.minSalary);
         if (filters.maxSalary !== undefined)
-          query.salary.$lte = parseFloat(filters.maxSalary); 
+          query.salary.$lte = parseFloat(filters.maxSalary);
       }
 
       const totalItems = await this.jobModel.countDocuments(query);
