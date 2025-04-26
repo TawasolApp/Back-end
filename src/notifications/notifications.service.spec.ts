@@ -85,6 +85,7 @@ describe('NotificationsService', () => {
     expect(result).toEqual(mappedNotifications);
     expect(notificationModelMock.find).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
+      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
   });
 
@@ -144,6 +145,7 @@ describe('NotificationsService', () => {
     expect(notificationModelMock.countDocuments).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
       seen: false,
+      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
   });
 
