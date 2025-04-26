@@ -10,6 +10,10 @@ import {
   ConversationDocument,
 } from './infrastructure/database/schemas/conversation.schema';
 import { MessageStatus } from './enums/message-status.enum';
+import {
+  Profile,
+  ProfileDocument,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -17,6 +21,8 @@ export class MessagesService {
     private readonly messageModel: Model<MessageDocument>,
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
+    @InjectModel(Profile.name)
+    private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
   ) {}
 
   async createMessage(
@@ -50,5 +56,46 @@ export class MessagesService {
     await conversation.save();
 
     return { conversation, message: newMessage };
+  }
+
+  async markMessagesAsDelivered(userId: string) {
+    await this.messageModel.updateMany(
+      { receiver_id: userId, status: MessageStatus.Sent },
+      { $set: { status: MessageStatus.Delivered } },
+    );
+  }
+
+  async markMessagesAsRead(conversationId: string, userId: string) {
+    await this.messageModel.updateMany(
+      {
+        conversation_id: conversationId,
+        receiver_id: userId,
+        status: MessageStatus.Delivered,
+      },
+      { $set: { status: MessageStatus.Read } },
+    );
+  }
+
+  async getConversations(userId: Types.ObjectId) {
+    const conversations = await this.conversationModel
+      .find({ participants: userId })
+      .populate({ path: 'participants', model: 'User' })
+      .populate({ path: 'last_message_id', model: 'Message' })
+      .lean();
+
+    const modifiedConversations = conversations.map((conversation) => {
+      const otherParticipant = conversation.participants.find(
+        (participant: any) => participant._id.toString() !== userId.toString(),
+      );
+
+      return {
+        _id: conversation._id,
+        last_messaged: conversation.last_message_id,
+        unseen_count: conversation.unseen_count,
+        otherParticipant, // ✅ keep only the other participant
+      };
+    });
+
+    return modifiedConversations;
   }
 }
