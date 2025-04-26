@@ -9,7 +9,11 @@ export type MessageDocument = Message & Document;
   versionKey: false,
 })
 export class Message {
-  @Prop({ type: Types.ObjectId, auto: true })
+  @Prop({
+    type: Types.ObjectId,
+    auto: true,
+    default: () => new Types.ObjectId(),
+  })
   _id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: 'User', required: true })

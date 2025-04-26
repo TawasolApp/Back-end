@@ -8,6 +8,8 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import { Injectable } from '@nestjs/common';
+import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
 
 @WebSocketGateway({
   cors: {
@@ -17,6 +19,7 @@ import { Socket, Server } from 'socket.io';
 export class MessagesGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  constructor(private readonly messagesService: MessagesService) {}
   afterInit(server: Server) {
     console.log('✅ WebSocket server initialized');
   }
@@ -39,7 +42,7 @@ export class MessagesGateway
   }
 
   @SubscribeMessage('send_message')
-  handleMessage(
+  async handleMessage(
     @MessageBody() rawPayload: any,
     @ConnectedSocket() client: Socket,
   ) {
@@ -58,10 +61,20 @@ export class MessagesGateway
     }
 
     console.log('✅ Parsed payload:', payload);
+    const messageDate = new Date();
+
+    const senderId = client.data.userId; // Assuming you attached userId at connect time
+    const { conversation, message } = await this.messagesService.createMessage(
+      senderId,
+      payload.receiverId,
+      payload.text,
+      messageDate,
+    );
 
     client.to(payload.receiverId).emit('receive_message', {
       senderId: client.data.userId,
       text: payload.text,
+      sentAt: messageDate,
     });
 
     console.log(
