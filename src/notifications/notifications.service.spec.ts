@@ -7,6 +7,7 @@ import { Company } from '../companies/infrastructure/database/schemas/company.sc
 import { Types } from 'mongoose';
 import * as notificationHelpers from './helpers/notification.helper';
 import * as notificationMappers from './mappers/notification.mapper';
+import * as postHelpers from '../posts/helpers/posts.helpers';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -52,6 +53,9 @@ describe('NotificationsService', () => {
 
   it('[2] should fetch notifications for a user', async () => {
     const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
+
     const mockNotifications = [
       {
         _id: new Types.ObjectId(),
@@ -72,7 +76,7 @@ describe('NotificationsService', () => {
       .spyOn(notificationMappers, 'mapToGetNotificationsDto')
       .mockResolvedValueOnce(mappedNotifications[0]);
 
-    const result = await service.getNotifications(mockUserId);
+    const result = await service.getNotifications(mockUserId, mockCompanyId);
 
     expect(result).toEqual(mappedNotifications);
     expect(notificationModelMock.find).toHaveBeenCalledWith({
@@ -83,6 +87,8 @@ describe('NotificationsService', () => {
   it('[3] should mark a notification as read', async () => {
     const mockNotificationId = new Types.ObjectId().toString();
     const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
     const mockNotification = {
       _id: mockNotificationId,
       receiver_id: mockUserId,
@@ -94,7 +100,11 @@ describe('NotificationsService', () => {
       exec: jest.fn().mockResolvedValue(mockNotification),
     });
 
-    const result = await service.markAsRead(mockNotificationId, mockUserId);
+    const result = await service.markAsRead(
+      mockNotificationId,
+      mockUserId,
+      mockCompanyId,
+    );
 
     expect(result).toEqual({ message: 'Notification marked as read' });
     expect(mockNotification.seen).toBe(true);
@@ -104,23 +114,27 @@ describe('NotificationsService', () => {
   it('[4] should throw an error if notification not found or access denied', async () => {
     const mockNotificationId = new Types.ObjectId().toString();
     const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
 
     notificationModelMock.findOne.mockReturnValue({
       exec: jest.fn().mockResolvedValue(null),
     });
 
     await expect(
-      service.markAsRead(mockNotificationId, mockUserId),
+      service.markAsRead(mockNotificationId, mockUserId, mockCompanyId),
     ).rejects.toThrow('Notification not found or access denied');
   });
 
   it('[5] should get unseen notification count for a user', async () => {
     const mockUserId = new Types.ObjectId().toString();
     const mockCount = 5;
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
 
     notificationModelMock.countDocuments.mockResolvedValue(mockCount);
 
-    const result = await service.getUnseenCount(mockUserId);
+    const result = await service.getUnseenCount(mockUserId, mockCompanyId);
 
     expect(result).toEqual({ unseenCount: mockCount });
     expect(notificationModelMock.countDocuments).toHaveBeenCalledWith({
@@ -131,38 +145,44 @@ describe('NotificationsService', () => {
 
   it('[6] should handle errors in getNotifications gracefully', async () => {
     const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
 
     notificationModelMock.find.mockImplementation(() => {
       throw new Error('Database error');
     });
 
-    await expect(service.getNotifications(mockUserId)).rejects.toThrow(
-      'Failed to fetch notifications',
-    );
+    await expect(
+      service.getNotifications(mockUserId, mockCompanyId),
+    ).rejects.toThrow('Failed to fetch notifications');
   });
 
   it('[7] should handle errors in markAsRead gracefully', async () => {
     const mockNotificationId = new Types.ObjectId().toString();
     const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
 
     notificationModelMock.findOne.mockImplementation(() => {
       throw new Error('Database error');
     });
 
     await expect(
-      service.markAsRead(mockNotificationId, mockUserId),
+      service.markAsRead(mockNotificationId, mockUserId, mockCompanyId),
     ).rejects.toThrow('Failed to mark notification as read');
   });
 
   it('[8] should handle errors in getUnseenCount gracefully', async () => {
     const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
 
     notificationModelMock.countDocuments.mockImplementation(() => {
       throw new Error('Database error');
     });
 
-    await expect(service.getUnseenCount(mockUserId)).rejects.toThrow(
-      'Failed to fetch unseen notification count',
-    );
+    await expect(
+      service.getUnseenCount(mockUserId, mockCompanyId),
+    ).rejects.toThrow('Failed to fetch unseen notification count');
   });
 });

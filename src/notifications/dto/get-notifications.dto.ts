@@ -21,7 +21,7 @@ export class GetNotificationsDto {
 
   @IsOptional()
   @IsString()
-  refrenceId?: string;
+  referenceId?: string;
 
   @IsOptional()
   @IsEnum(['User', 'Company'])

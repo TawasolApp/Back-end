@@ -11,6 +11,7 @@ import { mapToGetNotificationsDto } from './mappers/notification.mapper';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Types } from 'mongoose';
+import { getUserAccessed } from '../posts/helpers/posts.helpers';
 
 @Injectable()
 export class NotificationsService {
@@ -23,10 +24,19 @@ export class NotificationsService {
     private readonly companyModel: Model<any>,
   ) {}
 
-  async getNotifications(userId: string): Promise<GetNotificationsDto[]> {
+  async getNotifications(
+    userId: string,
+    companyId: string,
+  ): Promise<GetNotificationsDto[]> {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyModel,
+      );
+
       const notifications = await this.notificationModel
-        .find({ receiver_id: new Types.ObjectId(userId) })
+        .find({ receiver_id: new Types.ObjectId(authorId) })
         .sort({ timestamp: -1 })
         .lean();
 
@@ -48,12 +58,18 @@ export class NotificationsService {
     }
   }
 
-  async markAsRead(notificationId: string, userId: string) {
+  async markAsRead(notificationId: string, userId: string, companyId: string) {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyModel,
+      );
+
       const notification = await this.notificationModel
         .findOne({
           _id: new Types.ObjectId(notificationId),
-          receiver_id: new Types.ObjectId(userId),
+          receiver_id: new Types.ObjectId(authorId),
         })
         .exec();
       if (!notification) {
@@ -72,10 +88,19 @@ export class NotificationsService {
     }
   }
 
-  async getUnseenCount(userId: string): Promise<{ unseenCount: number }> {
+  async getUnseenCount(
+    userId: string,
+    companyId: string,
+  ): Promise<{ unseenCount: number }> {
     try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyModel,
+      );
+
       const unseenCount = await this.notificationModel.countDocuments({
-        receiver_id: new Types.ObjectId(userId),
+        receiver_id: new Types.ObjectId(authorId),
         seen: false,
       });
       return { unseenCount };
