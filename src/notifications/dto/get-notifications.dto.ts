@@ -33,7 +33,7 @@ export class GetNotificationsDto {
 
   @IsOptional()
   @IsString()
-  type?: 'React' | 'Comment' | 'UserConnection' | 'Message';
+  type?: 'React' | 'Comment' | 'UserConnection' | 'Message' | 'JobOffer';
 
   @IsOptional()
   @IsString()

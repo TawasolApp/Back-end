@@ -40,7 +40,10 @@ export class NotificationsService {
       console.log('Author ID:', authorId);
 
       const notifications = await this.notificationModel
-        .find({ receiver_id: new Types.ObjectId(authorId) })
+        .find({
+          receiver_id: new Types.ObjectId(authorId),
+          type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+        })
         .sort({ timestamp: -1 })
         .lean();
 
@@ -106,6 +109,7 @@ export class NotificationsService {
       const unseenCount = await this.notificationModel.countDocuments({
         receiver_id: new Types.ObjectId(authorId),
         seen: false,
+        type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
       });
       return { unseenCount };
     } catch (error) {

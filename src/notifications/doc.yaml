@@ -105,6 +105,9 @@ components:
         referenceId:
           type: string
           description: User who triggered the notification
+        rootItemId:
+          type: string
+          description: Root item ID associated with the notification
         senderType:
           type: string
           enum:

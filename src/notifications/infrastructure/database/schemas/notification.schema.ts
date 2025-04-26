@@ -24,7 +24,7 @@ export class Notification {
   root_item_id: Types.ObjectId;
 
   @Prop({
-    enum: ['React', 'Comment', 'Message', 'UserConnection'],
+    enum: ['React', 'Comment', 'Message', 'UserConnection', 'JobOffer'],
     required: true,
   })
   reference_type: string;

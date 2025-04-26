@@ -14,7 +14,12 @@ export async function addNotification(
   receiverId: Types.ObjectId,
   referenceId: Types.ObjectId,
   rootId: Types.ObjectId,
-  referenceType: 'React' | 'Comment' | 'UserConnection' | 'Message',
+  referenceType:
+    | 'React'
+    | 'Comment'
+    | 'UserConnection'
+    | 'Message'
+    | 'JobOffer',
   content: string,
   sentAt: Date,
   notificationGateway: NotificationGateway, // Inject NotificationGateway
