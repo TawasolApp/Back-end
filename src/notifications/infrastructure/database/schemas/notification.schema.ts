@@ -20,6 +20,9 @@ export class Notification {
   @Prop({ type: Types.ObjectId, required: true, refPath: 'reported_type' })
   item_id: Types.ObjectId;
 
+  @Prop({ type: Types.ObjectId, required: true, refPath: 'reported_type' })
+  root_item_id: Types.ObjectId;
+
   @Prop({
     enum: ['React', 'Comment', 'Message', 'UserConnection'],
     required: true,

@@ -203,16 +203,19 @@ export class PostsService {
 
       let authorType: 'User' | 'Company';
       let authorCompany;
+
+      console.log('authorId:', authorId);
       const authorProfile = await this.profileModel
         .findById(new Types.ObjectId(authorId))
         .exec();
+      console.log(authorProfile);
       if (authorProfile) {
         authorType = 'User';
       } else {
         authorCompany = await this.companyModel
           .findById(new Types.ObjectId(authorId))
           .exec();
-        //console.log(authorCompany);
+        console.log(authorCompany);
         if (authorCompany) {
           authorType = 'Company';
         } else {
@@ -248,6 +251,8 @@ export class PostsService {
           : null,
         is_silent_repost: createPostDto.isSilentRepost,
       });
+
+      console.log('createdPost:', createdPost);
 
       await createdPost.save();
       return getPostInfo(
@@ -639,6 +644,8 @@ export class PostsService {
         this.companyManagerModel,
       );
 
+      console.log('authorId:', authorId);
+
       const objectIdUserId = new Types.ObjectId(authorId);
       const objectIdPostId = new Types.ObjectId(postId);
 
@@ -710,6 +717,7 @@ export class PostsService {
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(post.author_id),
                 new Types.ObjectId(newReaction._id),
+                new Types.ObjectId(post._id),
                 'React',
                 `reacted to your post`,
                 new Date(),
@@ -730,6 +738,7 @@ export class PostsService {
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(newReaction._id),
+                new Types.ObjectId(comment.post_id),
                 'React',
                 `reacted to your comment`,
                 new Date(),
@@ -761,6 +770,7 @@ export class PostsService {
                 new Types.ObjectId(authorId), // Pass the sender
                 new Types.ObjectId(post.author_id), // Pass the receiver
                 new Types.ObjectId(existingReaction._id), // Pass the item
+                new Types.ObjectId(post._id),
                 'React',
                 `reacted to your post`,
                 new Date(),
@@ -790,6 +800,7 @@ export class PostsService {
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(existingReaction._id),
+                new Types.ObjectId(comment.post_id),
                 'React',
                 `reacted to your comment`,
                 new Date(),
@@ -1149,6 +1160,7 @@ export class PostsService {
           new Types.ObjectId(authorId),
           new Types.ObjectId(post.author_id),
           new Types.ObjectId(newComment._id),
+          new Types.ObjectId(post._id),
           'Comment',
           `commented on your post`,
           new Date(),
@@ -1164,6 +1176,7 @@ export class PostsService {
           new Types.ObjectId(authorId),
           new Types.ObjectId(comment.author_id),
           new Types.ObjectId(newComment._id),
+          new Types.ObjectId(comment.post_id),
           'Comment',
           `replied to your comment`,
           new Date(),
