@@ -18,12 +18,17 @@ import { MessageSeeder } from './infrastructure/database/seeders/message.seeder'
 import { MessagesController } from './messages.controller';
 import { MessagesService } from './messages.service';
 import { MessagesGateway } from '../gateway/messages.gateway';
+import {
+  Profile,
+  ProfileSchema,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
+      { name: Profile.name, schema: ProfileSchema },
     ]),
     AuthModule,
     UsersModule,
