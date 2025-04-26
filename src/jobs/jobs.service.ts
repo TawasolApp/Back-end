@@ -258,9 +258,9 @@ export class JobsService {
       if (filters.minSalary || filters.maxSalary) {
         query.salary = {};
         if (filters.minSalary !== undefined)
-          query.salary.$gte = parseFloat(filters.minSalary); // Ensure minSalary is treated as a double
+          query.salary.$gte = parseFloat(filters.minSalary); 
         if (filters.maxSalary !== undefined)
-          query.salary.$lte = parseFloat(filters.maxSalary); // Ensure maxSalary is treated as a double
+          query.salary.$lte = parseFloat(filters.maxSalary); 
       }
 
       const totalItems = await this.jobModel.countDocuments(query);
