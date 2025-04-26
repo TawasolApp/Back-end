@@ -140,7 +140,7 @@ export class JobsService {
       const jobDto = toGetJobDto(job);
       jobDto.companyName = company.name;
       jobDto.companyLogo = company.logo;
-      jobDto.companyLocation = company.address; // Map company.address to companyLocation
+      jobDto.companyLocation = company.address;
       jobDto.companyDescription = company.description;
 
       jobDto.isSaved =
@@ -159,6 +159,19 @@ export class JobsService {
     } catch (error) {
       handleError(error, 'Failed to retrieve job details.');
     }
+    /**
+     * retrieves the list of applicants for a given job, can apply optional filter by name.
+     *
+     * @param jobId - ID of the job.
+     * @returns array of GetUserDto - list of applicants with profile information.
+     * @throws NotFoundException - if the job does not exist.
+     *
+     * function flow:
+     * 1. verify the job's existence.
+     * 2. fetch applicants from the database.
+     * 3. retrieve profile details for each applicants.
+     * 4. map profile data to DTO and return.
+     */
   }
 
   /**
@@ -360,7 +373,6 @@ export class JobsService {
         job_id: new Types.ObjectId(jobId),
       });
 
-      // Delete the job itself
       await this.jobModel.deleteOne({ _id: new Types.ObjectId(jobId) });
     } catch (error) {
       handleError(error, 'Failed to delete job.');
@@ -378,7 +390,7 @@ export class JobsService {
     currentPage: number;
   }> {
     try {
-      const query = { saved_by: new Types.ObjectId(userId) };
+      const query = { saved_by: { $in: [new Types.ObjectId(userId)] } };
 
       const totalItems = await this.jobModel.countDocuments(query);
       const totalPages = Math.ceil(totalItems / limit);
@@ -398,7 +410,7 @@ export class JobsService {
         jobDto.companyLogo = company?.logo || null;
         jobDto.companyLocation = company?.address || null;
         jobDto.companyDescription = company?.description || null;
-        jobDto.isSaved = true; 
+        jobDto.isSaved = true;
         jobDtos.push(jobDto);
       }
 

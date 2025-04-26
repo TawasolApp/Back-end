@@ -55,17 +55,6 @@ export class JobsController {
     return await this.jobsService.getJobs(userId, filters, page, limit);
   }
 
-  @Get('/:jobId') // Fix the route to match /jobs/:jobId
-  @HttpCode(HttpStatus.OK)
-  async getJob(@Param('jobId') jobId: string, @Req() request: Request) {
-    if (!request.user) {
-      throw new UnauthorizedException('User not authenticated.');
-    }
-    const userId = request.user['sub'];
-    const jobDto = await this.jobsService.getJob(jobId, userId);
-    return jobDto;
-  }
-
   @Get('/saved')
   @HttpCode(HttpStatus.OK)
   async getSavedJobs(
@@ -79,6 +68,17 @@ export class JobsController {
 
     const userId = request.user['sub'];
     return await this.jobsService.getSavedJobs(userId, page, limit);
+  }
+
+  @Get('/:jobId')
+  @HttpCode(HttpStatus.OK)
+  async getJob(@Param('jobId') jobId: string, @Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    const userId = request.user['sub'];
+    const jobDto = await this.jobsService.getJob(jobId, userId);
+    return jobDto;
   }
 
   @Patch('/:jobId/save')
@@ -102,6 +102,7 @@ export class JobsController {
     const userId = request.user['sub'];
     await this.jobsService.unsaveJob(userId, jobId);
   }
+
   @Delete('/:jobId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteJob(@Req() request: Request, @Param('jobId') jobId: string) {
@@ -110,6 +111,6 @@ export class JobsController {
     }
 
     const userId = request.user['sub'];
-    await this.jobsService.deleteJob(userId, jobId); // Delegate access check to the service
+    await this.jobsService.deleteJob(userId, jobId);
   }
 }
