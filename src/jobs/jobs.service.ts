@@ -59,7 +59,7 @@ export class JobsService {
       .findById(new Types.ObjectId(userId))
       .lean();
     if (user?.role === 'admin') {
-      return true; 
+      return true;
     }
 
     const allowedManager = await this.companyManagerModel
@@ -306,6 +306,38 @@ export class JobsService {
     }
   }
 
+  async saveJob(userId: string, jobId: string): Promise<void> {
+    try {
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $addToSet: { saved_by: new Types.ObjectId(userId) } },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to save job.');
+    }
+  }
+
+  async unsaveJob(userId: string, jobId: string): Promise<void> {
+    try {
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $pull: { saved_by: new Types.ObjectId(userId) } },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to unsave job.');
+    }
+  }
+
   async deleteJob(userId: string, jobId: string): Promise<void> {
     try {
       const job = await this.jobModel.findById(new Types.ObjectId(jobId));
@@ -332,6 +364,52 @@ export class JobsService {
       await this.jobModel.deleteOne({ _id: new Types.ObjectId(jobId) });
     } catch (error) {
       handleError(error, 'Failed to delete job.');
+    }
+  }
+
+  async getSavedJobs(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
+    jobs: GetJobDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    try {
+      const query = { saved_by: new Types.ObjectId(userId) };
+
+      const totalItems = await this.jobModel.countDocuments(query);
+      const totalPages = Math.ceil(totalItems / limit);
+      const skip = (page - 1) * limit;
+
+      const jobs = await this.jobModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const jobDtos: GetJobDto[] = [];
+      for (const job of jobs) {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company?.name || null;
+        jobDto.companyLogo = company?.logo || null;
+        jobDto.companyLocation = company?.address || null;
+        jobDto.companyDescription = company?.description || null;
+        jobDto.isSaved = true; 
+        jobDtos.push(jobDto);
+      }
+
+      return {
+        jobs: jobDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
+    } catch (error) {
+      handleError(error, 'Failed to retrieve saved jobs.');
     }
   }
 }

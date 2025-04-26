@@ -9,6 +9,7 @@ import {
   BadRequestException,
   Delete,
   Param,
+  Patch,
   ForbiddenException,
   UnauthorizedException,
   ParseIntPipe,
@@ -65,6 +66,42 @@ export class JobsController {
     return jobDto;
   }
 
+  @Get('/saved')
+  @HttpCode(HttpStatus.OK)
+  async getSavedJobs(
+    @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+
+    const userId = request.user['sub'];
+    return await this.jobsService.getSavedJobs(userId, page, limit);
+  }
+
+  @Patch('/:jobId/save')
+  @HttpCode(HttpStatus.OK)
+  async saveJob(@Param('jobId') jobId: string, @Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+
+    const userId = request.user['sub'];
+    await this.jobsService.saveJob(userId, jobId);
+  }
+
+  @Delete('/:jobId/unsave')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async unsaveJob(@Param('jobId') jobId: string, @Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+
+    const userId = request.user['sub'];
+    await this.jobsService.unsaveJob(userId, jobId);
+  }
   @Delete('/:jobId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteJob(@Req() request: Request, @Param('jobId') jobId: string) {
