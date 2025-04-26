@@ -218,7 +218,17 @@ export class JobsService {
     }
   }
 
-  async getJobs(userId: string, filters: any): Promise<GetJobDto[]> {
+  async getJobs(
+    userId: string,
+    filters: any,
+    page: number,
+    limit: number,
+  ): Promise<{
+    jobs: GetJobDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     try {
       const query: any = {};
 
@@ -248,12 +258,20 @@ export class JobsService {
       if (filters.minSalary || filters.maxSalary) {
         query.salary = {};
         if (filters.minSalary !== undefined)
-          query.salary.$gte = Number(filters.minSalary);
+          query.salary.$gte = parseFloat(filters.minSalary); 
         if (filters.maxSalary !== undefined)
-          query.salary.$lte = Number(filters.maxSalary);
+          query.salary.$lte = parseFloat(filters.maxSalary); 
       }
 
-      const jobs = await this.jobModel.find(query).lean();
+      const totalItems = await this.jobModel.countDocuments(query);
+      const totalPages = Math.ceil(totalItems / limit);
+      const skip = (page - 1) * limit;
+
+      const jobs = await this.jobModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .lean();
 
       const jobDtos: GetJobDto[] = [];
       for (const job of jobs) {
@@ -268,7 +286,12 @@ export class JobsService {
         jobDtos.push(jobDto);
       }
 
-      return jobDtos;
+      return {
+        jobs: jobDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
     } catch (error) {
       handleError(error, 'Failed to retrieve jobs.');
     }
