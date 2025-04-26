@@ -12,6 +12,7 @@ import { Profile } from '../profiles/infrastructure/database/schemas/profile.sch
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Types } from 'mongoose';
 import { getUserAccessed } from '../posts/helpers/posts.helpers';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 @Injectable()
 export class NotificationsService {
@@ -20,8 +21,9 @@ export class NotificationsService {
     private readonly notificationModel: Model<NotificationDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<any>,
-    @InjectModel(Company.name)
-    private readonly companyModel: Model<any>,
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<any>,
+    //
   ) {}
 
   async getNotifications(
@@ -32,8 +34,10 @@ export class NotificationsService {
       const authorId = await getUserAccessed(
         userId,
         companyId,
-        this.companyModel,
+        this.companyManagerModel,
       );
+
+      console.log('Author ID:', authorId);
 
       const notifications = await this.notificationModel
         .find({ receiver_id: new Types.ObjectId(authorId) })
@@ -45,7 +49,7 @@ export class NotificationsService {
           mapToGetNotificationsDto(
             notification,
             this.profileModel,
-            this.companyModel,
+            this.companyManagerModel,
           ),
         ),
       );
@@ -63,7 +67,7 @@ export class NotificationsService {
       const authorId = await getUserAccessed(
         userId,
         companyId,
-        this.companyModel,
+        this.companyManagerModel,
       );
 
       const notification = await this.notificationModel
@@ -96,7 +100,7 @@ export class NotificationsService {
       const authorId = await getUserAccessed(
         userId,
         companyId,
-        this.companyModel,
+        this.companyManagerModel,
       );
 
       const unseenCount = await this.notificationModel.countDocuments({

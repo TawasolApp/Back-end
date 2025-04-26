@@ -8,13 +8,14 @@ import { Types } from 'mongoose';
 import * as notificationHelpers from './helpers/notification.helper';
 import * as notificationMappers from './mappers/notification.mapper';
 import * as postHelpers from '../posts/helpers/posts.helpers';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
 
   let notificationModelMock: any;
   let profileModelMock: any;
-  let companyModelMock: any;
+  let companyManagerModelMock: any;
 
   beforeEach(async () => {
     notificationModelMock = {
@@ -28,7 +29,7 @@ describe('NotificationsService', () => {
       findById: jest.fn(),
     };
 
-    companyModelMock = {
+    companyManagerModelMock = {
       findById: jest.fn(),
     };
 
@@ -40,7 +41,10 @@ describe('NotificationsService', () => {
           useValue: notificationModelMock,
         },
         { provide: getModelToken(Profile.name), useValue: profileModelMock },
-        { provide: getModelToken(Company.name), useValue: companyModelMock },
+        {
+          provide: getModelToken(CompanyManager.name),
+          useValue: companyManagerModelMock,
+        },
       ],
     }).compile();
 

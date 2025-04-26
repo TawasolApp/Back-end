@@ -24,6 +24,10 @@ export class GetNotificationsDto {
   referenceId?: string;
 
   @IsOptional()
+  @IsString()
+  rootItemId?: string; // ID of the root item (e.g., post, comment)
+
+  @IsOptional()
   @IsEnum(['User', 'Company'])
   senderType?: 'User' | 'Company'; // Enum for sender type
 
