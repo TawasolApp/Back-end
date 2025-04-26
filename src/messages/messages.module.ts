@@ -15,6 +15,9 @@ import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConversationSeeder } from './infrastructure/database/seeders/conversation.seeder';
 import { MessageSeeder } from './infrastructure/database/seeders/message.seeder';
+import { MessagesController } from './messages.controller';
+import { MessagesService } from './messages.service';
+import { MessagesGateway } from '../gateway/messages.gateway';
 
 @Module({
   imports: [
@@ -39,6 +42,9 @@ import { MessageSeeder } from './infrastructure/database/seeders/message.seeder'
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    MessagesService,
+    MessagesGateway,
   ],
+  controllers: [MessagesController],
 })
 export class MessagesModule {}
