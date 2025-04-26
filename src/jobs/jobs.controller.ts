@@ -11,6 +11,7 @@ import {
   Param,
   ForbiddenException,
   UnauthorizedException,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -25,6 +26,8 @@ export class JobsController {
   @HttpCode(HttpStatus.OK)
   async getJobs(
     @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
     @Query('keyword') keyword?: string,
     @Query('location') location?: string,
     @Query('industry') industry?: string,
@@ -48,7 +51,7 @@ export class JobsController {
       maxSalary,
     };
 
-    return await this.jobsService.getJobs(userId, filters);
+    return await this.jobsService.getJobs(userId, filters, page, limit);
   }
 
   @Get('/:jobId') // Fix the route to match /jobs/:jobId
