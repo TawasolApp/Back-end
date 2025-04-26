@@ -8,6 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
+import * as jwt from 'jsonwebtoken';
 
 @WebSocketGateway({
   cors: {
@@ -22,7 +23,22 @@ export class MessagesGateway
   }
 
   handleConnection(client: Socket) {
-    console.log(`Client connected: ${client.id}`);
+    const token = client.handshake.query.token;
+    if (typeof token === 'string') {
+      try {
+        const user = jwt.verify(
+          token,
+          '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
+        );
+        console.log('User authenticated:', user);
+      } catch (error) {
+        console.log('Invalid token');
+        client.disconnect();
+      }
+    } else {
+      console.log('Token is missing or invalid');
+      client.disconnect();
+    }
   }
 
   handleDisconnect(client: Socket) {
