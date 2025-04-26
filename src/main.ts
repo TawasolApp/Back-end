@@ -8,10 +8,6 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
   });
-
-  app.use('/api/webhook/stripe', bodyParser.raw({ type: 'application/json' }));
-
-
   // Enable global validation pipes
   app.useGlobalPipes(new ValidationPipe());
 
