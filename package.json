@@ -28,7 +28,7 @@
     "@nestjs/mapped-types": "^2.1.0",
     "@nestjs/mongoose": "^11.0.1",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.0.13",
+    "@nestjs/platform-express": "^11.1.0",
     "@nestjs/platform-socket.io": "^11.0.20",
     "@nestjs/swagger": "^11.1.4",
     "axios": "^1.8.4",
@@ -50,8 +50,10 @@
     "passport-jwt": "^4.0.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
+    "stripe": "^18.0.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "stripe": "^18.0.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {

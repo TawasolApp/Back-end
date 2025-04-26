@@ -1,6 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { PlanType } from '../../../../payments/enums/plan-type.enum';
+import { PlanType } from '../../../enums/plan-type.enum';
 
 export type PlanDetailDocument = PlanDetail & Document;
 
@@ -22,13 +22,13 @@ export class PlanDetail {
   start_date: Date;
 
   @Prop()
-  expiry_date: Date;
+  expiry_date?: Date; // set for one time plans
 
   @Prop()
-  auto_renewal: boolean;
+  auto_renewal: boolean; // true for subscription, false for one time
 
   @Prop()
-  cancel_date?: Date;
+  cancel_date?: Date; // set for both plans
 }
 
 export const PlanDetailSchema = SchemaFactory.createForClass(PlanDetail);

@@ -85,6 +85,6 @@ import {
   ],
   providers: [UsersService, UserSeeder],
   controllers: [UsersController],
-  exports: [UsersService, MongooseModule],
+  exports: [UsersService, MongooseModule, JwtModule],
 })
 export class UsersModule {}

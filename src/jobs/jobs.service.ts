@@ -114,7 +114,7 @@ export class JobsService {
     }
   }
 
-  async getJob(jobId: string): Promise<GetJobDto> {
+  async getJob(jobId: string, userId: string): Promise<GetJobDto> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
@@ -122,7 +122,31 @@ export class JobsService {
       if (!job) {
         throw new NotFoundException('Job not found.');
       }
-      return toGetJobDto(job);
+
+      const company = await this.companyModel.findById(job.company_id).lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+
+      const jobDto = toGetJobDto(job);
+      jobDto.companyName = company.name;
+      jobDto.companyLogo = company.logo;
+      jobDto.companyLocation = company.address; // Map company.address to companyLocation
+      jobDto.companyDescription = company.description;
+
+      jobDto.isSaved =
+        job.saved_by?.some((id) => id.toString() === userId) || false;
+
+      const application = await this.applicationModel
+        .findOne({
+          job_id: new Types.ObjectId(jobId),
+          user_id: new Types.ObjectId(userId),
+        })
+        .lean();
+
+      jobDto.status = application?.status || null;
+
+      return jobDto;
     } catch (error) {
       handleError(error, 'Failed to retrieve job details.');
     }
@@ -145,7 +169,7 @@ export class JobsService {
     userId: string,
     jobId: string,
     page: number,
-    limit: number
+    limit: number,
   ): Promise<GetUserDto[]> {
     try {
       const job = await this.jobModel
@@ -191,6 +215,91 @@ export class JobsService {
       return applicants.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
+    }
+  }
+
+  async getJobs(userId: string, filters: any): Promise<GetJobDto[]> {
+    try {
+      const query: any = {};
+
+      if (filters.keyword) {
+        query.position = { $regex: filters.keyword, $options: 'i' };
+      }
+      if (filters.location) {
+        query.location = { $regex: filters.location, $options: 'i' };
+      }
+      if (filters.industry) {
+        const companies = await this.companyModel
+          .find({ industry: { $regex: filters.industry, $options: 'i' } })
+          .select('_id')
+          .lean();
+        query.company_id = { $in: companies.map((c) => c._id) };
+      }
+      if (filters.experienceLevel) {
+        query.experience_level = filters.experienceLevel;
+      }
+      if (filters.company) {
+        const companies = await this.companyModel
+          .find({ name: { $regex: filters.company, $options: 'i' } })
+          .select('_id')
+          .lean();
+        query.company_id = { $in: companies.map((c) => c._id) };
+      }
+      if (filters.minSalary || filters.maxSalary) {
+        query.salary = {};
+        if (filters.minSalary !== undefined)
+          query.salary.$gte = Number(filters.minSalary);
+        if (filters.maxSalary !== undefined)
+          query.salary.$lte = Number(filters.maxSalary);
+      }
+
+      const jobs = await this.jobModel.find(query).lean();
+
+      const jobDtos: GetJobDto[] = [];
+      for (const job of jobs) {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company?.name || null;
+        jobDto.companyLogo = company?.logo || null;
+        jobDto.companyLocation = company?.address || null;
+        jobDto.companyDescription = company?.description || null;
+        jobDto.isSaved =
+          job.saved_by?.some((id) => id.toString() === userId) || false;
+        jobDtos.push(jobDto);
+      }
+
+      return jobDtos;
+    } catch (error) {
+      handleError(error, 'Failed to retrieve jobs.');
+    }
+  }
+
+  async deleteJob(userId: string, jobId: string): Promise<void> {
+    try {
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      const hasAccess = await this.checkAccess(
+        userId,
+        job.company_id.toString(),
+      );
+      if (!hasAccess) {
+        throw new ForbiddenException(
+          'You do not have permission to delete this job.',
+        );
+      }
+
+      // Delete all applications associated with the job
+      await this.applicationModel.deleteMany({
+        job_id: new Types.ObjectId(jobId),
+      });
+
+      // Delete the job itself
+      await this.jobModel.deleteOne({ _id: new Types.ObjectId(jobId) });
+    } catch (error) {
+      handleError(error, 'Failed to delete job.');
     }
   }
 }

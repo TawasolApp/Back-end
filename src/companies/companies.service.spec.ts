@@ -975,6 +975,55 @@ describe('CompaniesService', () => {
     });
   });
 
+  describe('getManagedCompanies', () => {
+    describe('getManagedCompanies', () => {
+      it('should return companyId1 and companyId2 as managed companies for profileId1', async () => {
+        const profileId = mockProfiles[0]._id.toString();
+        const matchedManagers = mockCompanyManagers.filter(
+          (m) => m.manager_id.toString() === profileId,
+        );
+        const managedCompanyIds = matchedManagers.map((m) => ({
+          company_id: m.company_id,
+        }));
+        companyManagerModel.find.mockReturnValueOnce({
+          select: jest.fn().mockReturnValueOnce({
+            lean: jest.fn().mockResolvedValueOnce(managedCompanyIds),
+          }),
+        });
+        const expectedCompanies = mockCompanies.filter((c) =>
+          managedCompanyIds.some(
+            (m) => m.company_id.toString() === c._id.toString(),
+          ),
+        );
+        companyModel.find.mockReturnValueOnce({
+          select: jest.fn().mockReturnValueOnce({
+            lean: jest.fn().mockResolvedValueOnce(expectedCompanies),
+          }),
+        });
+        const result = await service.getManagedCompanies(profileId);
+        expect(result).toHaveLength(expectedCompanies.length);
+        expect(result.map((c) => c.companyId.toString())).toEqual(
+          expect.arrayContaining([
+            mockCompanies[0]._id.toString(),
+            mockCompanies[1]._id.toString(),
+          ]),
+        );
+      });
+    });
+
+    it('should catch and handle unexpected errors during getManagedCompanies', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      companyManagerModel.find.mockImplementationOnce(() => {
+        throw new Error('Unexpected Error');
+      });
+      await service.getManagedCompanies(userId);
+      expect(handleError).toHaveBeenCalledWith(
+        new Error('Unexpected Error'),
+        'Failed to retrieve list of managed companies.',
+      );
+    });
+  });
+
   describe('getCompanyJobs', () => {
     it('should throw NotFoundException if the company does not exist', async () => {
       const invalidCompanyId = new Types.ObjectId().toString();
