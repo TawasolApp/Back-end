@@ -10,7 +10,12 @@ import {
 import { Server } from 'socket.io';
 import { GetNotificationsDto } from 'src/notifications/dto/get-notifications.dto';
 
-@WebSocketGateway({ cors: { origin: '*', methods: ['GET', 'POST'] } }) // Allow all origins for testing
+@WebSocketGateway({
+  cors: {
+    origin: 'https://tawasolapp.me', // Allow connections from this domain
+    methods: ['GET', 'POST'],
+  },
+})
 export class NotificationGateway
   implements OnGatewayConnection, OnGatewayDisconnect
 {
