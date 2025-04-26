@@ -79,22 +79,42 @@ export class MessagesService {
   async getConversations(userId: Types.ObjectId) {
     const conversations = await this.conversationModel
       .find({ participants: userId })
-      .populate({ path: 'participants', model: 'User' })
-      .populate({ path: 'last_message_id', model: 'Message' })
+      .populate({
+        path: 'participants', // Populate participants (users)
+        model: 'User',
+        select: 'first_name last_name ', // This refers to the User model
+      })
+      .populate({
+        path: 'last_message_id', // Populate the last message in the conversation
+        model: 'Message',
+      })
       .lean();
 
-    const modifiedConversations = conversations.map((conversation) => {
-      const otherParticipant = conversation.participants.find(
-        (participant: any) => participant._id.toString() !== userId.toString(),
-      );
+    // Now, manually populate the profile for each participant
+    const modifiedConversations = await Promise.all(
+      conversations.map(async (conversation) => {
+        const otherParticipant = conversation.participants.find(
+          (participant: any) =>
+            participant._id.toString() !== userId.toString(),
+        );
 
-      return {
-        _id: conversation._id,
-        last_messaged: conversation.last_message_id,
-        unseen_count: conversation.unseen_count,
-        otherParticipant, // ✅ keep only the other participant
-      };
-    });
+        // Manually populate profile for each participant
+        if (otherParticipant) {
+          const profile = await this.profileModel
+            .findOne({ _id: otherParticipant._id }) // Find profile by user id
+            .select('profile_picture'); // Only select necessary fields
+
+          (otherParticipant as any).profile = profile; // Add the profile to the participant (cast to `any` type)
+        }
+
+        return {
+          _id: conversation._id,
+          lastMessage: conversation.last_message_id,
+          unseenCount: conversation.unseen_count,
+          otherParticipant, // Add the populated participant here
+        };
+      }),
+    );
 
     return modifiedConversations;
   }
