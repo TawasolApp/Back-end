@@ -49,7 +49,7 @@ export async function mapToGetNotificationsDto(
     notificationId: notification._id.toString(),
     userName,
     profilePicture,
-    refrenceId: notification.sender_id.toString(),
+    referenceId: notification.sender_id.toString(),
     senderType,
     type: notification.reference_type as
       | 'React'
