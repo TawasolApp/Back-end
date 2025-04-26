@@ -8,59 +8,64 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import * as jwt from 'jsonwebtoken';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // or specify your frontend URL
+    origin: '*', // Allow frontend URL in production
   },
 })
 export class MessagesGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
   afterInit(server: Server) {
-    console.log('WebSocket server initialized');
+    console.log('✅ WebSocket server initialized');
   }
 
   handleConnection(client: Socket) {
-    const token = client.handshake.query.token;
-    if (typeof token === 'string') {
-      try {
-        const user = jwt.verify(
-          token,
-          '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
-        );
-        console.log('User authenticated:', user);
-      } catch (error) {
-        console.log('Invalid token');
-        client.disconnect();
-      }
+    const userId = client.handshake.query.userId as string;
+
+    if (userId) {
+      client.data.userId = userId; // Attach userId to socket
+      console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
+      client.join(userId); // Automatically join their room
     } else {
-      console.log('Token is missing or invalid');
+      console.log('❌ Connection rejected: userId missing');
       client.disconnect();
     }
   }
 
   handleDisconnect(client: Socket) {
-    console.log(`Client disconnected: ${client.id}`);
-  }
-
-  @SubscribeMessage('join')
-  handleJoinRoom(
-    @MessageBody() userId: string,
-    @ConnectedSocket() client: Socket,
-  ) {
-    client.join(userId);
-    console.log(`User with ID ${userId} joined their room`);
+    console.log(`⚡ Client disconnected: ${client.id}`);
   }
 
   @SubscribeMessage('send_message')
   handleMessage(
-    @MessageBody()
-    payload: { receiverId: string; text: string },
+    @MessageBody() rawPayload: any,
     @ConnectedSocket() client: Socket,
   ) {
-    client.to(payload.receiverId).emit('receive_message', payload);
-    console.log(`Message sent to ${payload.receiverId}: ${payload.text}`);
+    let payload;
+    try {
+      payload =
+        typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
+    } catch (error) {
+      console.error('❌ Invalid JSON received:', error.message);
+      return;
+    }
+
+    if (!payload.receiverId || !payload.text) {
+      console.error('❌ Invalid payload: missing receiverId or text');
+      return;
+    }
+
+    console.log('✅ Parsed payload:', payload);
+
+    client.to(payload.receiverId).emit('receive_message', {
+      senderId: client.data.userId,
+      text: payload.text,
+    });
+
+    console.log(
+      `📨 Message sent from ${client.data.userId} to ${payload.receiverId}: ${payload.text}`,
+    );
   }
 }
