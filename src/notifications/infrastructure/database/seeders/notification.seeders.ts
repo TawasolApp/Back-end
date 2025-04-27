@@ -97,119 +97,154 @@ export class NotificationSeeder {
 
       switch (type) {
         case 'React': {
-          const react = faker.helpers.arrayElement(reacts);
-          if (!react) continue;
+          for (const react of reacts) {
+            referenceId = react._id;
+            sentAt = new Date(react.reacted_at);
+            const sender = usersMap.get(react.user_id.toString());
+            if (!sender) continue;
 
-          referenceId = react._id;
-          sentAt = new Date(react.reacted_at);
-          const sender = usersMap.get(react.user_id.toString());
-          if (!sender) continue;
+            const senderName = `${sender.first_name} ${sender.last_name}`;
 
-          const senderName = `${sender.first_name} ${sender.last_name}`;
+            if (react.post_type === 'Comment') {
+              const comment = commentsMap.get(react.post_id.toString());
+              if (!comment) continue;
+              receiver = comment.author_id;
+              content = `reacted to your comment`;
+              senderId = react.user_id;
+              rootItemId = comment.post_id;
+            } else {
+              const post = postsMap.get(react.post_id.toString());
+              if (!post) continue;
+              receiver = post.author_id;
+              content = `reacted to your post`;
+              senderId = react.user_id;
+              rootItemId = post._id;
+            }
 
-          if (react.post_type === 'Comment') {
-            const comment = commentsMap.get(react.post_id.toString());
-            if (!comment) continue;
-            receiver = comment.author_id;
-            content = `reacted to your comment`;
-            senderId = react.user_id;
-            rootItemId = comment.post_id;
-          } else {
-            const post = postsMap.get(react.post_id.toString());
-            if (!post) continue;
-            receiver = post.author_id;
-            content = `reacted to your post`;
-            senderId = react.user_id;
-            rootItemId = post._id;
+            if (receiver && referenceId) {
+              notifications.push({
+                sender_id: senderId,
+                receiver_id: receiver,
+                item_id: referenceId,
+                root_item_id: rootItemId,
+                reference_type: type,
+                content,
+                seen: faker.datatype.boolean(),
+                sent_at: sentAt,
+              });
+            }
           }
           break;
         }
 
         case 'Comment': {
-          const comment = faker.helpers.arrayElement(comments);
-          if (!comment) continue;
+          for (const comment of comments) {
+            referenceId = comment._id;
+            sentAt = comment.commented_at;
+            const commenter = usersMap.get(comment.author_id.toString());
+            if (!commenter) continue;
 
-          referenceId = comment._id;
-          sentAt = comment.commented_at;
-          const commenter = usersMap.get(comment.author_id.toString());
-          if (!commenter) continue;
+            const commenterName = `${commenter.first_name} ${commenter.last_name}`;
 
-          const commenterName = `${commenter.first_name} ${commenter.last_name}`;
+            const post = postsMap.get(comment.post_id.toString());
+            if (!post) continue;
 
-          const post = postsMap.get(comment.post_id.toString());
-          if (!post) continue;
+            receiver = post.author_id;
+            senderId = comment.author_id;
+            content = `commented on your post`;
+            rootItemId = post._id;
 
-          receiver = post.author_id;
-          senderId = comment.author_id;
-          content = `commented on your post`;
-          rootItemId = post._id;
+            if (receiver && referenceId) {
+              notifications.push({
+                sender_id: senderId,
+                receiver_id: receiver,
+                item_id: referenceId,
+                root_item_id: rootItemId,
+                reference_type: type,
+                content,
+                seen: faker.datatype.boolean(),
+                sent_at: sentAt,
+              });
+            }
+          }
           break;
         }
 
         case 'Message': {
-          const message = faker.helpers.arrayElement(messages);
-          if (!message) continue;
+          for (const message of messages) {
+            const conversation = conversationsMap.get(
+              message.conversation_id.toString(),
+            );
+            if (!conversation) continue;
 
-          const conversation = conversationsMap.get(
-            message.conversation_id.toString(),
-          );
-          if (!conversation) continue;
+            referenceId = message._id;
+            sentAt = message.sent_at;
 
-          referenceId = message._id;
-          sentAt = message.sent_at;
+            const sender = usersMap.get(message.sender_id.toString());
+            if (!sender) continue;
 
-          const sender = usersMap.get(message.sender_id.toString());
-          if (!sender) continue;
+            const senderName = `${sender.first_name} ${sender.last_name}`;
 
-          const senderName = `${sender.first_name} ${sender.last_name}`;
+            const receiverId = conversation.participants.find(
+              (p) => p.toString() !== message.sender_id.toString(),
+            );
+            if (!receiverId) continue;
 
-          const receiverId = conversation.participants.find(
-            (p) => p.toString() !== message.sender_id.toString(),
-          );
-          if (!receiverId) continue;
+            receiver = receiverId;
+            senderId = message.sender_id;
+            content = `sent you a message`;
+            rootItemId = conversation._id;
 
-          receiver = receiverId;
-          senderId = message.sender_id;
-          content = `sent you a message`;
-          rootItemId = conversation._id;
+            if (receiver && referenceId) {
+              notifications.push({
+                sender_id: senderId,
+                receiver_id: receiver,
+                item_id: referenceId,
+                root_item_id: rootItemId,
+                reference_type: type,
+                content,
+                seen: faker.datatype.boolean(),
+                sent_at: sentAt,
+              });
+            }
+          }
           break;
         }
 
         case 'UserConnection': {
-          const connection = faker.helpers.arrayElement(connections);
-          if (!connection) continue;
+          for (const connection of connections) {
+            referenceId = connection._id;
+            sentAt = new Date(connection.created_at);
 
-          referenceId = connection._id;
-          sentAt = new Date(connection.created_at);
+            const sender = usersMap.get(connection.sending_party.toString());
+            if (!sender) continue;
 
-          const sender = usersMap.get(connection.sending_party.toString());
-          if (!sender) continue;
+            const senderName = `${sender.first_name} ${sender.last_name}`;
+            receiver = connection.receiving_party;
+            senderId = connection.sending_party;
 
-          const senderName = `${sender.first_name} ${sender.last_name}`;
-          receiver = connection.receiving_party;
-          senderId = connection.sending_party;
+            content =
+              connection.status === ConnectionStatus.Pending
+                ? `sent you a connection request`
+                : `followed you`;
+            rootItemId = connection._id;
 
-          content =
-            connection.status === ConnectionStatus.Pending
-              ? `sent you a connection request`
-              : `followed you`;
-          rootItemId = connection._id;
+            if (receiver && referenceId) {
+              notifications.push({
+                sender_id: senderId,
+                receiver_id: receiver,
+                item_id: referenceId,
+                root_item_id: rootItemId,
+                reference_type: type,
+                content,
+                seen: faker.datatype.boolean(),
+                sent_at: sentAt,
+              });
+            }
+          }
           break;
         }
       }
-
-      if (!receiver || !referenceId) continue;
-
-      notifications.push({
-        sender_id: senderId,
-        receiver_id: receiver,
-        item_id: referenceId,
-        root_item_id: rootItemId,
-        reference_type: type,
-        content,
-        seen: faker.datatype.boolean(),
-        sent_at: sentAt,
-      });
     }
 
     await this.notificationModel.insertMany(notifications);
