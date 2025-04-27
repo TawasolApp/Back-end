@@ -14,6 +14,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import { mapConversations } from './dto/messages.mapper';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -29,6 +30,7 @@ export class MessagesService {
     senderId: string,
     receiverId: string,
     messageText: string,
+    media: string[],
     messageDate: Date,
   ) {
     let conversation = await this.conversationModel.findOne({
@@ -47,6 +49,7 @@ export class MessagesService {
       sender_id: senderId,
       conversation_id: conversation._id,
       text: messageText,
+      media: media ?? [],
       status: MessageStatus.Sent,
       sent_at: messageDate,
     });
@@ -116,6 +119,14 @@ export class MessagesService {
       }),
     );
 
-    return modifiedConversations;
+    const mappedConversations = mapConversations(modifiedConversations);
+    const sortedConversations = mappedConversations.sort((a, b) => {
+      const dateA = new Date(a.lastMessage.sentAt);
+      const dateB = new Date(b.lastMessage.sentAt);
+
+      // Sort by latest date (descending order)
+      return dateB.getTime() - dateA.getTime();
+    });
+    return sortedConversations;
   }
 }
