@@ -13,7 +13,7 @@ import {
 import { JobSeeder } from './infrastructure/database/seeders/job.seeder';
 import { ApplicationSeeder } from './infrastructure/database/seeders/application.seeder';
 import { CompanyEmployerSeeder } from './infrastructure/database/seeders/company-employer.seeder';
-import { AuthModule } from '../auth/auth.module'; // Ensure AuthModule is imported
+import { AuthModule } from '../auth/auth.module';
 import { CompaniesModule } from '../companies/companies.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
@@ -33,7 +33,7 @@ import { JobsController } from './jobs.controller';
         '4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4',
       signOptions: { expiresIn: '1h' },
     }),
-    AuthModule, // Ensure AuthModule is imported
+    AuthModule,
     forwardRef(() => CompaniesModule),
     UsersModule,
     forwardRef(() => ProfilesModule),
