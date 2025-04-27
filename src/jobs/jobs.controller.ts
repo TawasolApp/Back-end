@@ -13,10 +13,13 @@ import {
   ForbiddenException,
   UnauthorizedException,
   ParseIntPipe,
+  Post,
+  Body,
 } from '@nestjs/common';
 import { JobsService } from './jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
+import { ApplyJobDto } from './dtos/apply-job.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('jobs')
@@ -112,5 +115,16 @@ export class JobsController {
 
     const userId = request.user['sub'];
     await this.jobsService.deleteJob(userId, jobId);
+  }
+
+  @Post('/apply')
+  @HttpCode(HttpStatus.CREATED)
+  async applyForJob(@Req() request: Request, @Body() applyJobDto: ApplyJobDto) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+
+    const userId = request.user['sub'];
+    await this.jobsService.addApplication(userId, applyJobDto);
   }
 }

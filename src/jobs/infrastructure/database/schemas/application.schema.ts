@@ -26,6 +26,12 @@ export class Application {
     default: () => new Date().toISOString(),
   })
   applied_at: string;
+
+  @Prop()
+  phone_number: string;
+
+  @Prop()
+  resume_url: string;
 }
 
 export const ApplicationSchema = SchemaFactory.createForClass(Application);

@@ -32,6 +32,7 @@ import {
 } from '../users/infrastructure/database/schemas/user.schema';
 import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
+import { ApplyJobDto } from './dtos/apply-job.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
@@ -422,6 +423,52 @@ export class JobsService {
       };
     } catch (error) {
       handleError(error, 'Failed to retrieve saved jobs.');
+    }
+  }
+
+  async addApplication(
+    userId: string,
+    applyJobDto: ApplyJobDto,
+  ): Promise<void> {
+    try {
+      const { jobId, phoneNumber, resumeURL } = applyJobDto;
+
+      // Check if the job exists
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      // Check if the user has already applied for the job
+      const existingApplication = await this.applicationModel.findOne({
+        user_id: new Types.ObjectId(userId),
+        job_id: new Types.ObjectId(jobId),
+      });
+
+      if (existingApplication) {
+        throw new ForbiddenException('You have already applied for this job.');
+      }
+
+      // Create a new application
+      const newApplication = new this.applicationModel({
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(userId),
+        job_id: new Types.ObjectId(jobId),
+        phone_number: phoneNumber,
+        resume_url: resumeURL,
+        status: 'Pending',
+        applied_at: new Date().toISOString(),
+      });
+
+      await newApplication.save();
+
+      // Increment the applicant count for the job
+      await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $inc: { applicants: 1 } },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to apply for the job.');
     }
   }
 }
