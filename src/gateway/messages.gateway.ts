@@ -63,17 +63,21 @@ export class MessagesGateway
     console.log('✅ Parsed payload:', payload);
     const messageDate = new Date();
 
+    const media = Array.isArray(payload.media) ? payload.media : [];
+
     const senderId = client.data.userId; // Assuming you attached userId at connect time
     const { conversation, message } = await this.messagesService.createMessage(
       senderId,
       payload.receiverId,
       payload.text,
+      media,
       messageDate,
     );
 
     client.to(payload.receiverId).emit('receive_message', {
       senderId: client.data.userId,
       text: payload.text,
+      media: media,
       sentAt: messageDate,
     });
 
