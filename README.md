@@ -54,7 +54,7 @@ STRIPE_SECRET_KEY=sk_test_51RGSKsRxKmlmf6E0fkG88mb8kL7R7sDwmlsquKH1MRIjAgWfqt61u
 STRIPE_WEBHOOK_SECRET=whsec_c8d703f5c77103835d2e00880911fc69ece3822e0fd43d77807e1c843a4e853e
 PAYMENT_SUCCESS_URL = http://localhost:3000/payment-success
 PAYMENT_CANCEL_URL = http://localhost:3000/payment-cancel
-
+```
 
 ### 4. Run the application:
 
@@ -62,7 +62,7 @@ PAYMENT_CANCEL_URL = http://localhost:3000/payment-cancel
 npm run start:dev
 ```
 
-The API will be available at `http://localhost:3000`.
+The API will be available at `http://localhost:3000/api`.
 
 ## Running the Project
 
@@ -89,7 +89,7 @@ npm run start
 To populate the database with test data, run the following command:
 
 ```sh
-ts-node src/seed.ts
+npx ts-node src/seed.ts
 ```
 
 ## Running Unit Tests
