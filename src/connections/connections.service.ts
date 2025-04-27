@@ -989,6 +989,30 @@ export class ConnectionsService {
     }
   }
 
+  async getFollowingCount(userId: string): Promise<number> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        sending_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return count;
+    } catch (error) {
+      handleError(error, 'Failed to get following count.');
+    }
+  }
+
+  async getFollowerCount(userId: string): Promise<number> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return count;
+    } catch (error) {
+      handleError(error, 'Failed to get follower count.');
+    }
+  }
+
   /**
    * add a new endorsement from logged in user to specified skill on another user's profile.
    *
