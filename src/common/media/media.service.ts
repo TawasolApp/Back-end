@@ -11,55 +11,52 @@ export class MediaService {
     @Inject('CLOUDINARY') private readonly cloudinary: CloudinaryType,
   ) {}
 
+  private buildMediaUrl(
+    uploadResult: UploadApiResponse,
+    mediaType: string,
+  ): string {
+    const baseUrl = this.buildCloudinaryUrl(uploadResult);
+    if (mediaType === 'document') {
+      const encodedUrl = encodeURIComponent(baseUrl);
+      return `https://docs.google.com/viewer?url=${encodedUrl}&embedded=true`;
+    }
+    return baseUrl;
+  }
+
   async uploadFile(
     file: Express.Multer.File,
   ): Promise<{ url: string; type: string }> {
     const mime = file.mimetype;
-    const ext = extname(file.originalname).replace('.', '');
+    const ext = extname(file.originalname).replace('.', '').toLowerCase();
 
     let resourceType: 'image' | 'video' | 'raw' = 'raw';
     if (mime.startsWith('image/')) resourceType = 'image';
     else if (mime.startsWith('video/')) resourceType = 'video';
-    else if (ext === 'pdf') resourceType = 'image';
+    else if (ext === 'pdf') resourceType = 'raw';
 
     const publicId = file.originalname.replace(/\.[^/.]+$/, '');
 
-    const uploadStream = this.cloudinary.uploader.upload_stream(
-      {
-        resource_type: resourceType,
-        public_id: `uploads/${publicId}`,
-        format: ext,
-        pages: true,
-      },
-      (error, result) => {
-        if (error || !result) throw error;
-      },
-    );
-
-    const stream = Readable.from(file.buffer);
-    stream.pipe(uploadStream);
-
     const uploadResult: UploadApiResponse = await new Promise(
       (resolve, reject) => {
-        this.cloudinary.uploader
-          .upload_stream(
-            {
-              resource_type: resourceType,
-              public_id: `uploads/${publicId}`,
-              format: ext,
-              pages: true,
-            },
-            (error, result) => {
-              if (error || !result) return reject(error);
-              resolve(result);
-            },
-          )
-          .end(file.buffer);
+        const uploadStream = this.cloudinary.uploader.upload_stream(
+          {
+            resource_type: resourceType,
+            public_id: `uploads/${publicId}`,
+            format: ext,
+          },
+          (error, result) => {
+            if (error || !result) return reject(error);
+            resolve(result);
+          },
+        );
+
+        const stream = Readable.from(file.buffer);
+        stream.pipe(uploadStream);
       },
     );
 
     const mediaType = this.detectMediaType(resourceType, uploadResult.format);
-    const url = this.buildCloudinaryUrl(uploadResult);
+    const url = this.buildMediaUrl(uploadResult, mediaType);
 
     return {
       url,
@@ -68,13 +65,13 @@ export class MediaService {
   }
 
   private detectMediaType(resourceType: string, format?: string): string {
+    if (format && format.toLowerCase() === 'pdf') return 'document';
     if (resourceType === 'video') return 'video';
     if (
       format &&
       ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(format.toLowerCase())
     )
       return 'image';
-    if (format && format.toLowerCase() === 'pdf') return 'document';
     return 'file';
   }
 
