@@ -276,7 +276,7 @@ paths:
         '401':
           description: Unauthorized (user not logged in)
 
-  /jobs/{jobId}/applications:
+  /companies/jobs/{jobId}/applicants:
     get:
       summary: Get applications for a job (manager only)
       parameters:
@@ -284,15 +284,41 @@ paths:
           in: path
           required: true
           schema: { type: string }
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
       responses:
         '200':
           description: Applications retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ApplicationDto'
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApplicationDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of applications.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '403':
           description: Forbidden (non-manager access)
         '404':
@@ -303,16 +329,43 @@ paths:
   /jobs/saved:
     get:
       summary: Get all jobs saved by the user
-      description: Retrieve a list of jobs that the authenticated user has saved.
+      description: Retrieve a paginated list of jobs that the authenticated user has saved.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
       responses:
         '200':
           description: Successfully retrieved saved jobs
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GetJobDto'
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of saved jobs.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '401':
           description: Unauthorized (user not logged in)
 
