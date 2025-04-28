@@ -14,7 +14,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
-import { mapConversations } from './dto/messages.mapper';
+import { getConversations } from './dto/messages.mapper';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -80,53 +80,62 @@ export class MessagesService {
   }
 
   async getConversations(userId: Types.ObjectId) {
+    // Find all conversations where the user is a participant
     const conversations = await this.conversationModel
       .find({ participants: userId })
-      .populate({
-        path: 'participants', // Populate participants (users)
-        model: 'User',
-        select: 'first_name last_name ', // This refers to the User model
-      })
-      .populate({
-        path: 'last_message_id', // Populate the last message in the conversation
-        model: 'Message',
-      })
       .lean();
 
-    // Now, manually populate the profile for each participant
     const modifiedConversations = await Promise.all(
       conversations.map(async (conversation) => {
-        const otherParticipant = conversation.participants.find(
-          (participant: any) =>
-            participant._id.toString() !== userId.toString(),
+        // Find the other participant (not the current user)
+        const otherParticipantId = conversation.participants.find(
+          (participant: any) => participant.toString() !== userId.toString(),
         );
 
-        // Manually populate profile for each participant
-        if (otherParticipant) {
-          const profile = await this.profileModel
-            .findOne({ _id: otherParticipant._id }) // Find profile by user id
-            .select('profile_picture'); // Only select necessary fields
+        if (!otherParticipantId) return null;
+        console.log('other participant id:' + otherParticipantId);
 
-          (otherParticipant as any).profile = profile; // Add the profile to the participant (cast to `any` type)
-        }
+        // Fetch the profile data (which contains first_name, last_name, and profile_picture)
+        const profile = await this.profileModel
+          .findById(new Types.ObjectId(otherParticipantId))
+          .select('profile_picture first_name last_name ')
+          .lean();
+        console.log('Profile:', profile);
+        // Fetch the last message separately (since we're not using populate)
+        const lastMessage = await this.messageModel
+          .findById(conversation.last_message_id)
+          .lean();
 
         return {
           _id: conversation._id,
-          lastMessage: conversation.last_message_id,
+          lastMessage: lastMessage || null, // Handle case where message might not exist
           unseenCount: conversation.unseen_count,
-          otherParticipant, // Add the populated participant here
+          otherParticipant: {
+            _id: otherParticipantId,
+            first_name: profile?.first_name,
+            last_name: profile?.last_name,
+            profile_picture: profile?.profile_picture,
+          },
         };
       }),
     );
 
-    const mappedConversations = mapConversations(modifiedConversations);
-    const sortedConversations = mappedConversations.sort((a, b) => {
-      const dateA = new Date(a.lastMessage.sentAt);
-      const dateB = new Date(b.lastMessage.sentAt);
+    // Filter out any null conversations
+    const filteredConversations = modifiedConversations.filter(
+      (conv) => conv !== null,
+    );
 
-      // Sort by latest date (descending order)
+    // Sort by last message date (newest first)
+    const sortedConversations = filteredConversations.sort((a, b) => {
+      const dateA = a.lastMessage?.sent_at
+        ? new Date(a.lastMessage.sent_at)
+        : new Date(0);
+      const dateB = b.lastMessage?.sent_at
+        ? new Date(b.lastMessage.sent_at)
+        : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-    return sortedConversations;
+    const mappedConversations = getConversations(sortedConversations);
+    return mappedConversations;
   }
 }
