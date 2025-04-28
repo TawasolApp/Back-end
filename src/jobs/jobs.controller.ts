@@ -20,6 +20,7 @@ import { JobsService } from './jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { ApplyJobDto } from './dtos/apply-job.dto';
+import { ApplicationDto } from './dtos/application.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('jobs')
@@ -126,5 +127,25 @@ export class JobsController {
 
     const userId = request.user['sub'];
     await this.jobsService.addApplication(userId, applyJobDto);
+  }
+
+  @Get('/applications/applied')
+  @HttpCode(HttpStatus.OK)
+  async getAppliedApplications(
+    @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ): Promise<{
+    applications: ApplicationDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+
+    const userId = request.user['sub'];
+    return await this.jobsService.getAppliedApplications(userId, page, limit);
   }
 }
