@@ -620,29 +620,32 @@ export class JobsService {
         { $set: { status } },
       );
 
-      // Send notification if the status is "Accepted"
-      if (status === 'Accepted') {
-        const company = await this.companyModel.findById(job.company_id).lean();
-        if (!company) {
-          throw new NotFoundException('Company not found.');
-        }
-
-        await addNotification(
-          this.notificationModel,
-          new Types.ObjectId(company._id),
-          new Types.ObjectId(application.user_id),
-          new Types.ObjectId(job._id),
-          new Types.ObjectId(application._id),
-          'JobOffer',
-          `accepted your offer for the position of ${job.position}.`,
-          new Date(),
-          this.notificationGateway,
-          this.profileModel,
-          this.companyModel,
-          this.userModel,
-          this.companyManagerModel,
-        );
+      // Send notification based on the status
+      const company = await this.companyModel.findById(job.company_id).lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
       }
+
+      const notificationMessage =
+        status === 'Accepted'
+          ? `accepted your application for the position of ${job.position}.`
+          : `rejected your application for the position of ${job.position}.`;
+
+      await addNotification(
+        this.notificationModel,
+        new Types.ObjectId(company._id), 
+        new Types.ObjectId(application.user_id), 
+        new Types.ObjectId(job._id), 
+        new Types.ObjectId(application._id), 
+        'JobOffer', 
+        notificationMessage,
+        new Date(),
+        this.notificationGateway,
+        this.profileModel, 
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
     } catch (error) {
       handleError(error, 'Failed to update application status.');
     }
