@@ -65,6 +65,10 @@ import {
 } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  UserDocument,
+  User,
+} from '../users/infrastructure/database/schemas/user.schema';
 
 @Injectable()
 export class PostsService {
@@ -82,6 +86,8 @@ export class PostsService {
     private readonly notificationGateway: NotificationGateway, // Inject NotificationGateway
     @InjectModel(CompanyManager.name)
     private companyManagerModel: Model<CompanyManager>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>, // Inject User model
   ) {}
 
   /**
@@ -724,6 +730,8 @@ export class PostsService {
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
               await post.save();
             }
@@ -745,6 +753,8 @@ export class PostsService {
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
               await comment.save();
             }
@@ -777,6 +787,8 @@ export class PostsService {
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
             }
 
@@ -807,6 +819,8 @@ export class PostsService {
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
             }
 
@@ -1167,6 +1181,8 @@ export class PostsService {
           this.notificationGateway, // Pass NotificationGateway
           this.profileModel, // Pass Profile model
           this.companyModel, // Pass Company model
+          this.userModel, // Pass User model
+          this.companyManagerModel, // Pass CompanyManager model
         );
         await post.save();
       } else if (comment) {
@@ -1183,6 +1199,8 @@ export class PostsService {
           this.notificationGateway, // Pass NotificationGateway
           this.profileModel, // Pass Profile model
           this.companyModel, // Pass Company model
+          this.userModel, // Pass User model
+          this.companyManagerModel, // Pass CompanyManager model
         );
         await comment?.save();
       }

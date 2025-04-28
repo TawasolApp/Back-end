@@ -3,10 +3,19 @@ import { NotificationDocument } from '../infrastructure/database/schemas/notific
 import { NotificationGateway } from '../../gateway/notification.gateway';
 import { mapToGetNotificationsDto } from '../mappers/notification.mapper';
 import { profile } from 'console';
-import { ProfileDocument } from 'src/profiles/infrastructure/database/schemas/profile.schema';
-import { CompanyDocument } from 'src/companies/infrastructure/database/schemas/company.schema';
+import { ProfileDocument } from '../../profiles/infrastructure/database/schemas/profile.schema';
+import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
 import * as admin from 'firebase-admin';
 import { firebaseAdminProvider } from '../firebase-admin.provider'; // Import the provider
+import {
+  User,
+  UserDocument,
+} from '../../users/infrastructure/database/schemas/user.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../../companies/infrastructure/database/schemas/company-manager.schema';
 
 export async function addNotification(
   notificationModel: Model<NotificationDocument>,
@@ -25,6 +34,8 @@ export async function addNotification(
   notificationGateway: NotificationGateway, // Inject NotificationGateway
   profileModel: Model<ProfileDocument>, // Inject Profile model
   companyModel: Model<CompanyDocument>, // Inject Company model
+  userModel: Model<UserDocument>, // Inject User model
+  companyManagerModel: Model<any>, // Inject CompanyManager model
 ) {
   if (senderId.equals(receiverId)) {
     console.log(
@@ -69,22 +80,71 @@ export async function addNotification(
     console.warn(`User with ID ${userId} is not connected.`);
   }
 
-  // Send notification via Firebase using sendNotificationToUser
+  // Send notification via Firebase using all FCM tokens
   try {
-    const message = {
-      title: 'New Notification',
-      body: content,
-    };
+    const managedCompany = await companyManagerModel
+      .find({ company_id: new Types.ObjectId(receiverId) })
+      .exec();
+    if (managedCompany) {
+      for (const company of managedCompany) {
+        const user = await userModel
+          .findById(company.manager_id)
+          .select('fcm_tokens');
+        if (!user || !user.fcm_tokens || user.fcm_tokens.length === 0) {
+          console.warn(`No FCM tokens found for user ID ${company.manager_id}`);
+          return savedNotification;
+        }
 
-    //TODO: Register the user with a valid FCM token before sending the notification
-    //TODO: Complete this when the cross teams are done with the FCM token
+        const message = {
+          title: 'Managed Company has a new Notification',
+          body: content,
+        };
 
-    await firebaseAdminProvider
-      .useFactory()
-      .sendNotificationToUser(receiverId.toString(), message);
-    console.log(`Notification sent via Firebase to user ID ${receiverId}`);
+        for (const token of user.fcm_tokens) {
+          try {
+            await admin.messaging().send({
+              token,
+              notification: message,
+            });
+            console.log(`Notification sent via Firebase to token: ${token}`);
+          } catch (error) {
+            console.error(
+              `Error sending notification to token ${token}:`,
+              error,
+            );
+          }
+        }
+      }
+    }
+    if (!managedCompany) {
+      const user = await userModel.findById(receiverId).select('fcm_tokens');
+      if (!user || !user.fcm_tokens || user.fcm_tokens.length === 0) {
+        console.warn(`No FCM tokens found for user ID ${receiverId}`);
+        return savedNotification;
+      }
+
+      const message = {
+        title: 'New Notification',
+        body: content,
+      };
+
+      for (const token of user.fcm_tokens) {
+        try {
+          await admin.messaging().send({
+            token,
+            notification: message,
+          });
+          console.log(`Notification sent via Firebase to token: ${token}`);
+        } catch (error) {
+          console.error(`Error sending notification to token ${token}:`, error);
+        }
+      }
+    }
   } catch (error) {
-    console.error(`Error sending notification via Firebase:`, error);
+    console.error(
+      `Error retrieving FCM tokens or sending notifications:`,
+      error,
+    );
   }
 
   return savedNotification;
