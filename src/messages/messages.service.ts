@@ -14,7 +14,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
-import { getConversations } from './dto/messages.mapper';
+import { getConversations, getMessages } from './dto/messages.mapper';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -36,6 +36,7 @@ export class MessagesService {
     let conversation = await this.conversationModel.findOne({
       participants: { $all: [senderId, receiverId] },
     });
+    console.log('Conversation:', conversation);
 
     if (!conversation) {
       conversation = await this.conversationModel.create({
@@ -57,6 +58,7 @@ export class MessagesService {
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
     await conversation.save();
+    // await newMessage.save();
 
     return { conversation, message: newMessage };
   }
@@ -90,10 +92,11 @@ export class MessagesService {
     // Find all conversations where the user is a participant with pagination
     const conversations = await this.conversationModel
       .find({ participants: userId })
-      .sort({ 'last_message_id.sent_at': -1 }) // Sort by most recent message first
-      .skip(skip)
-      .limit(limit)
+      // .sort({ 'last_message_id.sent_at': -1 }) // Sort by most recent message first
+      // .skip(skip)
+      // .limit(limit)
       .lean();
+    console.log('Conversations:', conversations);
 
     // Get total count for pagination metadata
     const total = await this.conversationModel.countDocuments({
@@ -151,9 +154,41 @@ export class MessagesService {
     });
 
     const mappedConversations = getConversations(sortedConversations);
-
+    const paginatedConversations = mappedConversations.slice(
+      skip,
+      skip + limit,
+    );
     return {
-      data: mappedConversations,
+      data: paginatedConversations,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+      },
+    };
+  }
+
+  async getConversationMessages(
+    conversationId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const skip = (page - 1) * limit;
+    const total = await this.messageModel.countDocuments({
+      conversation_id: new Types.ObjectId(conversationId),
+    });
+    const messages = await this.messageModel
+      .find({ conversation_id: new Types.ObjectId(conversationId) })
+      .sort({ sent_at: -1 }) // Sort by most recent message first
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    console.log(messages);
+    const mappedMessages = getMessages(messages);
+    return {
+      data: mappedMessages,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(total / limit),

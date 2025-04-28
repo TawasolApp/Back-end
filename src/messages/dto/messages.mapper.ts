@@ -27,3 +27,7 @@ function getMessage(message: any): GetMessageDto {
     sentAt: new Date(message.sent_at),
   };
 }
+
+export function getMessages(messages: any[]): GetMessageDto[] {
+  return messages.map((message) => getMessage(message));
+}
