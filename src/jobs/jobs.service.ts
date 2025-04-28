@@ -39,6 +39,12 @@ import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { toApplicationDto } from './mappers/application.mapper';
+import { addNotification } from '../notifications/helpers/notification.helper';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
 
 @Injectable()
 export class JobsService {
@@ -55,6 +61,9 @@ export class JobsService {
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   async checkAccess(userId: string, companyId: string) {
@@ -579,6 +588,63 @@ export class JobsService {
     } catch (error) {
       console.error(`Error fetching jobs applied by user: ${userId}`, error);
       handleError(error, 'Failed to retrieve applied jobs.');
+    }
+  }
+
+  async updateApplicationStatus(
+    userId: string,
+    applicationId: string,
+    status: 'Accepted' | 'Rejected',
+  ): Promise<void> {
+    try {
+      const application = await this.applicationModel
+        .findById(new Types.ObjectId(applicationId))
+        .lean();
+      if (!application) {
+        throw new NotFoundException('Application not found.');
+      }
+
+      const job = await this.jobModel.findById(application.job_id).lean();
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      if (!(await this.checkAccess(userId, job.company_id.toString()))) {
+        throw new ForbiddenException(
+          'You do not have permission to update the status of this application.',
+        );
+      }
+
+      await this.applicationModel.updateOne(
+        { _id: new Types.ObjectId(applicationId) },
+        { $set: { status } },
+      );
+
+      // Send notification if the status is "Accepted"
+      if (status === 'Accepted') {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        if (!company) {
+          throw new NotFoundException('Company not found.');
+        }
+
+        await addNotification(
+          this.notificationModel,
+          new Types.ObjectId(company._id),
+          new Types.ObjectId(application.user_id),
+          new Types.ObjectId(job._id),
+          new Types.ObjectId(application._id),
+          'JobOffer',
+          `accepted your offer for the position of ${job.position}.`,
+          new Date(),
+          this.notificationGateway,
+          this.profileModel,
+          this.companyModel,
+          this.userModel,
+          this.companyManagerModel,
+        );
+      }
+    } catch (error) {
+      handleError(error, 'Failed to update application status.');
     }
   }
 }

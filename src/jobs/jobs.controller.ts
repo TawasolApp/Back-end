@@ -177,4 +177,24 @@ export class JobsController {
     );
     return applicantsDto;
   }
+
+  @Patch('/applications/:applicationId/status')
+  @HttpCode(HttpStatus.OK)
+  async updateApplicationStatus(
+    @Param('applicationId') applicationId: string,
+    @Req() request: Request,
+    @Body('status') status: 'Accepted' | 'Rejected',
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(applicationId, 'application');
+    const userId = request.user['sub'];
+    await this.jobsService.updateApplicationStatus(
+      userId,
+      applicationId,
+      status,
+    );
+    return { message: 'Application status updated successfully.' };
+  }
 }
