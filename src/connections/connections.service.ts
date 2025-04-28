@@ -43,16 +43,28 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 @Injectable()
 export class ConnectionsService {
   constructor(
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     private readonly notificationGateway: NotificationGateway,
@@ -220,6 +232,8 @@ export class ConnectionsService {
         this.notificationGateway,
         this.profileModel,
         this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
       );
     } catch (error) {
       handleError(error, 'Failed to request connection.');
@@ -825,6 +839,8 @@ export class ConnectionsService {
         this.notificationGateway,
         this.profileModel,
         this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
       );
     } catch (error) {
       handleError(error, 'Failed to follow user.');
