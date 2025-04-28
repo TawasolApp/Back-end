@@ -731,6 +731,7 @@ export class CompaniesService {
    */
   async getCompanyJobs(
     companyId: string,
+    userId: string,
     page: number,
     limit: number,
   ): Promise<GetJobDto[]> {
@@ -748,7 +749,31 @@ export class CompaniesService {
         .skip(skip)
         .limit(limit)
         .lean();
-      return jobs.map(toGetJobDto);
+      // return jobs.map(toGetJobDto);
+      const jobIds = jobs.map((job) => job._id);
+      const applications = await this.applicationModel
+        .find({
+          job_id: { $in: jobIds },
+          user_id: new Types.ObjectId(userId),
+        })
+        .lean();
+      const applicationMap = new Map(
+        applications.map((application) => [
+          application.job_id.toString(),
+          application.status,
+        ]),
+      );
+      return jobs.map((job) => {
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company.name;
+        jobDto.companyLogo = company.logo;
+        jobDto.companyLocation = company.address;
+        jobDto.companyDescription = company.description;
+        jobDto.isSaved =
+          job.saved_by?.some((id) => id.toString() === userId) || false;
+        jobDto.status = applicationMap.get(job._id.toString()) || null;
+        return jobDto;
+      });
     } catch (error) {
       handleError(error, 'Failed to retrieve company jobs.');
     }
@@ -1080,9 +1105,7 @@ export class CompaniesService {
    * 1. fetches the companies managed by userId.
    * 2. returns the managed companies.
    */
-  async getManagedCompanies(
-    id: string,
-  ): Promise<GetCompanyDto[]> {
+  async getManagedCompanies(id: string): Promise<GetCompanyDto[]> {
     try {
       const managedCompanies = await this.companyManagerModel
         .find({ manager_id: new Types.ObjectId(id) })

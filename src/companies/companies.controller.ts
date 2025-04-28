@@ -289,8 +289,10 @@ export class CompaniesController {
       throw new UnauthorizedException('User not authenticated.');
     }
     validateId(companyId, 'company');
+    const userId = request.user['sub'];
     const jobsDto = await this.companiesService.getCompanyJobs(
       companyId,
+      userId,
       page,
       limit,
     );

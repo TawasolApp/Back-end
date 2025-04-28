@@ -1030,7 +1030,12 @@ describe('CompaniesService', () => {
       companyModel.findById.mockReturnValueOnce({
         lean: jest.fn().mockResolvedValueOnce(null),
       });
-      await service.getCompanyJobs(invalidCompanyId, 1, 10);
+      await service.getCompanyJobs(
+        invalidCompanyId,
+        mockProfiles[0]._id.toString(),
+        1,
+        10,
+      );
       expect(handleError).toHaveBeenCalledWith(
         new NotFoundException('Company not found.'),
         'Failed to retrieve company jobs.',
@@ -1056,7 +1061,12 @@ describe('CompaniesService', () => {
           }),
         }),
       });
-      const result = await service.getCompanyJobs(companyId, page, limit);
+      const result = await service.getCompanyJobs(
+        companyId,
+        mockProfiles[0]._id.toString(),
+        page,
+        limit,
+      );
       expect(result).toHaveLength(2);
       expect(result.map((j) => j.position)).toEqual(
         expect.arrayContaining(['Designer', 'Engineer']),
