@@ -32,6 +32,7 @@ import { CompanySize } from './enums/company-size.enum';
 import { CompanyType } from './enums/company-type.enum';
 import { toGetCompanyDto } from './mappers/company.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
+import { ApplicationStatus } from '../jobs/enums/application-status.enum';
 
 jest.mock('../common/utils/exception-handler', () => ({
   handleError: jest.fn(),
@@ -799,6 +800,47 @@ describe('CompaniesService', () => {
   });
 
   describe('getSuggestedCompanies', () => {
+    // it('should return suggested companies based on industry and size (from companyId1)', async () => {
+    //   const userId = mockProfiles[0]._id.toString();
+    //   const companyId = mockCompanies[0]._id.toString();
+    //   const page = 1;
+    //   const limit = 5;
+    //   companyModel.findById.mockReturnValueOnce({
+    //     select: jest.fn().mockReturnValueOnce({
+    //       lean: jest.fn().mockResolvedValueOnce({
+    //         industry: mockCompanies[0].industry,
+    //         company_size: mockCompanies[0].company_size,
+    //       }),
+    //     }),
+    //   });
+    //   const suggestedCompanies = [mockCompanies[1]];
+    //   companyModel.find.mockReturnValueOnce({
+    //     select: jest.fn().mockReturnValueOnce({
+    //       sort: jest.fn().mockReturnValueOnce({
+    //         skip: jest.fn().mockReturnValueOnce({
+    //           limit: jest.fn().mockReturnValueOnce({
+    //             lean: jest.fn().mockResolvedValueOnce(suggestedCompanies),
+    //           }),
+    //         }),
+    //       }),
+    //     }),
+    //   });
+    //   companyConnectionModel.find.mockReturnValueOnce({
+    //     lean: jest.fn().mockResolvedValueOnce([]),
+    //   });
+    //   const result = await service.getSuggestedCompanies(
+    //     userId,
+    //     companyId,
+    //     page,
+    //     limit,
+    //   );
+    //   expect(result).toHaveLength(1);
+    //   expect(result[0].companyId.toString()).toBe(
+    //     mockCompanies[1]._id.toString(),
+    //   );
+    //   expect(result[0].industry).toBe(mockCompanies[1].industry);
+    //   expect(result[0].isFollowing).toBe(false);
+    // });
     it('should return suggested companies based on industry and size (from companyId1)', async () => {
       const userId = mockProfiles[0]._id.toString();
       const companyId = mockCompanies[0]._id.toString();
@@ -825,7 +867,12 @@ describe('CompaniesService', () => {
         }),
       });
       companyConnectionModel.find.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce([]),
+        lean: jest.fn().mockResolvedValueOnce([
+          {
+            user_id: new Types.ObjectId(userId),
+            company_id: mockCompanies[1]._id,
+          },
+        ]),
       });
       const result = await service.getSuggestedCompanies(
         userId,
@@ -838,7 +885,7 @@ describe('CompaniesService', () => {
         mockCompanies[1]._id.toString(),
       );
       expect(result[0].industry).toBe(mockCompanies[1].industry);
-      expect(result[0].isFollowing).toBe(false);
+      expect(result[0].isFollowing).toBe(true);
     });
 
     it('should throw NotFoundException if the company does not exist', async () => {
@@ -878,7 +925,7 @@ describe('CompaniesService', () => {
       );
     });
 
-    it('should return profileId2 as a common follower of profileId1 and companyId1', async () => {
+    it('should correctly map sending and receiving parties and return common followers', async () => {
       const userId = mockProfiles[0]._id.toString();
       const companyId = mockCompanies[0]._id.toString();
       companyModel.findById.mockReturnValueOnce({
@@ -886,13 +933,12 @@ describe('CompaniesService', () => {
       });
       userConnectionModel.find.mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce([
-            {
-              sending_party: mockProfiles[0]._id,
-              receiving_party: mockProfiles[1]._id,
-              status: ConnectionStatus.Connected,
-            },
-          ]),
+          lean: jest
+            .fn()
+            .mockResolvedValueOnce([
+              mockUserConnections[0],
+              mockUserConnections[1],
+            ]),
         }),
       });
       companyConnectionModel.find.mockReturnValueOnce({
@@ -900,20 +946,83 @@ describe('CompaniesService', () => {
           select: jest.fn().mockReturnValueOnce({
             lean: jest
               .fn()
-              .mockResolvedValueOnce([{ user_id: mockProfiles[1]._id }]),
+              .mockResolvedValueOnce([
+                { user_id: mockProfiles[1]._id },
+                { user_id: mockProfiles[2]._id },
+              ]),
           }),
         }),
       });
       profileModel.find.mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce([mockProfiles[1]]),
+          lean: jest
+            .fn()
+            .mockResolvedValueOnce([mockProfiles[1], mockProfiles[2]]),
         }),
       });
       const result = await service.getCommonFollowers(userId, companyId);
-      expect(result).toBeDefined();
-      expect(result).toHaveLength(1);
-      expect(result[0].userId.toString()).toBe(mockProfiles[1]._id.toString());
+      expect(result).toHaveLength(2);
+      expect(result.map((p) => p.userId.toString())).toEqual(
+        expect.arrayContaining([
+          mockProfiles[1]._id.toString(),
+          mockProfiles[2]._id.toString(),
+        ]),
+      );
+      expect(companyModel.findById).toHaveBeenCalledWith(
+        new Types.ObjectId(companyId),
+      );
+      expect(userConnectionModel.find).toHaveBeenCalledWith({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Connected,
+          },
+          {
+            receiving_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Connected,
+          },
+        ],
+      });
+      expect(companyConnectionModel.find).toHaveBeenCalled();
+      expect(profileModel.find).toHaveBeenCalled();
     });
+
+    // it('should return profileId2 as a common follower of profileId1 and companyId1', async () => {
+    //   const userId = mockProfiles[0]._id.toString();
+    //   const companyId = mockCompanies[0]._id.toString();
+    //   companyModel.findById.mockReturnValueOnce({
+    //     lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
+    //   });
+    //   userConnectionModel.find.mockReturnValueOnce({
+    //     select: jest.fn().mockReturnValueOnce({
+    //       lean: jest.fn().mockResolvedValueOnce([
+    //         {
+    //           sending_party: mockProfiles[0]._id,
+    //           receiving_party: mockProfiles[1]._id,
+    //           status: ConnectionStatus.Connected,
+    //         },
+    //       ]),
+    //     }),
+    //   });
+    //   companyConnectionModel.find.mockReturnValueOnce({
+    //     sort: jest.fn().mockReturnValueOnce({
+    //       select: jest.fn().mockReturnValueOnce({
+    //         lean: jest
+    //           .fn()
+    //           .mockResolvedValueOnce([{ user_id: mockProfiles[1]._id }]),
+    //       }),
+    //     }),
+    //   });
+    //   profileModel.find.mockReturnValueOnce({
+    //     select: jest.fn().mockReturnValueOnce({
+    //       lean: jest.fn().mockResolvedValueOnce([mockProfiles[1]]),
+    //     }),
+    //   });
+    //   const result = await service.getCommonFollowers(userId, companyId);
+    //   expect(result).toBeDefined();
+    //   expect(result).toHaveLength(1);
+    //   expect(result[0].userId.toString()).toBe(mockProfiles[1]._id.toString());
+    // });
   });
 
   describe('getFollowedCompanies', () => {
@@ -976,39 +1085,37 @@ describe('CompaniesService', () => {
   });
 
   describe('getManagedCompanies', () => {
-    describe('getManagedCompanies', () => {
-      it('should return companyId1 and companyId2 as managed companies for profileId1', async () => {
-        const profileId = mockProfiles[0]._id.toString();
-        const matchedManagers = mockCompanyManagers.filter(
-          (m) => m.manager_id.toString() === profileId,
-        );
-        const managedCompanyIds = matchedManagers.map((m) => ({
-          company_id: m.company_id,
-        }));
-        companyManagerModel.find.mockReturnValueOnce({
-          select: jest.fn().mockReturnValueOnce({
-            lean: jest.fn().mockResolvedValueOnce(managedCompanyIds),
-          }),
-        });
-        const expectedCompanies = mockCompanies.filter((c) =>
-          managedCompanyIds.some(
-            (m) => m.company_id.toString() === c._id.toString(),
-          ),
-        );
-        companyModel.find.mockReturnValueOnce({
-          select: jest.fn().mockReturnValueOnce({
-            lean: jest.fn().mockResolvedValueOnce(expectedCompanies),
-          }),
-        });
-        const result = await service.getManagedCompanies(profileId);
-        expect(result).toHaveLength(expectedCompanies.length);
-        expect(result.map((c) => c.companyId.toString())).toEqual(
-          expect.arrayContaining([
-            mockCompanies[0]._id.toString(),
-            mockCompanies[1]._id.toString(),
-          ]),
-        );
+    it('should return companyId1 and companyId2 as managed companies for profileId1', async () => {
+      const profileId = mockProfiles[0]._id.toString();
+      const matchedManagers = mockCompanyManagers.filter(
+        (m) => m.manager_id.toString() === profileId,
+      );
+      const managedCompanyIds = matchedManagers.map((m) => ({
+        company_id: m.company_id,
+      }));
+      companyManagerModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(managedCompanyIds),
+        }),
       });
+      const expectedCompanies = mockCompanies.filter((c) =>
+        managedCompanyIds.some(
+          (m) => m.company_id.toString() === c._id.toString(),
+        ),
+      );
+      companyModel.find.mockReturnValueOnce({
+        select: jest.fn().mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(expectedCompanies),
+        }),
+      });
+      const result = await service.getManagedCompanies(profileId);
+      expect(result).toHaveLength(expectedCompanies.length);
+      expect(result.map((c) => c.companyId.toString())).toEqual(
+        expect.arrayContaining([
+          mockCompanies[0]._id.toString(),
+          mockCompanies[1]._id.toString(),
+        ]),
+      );
     });
 
     it('should catch and handle unexpected errors during getManagedCompanies', async () => {
@@ -1042,16 +1149,20 @@ describe('CompaniesService', () => {
       );
     });
 
-    it('should return jobs "Designer" and "Engineer" for companyId1', async () => {
+    it('should return jobs with correct isSaved and status for companyId1 and userId1', async () => {
       const companyId = mockCompanies[0]._id.toString();
+      const userId = mockProfiles[0]._id.toString();
       const page = 1;
       const limit = 10;
       companyModel.findById.mockReturnValueOnce({
         lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
       });
-      const expectedJobs = mockJobs.filter(
-        (job) => job.company_id.toString() === companyId,
-      );
+      const expectedJobs = mockJobs
+        .filter((job) => job.company_id.toString() === companyId)
+        .map((job) => ({
+          ...job,
+          saved_by: [new Types.ObjectId(userId)],
+        }));
       jobModel.find.mockReturnValueOnce({
         sort: jest.fn().mockReturnValueOnce({
           skip: jest.fn().mockReturnValueOnce({
@@ -1061,17 +1172,119 @@ describe('CompaniesService', () => {
           }),
         }),
       });
+      const applications = expectedJobs.map((job) => ({
+        job_id: job._id,
+        user_id: new Types.ObjectId(userId),
+        status: ApplicationStatus.Accepted,
+      }));
+      applicationModel.find.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(applications),
+      });
       const result = await service.getCompanyJobs(
         companyId,
-        mockProfiles[0]._id.toString(),
+        userId,
         page,
         limit,
       );
-      expect(result).toHaveLength(2);
-      expect(result.map((j) => j.position)).toEqual(
-        expect.arrayContaining(['Designer', 'Engineer']),
+      expect(result).toHaveLength(expectedJobs.length);
+      result.forEach((jobDto) => {
+        expect(jobDto.isSaved).toBe(true);
+        expect(jobDto.status).toBe(ApplicationStatus.Accepted);
+        expect(jobDto.companyName).toBe(mockCompanies[0].name);
+        expect(jobDto.companyLogo).toBe(mockCompanies[0].logo);
+        expect(jobDto.companyLocation).toBe(mockCompanies[0].address);
+        expect(jobDto.companyDescription).toBe(mockCompanies[0].description);
+      });
+      expect(companyModel.findById).toHaveBeenCalledWith(
+        new Types.ObjectId(companyId),
       );
+      expect(jobModel.find).toHaveBeenCalled();
+      expect(applicationModel.find).toHaveBeenCalled();
     });
+
+    //   it('should return jobs "Designer" and "Engineer" for companyId1', async () => {
+    //     const companyId = mockCompanies[0]._id.toString();
+    //     const userId = mockProfiles[0]._id.toString();
+    //     const page = 1;
+    //     const limit = 10;
+    //     companyModel.findById.mockReturnValueOnce({
+    //       lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
+    //     });
+    //     const expectedJobs = mockJobs
+    //       .filter((job) => job.company_id.toString() === companyId)
+    //       .map((job) => ({
+    //         ...job,
+    //         saved_by: [new Types.ObjectId(userId)],
+    //       }));
+    //     jobModel.find.mockReturnValueOnce({
+    //       sort: jest.fn().mockReturnValueOnce({
+    //         skip: jest.fn().mockReturnValueOnce({
+    //           limit: jest.fn().mockReturnValueOnce({
+    //             lean: jest.fn().mockResolvedValueOnce(expectedJobs),
+    //           }),
+    //         }),
+    //       }),
+    //     });
+    //     const applications = expectedJobs.map((job) => ({
+    //       job_id: job._id,
+    //       status: ApplicationStatus.Accepted,
+    //     }));
+
+    //     applicationModel.find.mockReturnValueOnce({
+    //       lean: jest.fn().mockResolvedValueOnce(applications),
+    //     });
+
+    //     const result = await service.getCompanyJobs(
+    //       companyId,
+    //       userId,
+    //       page,
+    //       limit,
+    //     );
+
+    //     expect(result).toHaveLength(2);
+    //     expect(result.map((j) => j.position)).toEqual(
+    //       expect.arrayContaining(['Designer', 'Engineer']),
+    //     );
+    //     result.forEach((jobDto) => {
+    //       expect(jobDto.isSaved).toBe(true);
+    //       expect(jobDto.status).toBe(ApplicationStatus.Accepted);
+    //     });
+    //   });
+    // });
+
+    // it('should return jobs "Designer" and "Engineer" for companyId1', async () => {
+    //   const companyId = mockCompanies[0]._id.toString();
+    //   const page = 1;
+    //   const limit = 10;
+    //   companyModel.findById.mockReturnValueOnce({
+    //     lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
+    //   });
+    //   const expectedJobs = mockJobs.filter(
+    //     (job) => job.company_id.toString() === companyId,
+    //   );
+    //   jobModel.find.mockReturnValueOnce({
+    //     sort: jest.fn().mockReturnValueOnce({
+    //       skip: jest.fn().mockReturnValueOnce({
+    //         limit: jest.fn().mockReturnValueOnce({
+    //           lean: jest.fn().mockResolvedValueOnce(expectedJobs),
+    //         }),
+    //       }),
+    //     }),
+    //   });
+    //   applicationModel.find.mockReturnValueOnce({
+    //     lean: jest.fn().mockResolvedValueOnce([]),
+    //   });
+    //   const result = await service.getCompanyJobs(
+    //     companyId,
+    //     mockProfiles[0]._id.toString(),
+    //     page,
+    //     limit,
+    //   );
+    //   expect(result).toHaveLength(2);
+    //   expect(result.map((j) => j.position)).toEqual(
+    //     expect.arrayContaining(['Designer', 'Engineer']),
+    //   );
+    // });
   });
 
   describe('addCompanyManager', () => {
