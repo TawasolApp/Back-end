@@ -79,11 +79,26 @@ export class MessagesService {
     );
   }
 
-  async getConversations(userId: Types.ObjectId) {
-    // Find all conversations where the user is a participant
+  async getConversations(
+    userId: Types.ObjectId,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    // Calculate skip value based on page and limit
+    const skip = (page - 1) * limit;
+
+    // Find all conversations where the user is a participant with pagination
     const conversations = await this.conversationModel
       .find({ participants: userId })
+      .sort({ 'last_message_id.sent_at': -1 }) // Sort by most recent message first
+      .skip(skip)
+      .limit(limit)
       .lean();
+
+    // Get total count for pagination metadata
+    const total = await this.conversationModel.countDocuments({
+      participants: userId,
+    });
 
     const modifiedConversations = await Promise.all(
       conversations.map(async (conversation) => {
@@ -93,22 +108,21 @@ export class MessagesService {
         );
 
         if (!otherParticipantId) return null;
-        console.log('other participant id:' + otherParticipantId);
 
-        // Fetch the profile data (which contains first_name, last_name, and profile_picture)
+        // Fetch the profile data
         const profile = await this.profileModel
           .findById(new Types.ObjectId(otherParticipantId))
-          .select('profile_picture first_name last_name ')
+          .select('profile_picture first_name last_name')
           .lean();
-        console.log('Profile:', profile);
-        // Fetch the last message separately (since we're not using populate)
+
+        // Fetch the last message
         const lastMessage = await this.messageModel
           .findById(conversation.last_message_id)
           .lean();
 
         return {
           _id: conversation._id,
-          lastMessage: lastMessage || null, // Handle case where message might not exist
+          lastMessage: lastMessage || null,
           unseenCount: conversation.unseen_count,
           otherParticipant: {
             _id: otherParticipantId,
@@ -125,7 +139,7 @@ export class MessagesService {
       (conv) => conv !== null,
     );
 
-    // Sort by last message date (newest first)
+    // Sort by last message date (newest first) - might be redundant since we sorted the query
     const sortedConversations = filteredConversations.sort((a, b) => {
       const dateA = a.lastMessage?.sent_at
         ? new Date(a.lastMessage.sent_at)
@@ -135,7 +149,17 @@ export class MessagesService {
         : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
+
     const mappedConversations = getConversations(sortedConversations);
-    return mappedConversations;
+
+    return {
+      data: mappedConversations,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+      },
+    };
   }
 }
