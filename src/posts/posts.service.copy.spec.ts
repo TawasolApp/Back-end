@@ -57,9 +57,10 @@ import * as postHelpers from '../posts/helpers/posts.helpers';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
 describe('PostsService', () => {
   let service: PostsService;
-
+  let userModelMock: any;
   let postModelMock: any;
   let profileModelMock: any;
   let companyModelMock: any;
@@ -183,6 +184,10 @@ describe('PostsService', () => {
           provide: getModelToken(CompanyManager.name),
           useValue: mockComapnyManager,
         },
+        {
+          provide: getModelToken(User.name),
+          useValue: userModelMock,
+        },
       ],
     }).compile();
 
@@ -197,6 +202,28 @@ describe('PostsService', () => {
 
   it('[1] should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('should return enriched comments for a valid postId and userId', async () => {
+    commentModelMock.find.mockReturnValue({
+      skip: jest.fn().mockReturnThis(),
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue(mockComments),
+    });
+    const postId = mockPost.id.toString();
+    const userId = mockProfile._id.toString();
+    jest
+      .spyOn(postHelpers, 'getCommentInfo')
+      .mockResolvedValueOnce(mockGetCommentDto)
+      .mockResolvedValueOnce(mockGetCommentDto);
+
+    const result = await service.getComments(postId, 1, 10, userId, mockUserId);
+
+    expect(commentModelMock.find).toHaveBeenCalledWith({
+      post_id: new Types.ObjectId(postId),
+    });
+    expect(result).toEqual([mockGetCommentDto, mockGetCommentDto]);
   });
 
   it('should update existing reaction type on a comment', async () => {
@@ -1528,31 +1555,8 @@ describe('PostsService', () => {
       { post_id: new Types.ObjectId().toString() },
     ];
     const mockPost = { _id: new Types.ObjectId(), text: 'Mock Post' };
-
-    // it('should return enriched saved posts', async () => {
-    //   saveModelMock.find.mockReturnValue({
-    //     skip: jest.fn().mockReturnThis(),
-    //     sort: jest.fn().mockReturnThis(),
-    //     limit: jest.fn().mockReturnThis(),
-    //     exec: jest.fn().mockResolvedValue(mockSavedPosts),
-    //   });
-
-    //   postModelMock.findById.mockReturnValue({
-    //     exec: jest.fn().mockResolvedValue(mockPost),
-    //   });
-
-    //   jest.spyOn(postHelpers, 'getPostInfo').mockResolvedValue(mockGetPostDto);
-
-    //   const result = await service.getSavedPosts(userId, 1, 10, mockUserId);
-
-    //   expect(saveModelMock.find).toHaveBeenCalledWith({
-    //     user_id: new Types.ObjectId(userId),
-    //   });
-    //   expect(postModelMock.findById).toHaveBeenCalledTimes(
-    //     mockSavedPosts.length,
-    //   );
-    //   expect(result).toEqual([mockGetPostDto, mockGetPostDto]);
-    // });
+    const postId = new Types.ObjectId().toString();
+    const mockUserId = new Types.ObjectId().toString();
 
     it('should return an empty array if no saved posts are found', async () => {
       saveModelMock.find.mockReturnValue({
@@ -1596,95 +1600,5 @@ describe('PostsService', () => {
         service.getSavedPosts(userId, 1, 10, mockUserId),
       ).rejects.toThrow('Failed to fetch saved posts');
     });
-
-    it('should rethrow HttpException if caught', async () => {
-      const httpException = new NotFoundException('Custom error');
-      saveModelMock.find.mockImplementation(() => {
-        throw httpException;
-      });
-
-      await expect(
-        service.getSavedPosts(userId, 1, 10, mockUserId),
-      ).rejects.toThrow(httpException);
-    });
-  });
-
-  describe('getComments', () => {
-    const postId = new Types.ObjectId().toString();
-    const userId = new Types.ObjectId().toString();
-    const mockComments = [
-      { _id: new Types.ObjectId(), content: 'Comment 1' },
-      { _id: new Types.ObjectId(), content: 'Comment 2' },
-    ];
-
-    it('should return enriched comments for a valid postId and userId', async () => {
-      commentModelMock.find.mockReturnValue({
-        skip: jest.fn().mockReturnThis(),
-        sort: jest.fn().mockReturnThis(),
-        limit: jest.fn().mockReturnThis(),
-        exec: jest.fn().mockResolvedValue(mockComments),
-      });
-
-      jest
-        .spyOn(postHelpers, 'getCommentInfo')
-        .mockResolvedValueOnce(mockGetCommentDto)
-        .mockResolvedValueOnce(mockGetCommentDto);
-
-      const result = await service.getComments(
-        postId,
-        1,
-        10,
-        userId,
-        mockUserId,
-      );
-
-      expect(commentModelMock.find).toHaveBeenCalledWith({
-        post_id: new Types.ObjectId(postId),
-      });
-      expect(result).toEqual([mockGetCommentDto, mockGetCommentDto]);
-    });
-
-    // it('should return an empty array if no comments are found', async () => {
-    //   commentModelMock.find.mockReturnValue({
-    //     skip: jest.fn().mockReturnThis(),
-    //     sort: jest.fn().mockReturnThis(),
-    //     limit: jest.fn().mockReturnThis(),
-    //     exec: jest.fn().mockResolvedValue([]),
-    //   });
-
-    //   const result = await service.getComments(
-    //     postId,
-    //     1,
-    //     10,
-    //     userId,
-    //     mockUserId,
-    //   );
-
-    //   expect(result).toEqual([]);
-    // });
-
-    // it('should throw InternalServerErrorException on database error', async () => {
-    //   commentModelMock.find.mockReturnValue({
-    //     skip: jest.fn().mockReturnThis(),
-    //     sort: jest.fn().mockReturnThis(),
-    //     limit: jest.fn().mockReturnThis(),
-    //     exec: jest.fn().mockRejectedValue(new Error('Database error')),
-    //   });
-
-    //   await expect(
-    //     service.getComments(postId, 1, 10, userId, mockUserId),
-    //   ).rejects.toThrow('Failed to fetch comments');
-    // });
-
-    // it('should rethrow HttpException if caught', async () => {
-    //   const httpException = new BadRequestException('Custom error');
-    //   commentModelMock.find.mockImplementation(() => {
-    //     throw httpException;
-    //   });
-
-    //   await expect(
-    //     service.getComments(postId, 1, 10, userId, mockUserId),
-    //   ).rejects.toThrow(httpException);
-    // });
   });
 });

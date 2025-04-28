@@ -22,9 +22,6 @@ export const firebaseAdminProvider = {
 
     return {
       defaultApp,
-      registerUser: (userId: string, token: string) => {
-        userTokens.set(userId, token); // Store the userId and token
-      },
       sendNotificationToUser: async (
         userId: string,
         message: { title: string; body: string }, // Simplified message parameter

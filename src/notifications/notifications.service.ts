@@ -13,6 +13,10 @@ import { Company } from '../companies/infrastructure/database/schemas/company.sc
 import { Types } from 'mongoose';
 import { getUserAccessed } from '../posts/helpers/posts.helpers';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
 
 @Injectable()
 export class NotificationsService {
@@ -23,6 +27,8 @@ export class NotificationsService {
     private readonly profileModel: Model<any>,
     @InjectModel(CompanyManager.name)
     private readonly companyManagerModel: Model<any>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>, // Inject User model
     //
   ) {}
 
@@ -117,5 +123,12 @@ export class NotificationsService {
         'Failed to fetch unseen notification count',
       );
     }
+  }
+
+  async subscribeFcmToken(userId: string, fcmToken: string): Promise<void> {
+    await this.userModel.updateOne(
+      { _id: new Types.ObjectId(userId) },
+      { $addToSet: { fcm_tokens: fcmToken } }, // Ensures no duplicate tokens
+    );
   }
 }
