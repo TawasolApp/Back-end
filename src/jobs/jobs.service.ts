@@ -39,6 +39,12 @@ import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { toApplicationDto } from './mappers/application.mapper';
+import { addNotification } from '../notifications/helpers/notification.helper';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
 
 @Injectable()
 export class JobsService {
@@ -55,6 +61,9 @@ export class JobsService {
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   async checkAccess(userId: string, companyId: string) {
@@ -519,13 +528,13 @@ export class JobsService {
     page: number,
     limit: number,
   ): Promise<{
-    applications: ApplicationDto[];
+    jobs: GetJobDto[];
     totalItems: number;
     totalPages: number;
     currentPage: number;
   }> {
     try {
-      console.log(`Fetching applied applications for user: ${userId}`);
+      console.log(`Fetching jobs applied by user: ${userId}`);
       console.log(`Pagination - Page: ${page}, Limit: ${limit}`);
 
       const skip = (page - 1) * limit;
@@ -533,7 +542,7 @@ export class JobsService {
       const [applications, totalItems] = await Promise.all([
         this.applicationModel
           .find({ user_id: new Types.ObjectId(userId) })
-          .sort({ applied_at: -1 })
+          .sort({ applied_at: -1 }) // Sort by applied date (descending)
           .skip(skip)
           .limit(limit)
           .lean(),
@@ -545,47 +554,100 @@ export class JobsService {
       console.log(`Total applications found: ${totalItems}`);
       console.log(`Applications fetched: ${applications.length}`);
 
-      const applicationDtos: ApplicationDto[] = [];
-      for (const application of applications) {
-        // Fetch user data
-        const user = await this.userModel
-          .findById(application.user_id)
-          .select('first_name last_name email')
-          .lean();
+      const jobIds = applications.map((application) => application.job_id);
+      const jobs = await this.jobModel.find({ _id: { $in: jobIds } }).lean();
 
-        // Fetch profile data
-        const profile = await this.profileModel
-          .findById(application.user_id)
-          .select('profile_picture headline')
-          .lean();
+      const jobDtos: GetJobDto[] = [];
+      for (const job of jobs) {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company?.name || null;
+        jobDto.companyLogo = company?.logo || null;
+        jobDto.companyLocation = company?.address || null;
+        jobDto.companyDescription = company?.description || null;
+        jobDto.isSaved =
+          job.saved_by?.some((id) => id.toString() === userId) || false;
 
-        const applicationDto = toApplicationDto(application);
-        applicationDto.applicantName =
-          user?.first_name && user?.last_name
-            ? `${user.first_name} ${user.last_name}`
-            : undefined;
-        applicationDto.applicantEmail = user?.email || undefined;
-        applicationDto.applicantPicture = profile?.profile_picture || undefined;
-        applicationDto.applicantHeadline = profile?.headline || undefined;
+        const application = applications.find(
+          (app) => app.job_id.toString() === job._id.toString(),
+        );
+        jobDto.status = application?.status || null;
 
-        applicationDtos.push(applicationDto);
+        jobDtos.push(jobDto);
       }
 
       const totalPages = Math.ceil(totalItems / limit);
 
-      console.log(`Mapped applications to DTOs: ${applicationDtos.length}`);
+      console.log(`Mapped jobs to DTOs: ${jobDtos.length}`);
       return {
-        applications: applicationDtos,
+        jobs: jobDtos,
         totalItems,
         totalPages,
         currentPage: page,
       };
     } catch (error) {
-      console.error(
-        `Error fetching applied applications for user: ${userId}`,
-        error,
+      console.error(`Error fetching jobs applied by user: ${userId}`, error);
+      handleError(error, 'Failed to retrieve applied jobs.');
+    }
+  }
+
+  async updateApplicationStatus(
+    userId: string,
+    applicationId: string,
+    status: 'Accepted' | 'Rejected',
+  ): Promise<void> {
+    try {
+      const application = await this.applicationModel
+        .findById(new Types.ObjectId(applicationId))
+        .lean();
+      if (!application) {
+        throw new NotFoundException('Application not found.');
+      }
+
+      const job = await this.jobModel.findById(application.job_id).lean();
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      if (!(await this.checkAccess(userId, job.company_id.toString()))) {
+        throw new ForbiddenException(
+          'You do not have permission to update the status of this application.',
+        );
+      }
+
+      await this.applicationModel.updateOne(
+        { _id: new Types.ObjectId(applicationId) },
+        { $set: { status } },
       );
-      handleError(error, 'Failed to retrieve applied applications.');
+
+      // Send notification based on the status
+      const company = await this.companyModel.findById(job.company_id).lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+
+      const notificationMessage =
+        status === 'Accepted'
+          ? `accepted your application for the position of ${job.position}.`
+          : `rejected your application for the position of ${job.position}.`;
+
+      await addNotification(
+        this.notificationModel,
+        new Types.ObjectId(company._id), 
+        new Types.ObjectId(application.user_id), 
+        new Types.ObjectId(job._id), 
+        new Types.ObjectId(application._id), 
+        'JobOffer', 
+        notificationMessage,
+        new Date(),
+        this.notificationGateway,
+        this.profileModel, 
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
+    } catch (error) {
+      handleError(error, 'Failed to update application status.');
     }
   }
 }
