@@ -55,6 +55,7 @@ import * as postHelpers from '../posts/helpers/posts.helpers';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
 describe('PostsService', () => {
   let service: PostsService;
 
@@ -68,6 +69,7 @@ describe('PostsService', () => {
   let notificationModelMock: any;
   let notificationGatewayMock;
   let mockComapnyManager: any;
+  let userModelMock: any;
 
   beforeEach(async () => {
     // Setup post constructor and instance
@@ -184,6 +186,10 @@ describe('PostsService', () => {
           provide: getModelToken(CompanyManager.name),
           useValue: mockComapnyManager,
         },
+        {
+          provide: getModelToken(User.name),
+          useValue: userModelMock,
+        }, // Add this mock
       ],
     }).compile();
 
@@ -208,7 +214,16 @@ describe('PostsService', () => {
   it('[1] should be defined', () => {
     expect(service).toBeDefined();
   });
+  it('should rethrow HttpException if caught', async () => {
+    const httpException = new NotFoundException('Custom error');
+    saveModelMock.find.mockImplementation(() => {
+      throw httpException;
+    });
 
+    await expect(
+      service.getSavedPosts(mockUserId, 1, 10, mockUserId),
+    ).rejects.toThrow(httpException);
+  });
   it('[2] should add a post', async () => {
     profileModelMock.find.mockReturnValue({
       exec: jest.fn().mockResolvedValue([mockProfile]),

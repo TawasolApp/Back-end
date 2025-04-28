@@ -20,9 +20,16 @@ import { UsersModule } from './users/users.module';
 import { MediaModule } from './common/media/media.module';
 import { NotificationGateway } from './gateway/notification.gateway';
 import { RawBodyMiddleware } from './payments/webhook/raw-body.middleware';
+import {
+  User,
+  UserSchema,
+} from './users/infrastructure/database/schemas/user.schema';
 
 @Module({
   imports: [
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema }, // Add User model
+    ]),
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URI || ''),
     JwtModule.register({

@@ -9,6 +9,7 @@ import * as notificationHelpers from './helpers/notification.helper';
 import * as notificationMappers from './mappers/notification.mapper';
 import * as postHelpers from '../posts/helpers/posts.helpers';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
 
 describe('NotificationsService', () => {
   let service: NotificationsService;
@@ -16,6 +17,7 @@ describe('NotificationsService', () => {
   let notificationModelMock: any;
   let profileModelMock: any;
   let companyManagerModelMock: any;
+  let userModelMock: any;
 
   beforeEach(async () => {
     notificationModelMock = {
@@ -33,6 +35,10 @@ describe('NotificationsService', () => {
       findById: jest.fn(),
     };
 
+    userModelMock = {
+      updateOne: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationsService,
@@ -44,6 +50,11 @@ describe('NotificationsService', () => {
         {
           provide: getModelToken(CompanyManager.name),
           useValue: companyManagerModelMock,
+        },
+
+        {
+          provide: getModelToken(User.name),
+          useValue: userModelMock,
         },
       ],
     }).compile();
@@ -190,5 +201,19 @@ describe('NotificationsService', () => {
     await expect(
       service.getUnseenCount(mockUserId, mockCompanyId),
     ).rejects.toThrow('Failed to fetch unseen notification count');
+  });
+
+  it('[9] should test subscribeFcmToken', async () => {
+    const mockUserId = new Types.ObjectId().toString();
+    const mockFcmToken = 'mockFcmToken';
+
+    userModelMock.updateOne.mockReturnValue({});
+    await service.subscribeFcmToken(mockUserId, mockFcmToken);
+    expect(userModelMock.updateOne).toHaveBeenCalledWith(
+      { _id: new Types.ObjectId(mockUserId) },
+      {
+        $addToSet: { fcm_tokens: mockFcmToken },
+      },
+    );
   });
 });
