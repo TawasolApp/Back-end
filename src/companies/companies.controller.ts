@@ -299,32 +299,7 @@ export class CompaniesController {
     return jobsDto;
   }
 
-  @Get('jobs/:jobId/applicants')
-  @HttpCode(HttpStatus.OK)
-  async getJobApplicants(
-    @Param('jobId') jobId: string,
-    @Req() request: Request,
-    @Query('page', ParseIntPipe) page: number,
-    @Query('limit', ParseIntPipe) limit: number,
-    @Query('name') name?: string,
-  ) {
-    if (!request.user) {
-      throw new UnauthorizedException('User not authenticated.');
-    }
-    validateId(jobId, 'job');
-    const userId = request.user['sub'];
-    // const role = request.user['role'];
-    // if (role !== 'manager' && role !== 'employer') {
-    //   throw new ForbiddenException('User cannot access this endpoint.');
-    // }
-    const applicantsDto = await this.jobsService.getJobApplicants(
-      userId,
-      jobId,
-      page,
-      limit,
-    );
-    return applicantsDto;
-  }
+  
 
   @Post('/:companyId/managers')
   @HttpCode(HttpStatus.CREATED)

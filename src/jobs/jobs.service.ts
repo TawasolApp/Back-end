@@ -33,10 +33,12 @@ import {
 import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
 import { ApplyJobDto } from './dtos/apply-job.dto';
+import { ApplicationDto } from './dtos/application.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
+import { toApplicationDto } from './mappers/application.mapper';
 
 @Injectable()
 export class JobsService {
@@ -179,7 +181,7 @@ export class JobsService {
    * retrieves the list of applicants for a given job, can apply optional filter by name.
    *
    * @param jobId - ID of the job.
-   * @returns array of GetUserDto - list of applicants with profile information.
+   * @returns array of ApplicationDto - list of applicants with profile information.
    * @throws NotFoundException - if the job does not exist.
    *
    * function flow:
@@ -193,7 +195,12 @@ export class JobsService {
     jobId: string,
     page: number,
     limit: number,
-  ): Promise<GetUserDto[]> {
+  ): Promise<{
+    applications: ApplicationDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
@@ -206,36 +213,55 @@ export class JobsService {
           'Logged in user does not have management access or employer access to this job posting.',
         );
       }
+
       const skip = (page - 1) * limit;
-      const applicants = await this.applicationModel.aggregate([
-        {
-          $match: {
-            job_id: new Types.ObjectId(jobId),
-          },
-        },
-        {
-          $lookup: {
-            from: 'Profiles',
-            localField: 'user_id',
-            foreignField: '_id',
-            as: 'profile',
-          },
-        },
-        { $unwind: '$profile' },
-        { $sort: { crapplied_at: -1, _id: 1 } },
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $project: {
-            _id: '$profile._id',
-            first_name: '$profile.first_name',
-            last_name: '$profile.last_name',
-            profile_picture: '$profile.profile_picture',
-            headline: '$profile.headline',
-          },
-        },
+
+      const [applications, totalItems] = await Promise.all([
+        this.applicationModel
+          .find({ job_id: new Types.ObjectId(jobId) })
+          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        this.applicationModel.countDocuments({
+          job_id: new Types.ObjectId(jobId),
+        }),
       ]);
-      return applicants.map(toGetUserDto);
+
+      const applicationDtos: ApplicationDto[] = [];
+      for (const application of applications) {
+        // Fetch user data
+        const user = await this.userModel
+          .findById(application.user_id)
+          .select('first_name last_name email')
+          .lean();
+
+        // Fetch profile data
+        const profile = await this.profileModel
+          .findById(application.user_id)
+          .select('profile_picture headline')
+          .lean();
+
+        const applicationDto = toApplicationDto(application);
+        applicationDto.applicantName =
+          user?.first_name && user?.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : undefined;
+        applicationDto.applicantEmail = user?.email || undefined;
+        applicationDto.applicantPicture = profile?.profile_picture || undefined;
+        applicationDto.applicantHeadline = profile?.headline || undefined;
+
+        applicationDtos.push(applicationDto);
+      }
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        applications: applicationDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
     }
@@ -433,13 +459,11 @@ export class JobsService {
     try {
       const { jobId, phoneNumber, resumeURL } = applyJobDto;
 
-      // Check if the job exists
       const job = await this.jobModel.findById(new Types.ObjectId(jobId));
       if (!job) {
         throw new NotFoundException('Job not found.');
       }
 
-      // Check if the user has already applied for the job
       const existingApplication = await this.applicationModel.findOne({
         user_id: new Types.ObjectId(userId),
         job_id: new Types.ObjectId(jobId),
@@ -449,7 +473,26 @@ export class JobsService {
         throw new ForbiddenException('You have already applied for this job.');
       }
 
-      // Create a new application
+      const userProfile = await this.profileModel.findById(
+        new Types.ObjectId(userId),
+      );
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found.');
+      }
+
+      if (!userProfile.is_premium) {
+        if (userProfile.plan_statistics.application_count <= 0) {
+          throw new ForbiddenException(
+            'You have reached your application limit. Upgrade to premium to apply for more jobs.',
+          );
+        }
+
+        await this.profileModel.updateOne(
+          { _id: new Types.ObjectId(userId) },
+          { $inc: { 'plan_statistics.application_count': -1 } },
+        );
+      }
+
       const newApplication = new this.applicationModel({
         _id: new Types.ObjectId(),
         user_id: new Types.ObjectId(userId),
@@ -462,13 +505,87 @@ export class JobsService {
 
       await newApplication.save();
 
-      // Increment the applicant count for the job
       await this.jobModel.updateOne(
         { _id: new Types.ObjectId(jobId) },
         { $inc: { applicants: 1 } },
       );
     } catch (error) {
       handleError(error, 'Failed to apply for the job.');
+    }
+  }
+
+  async getAppliedApplications(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
+    applications: ApplicationDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    try {
+      console.log(`Fetching applied applications for user: ${userId}`);
+      console.log(`Pagination - Page: ${page}, Limit: ${limit}`);
+
+      const skip = (page - 1) * limit;
+
+      const [applications, totalItems] = await Promise.all([
+        this.applicationModel
+          .find({ user_id: new Types.ObjectId(userId) })
+          .sort({ applied_at: -1 })
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        this.applicationModel.countDocuments({
+          user_id: new Types.ObjectId(userId),
+        }),
+      ]);
+
+      console.log(`Total applications found: ${totalItems}`);
+      console.log(`Applications fetched: ${applications.length}`);
+
+      const applicationDtos: ApplicationDto[] = [];
+      for (const application of applications) {
+        // Fetch user data
+        const user = await this.userModel
+          .findById(application.user_id)
+          .select('first_name last_name email')
+          .lean();
+
+        // Fetch profile data
+        const profile = await this.profileModel
+          .findById(application.user_id)
+          .select('profile_picture headline')
+          .lean();
+
+        const applicationDto = toApplicationDto(application);
+        applicationDto.applicantName =
+          user?.first_name && user?.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : undefined;
+        applicationDto.applicantEmail = user?.email || undefined;
+        applicationDto.applicantPicture = profile?.profile_picture || undefined;
+        applicationDto.applicantHeadline = profile?.headline || undefined;
+
+        applicationDtos.push(applicationDto);
+      }
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      console.log(`Mapped applications to DTOs: ${applicationDtos.length}`);
+      return {
+        applications: applicationDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
+    } catch (error) {
+      console.error(
+        `Error fetching applied applications for user: ${userId}`,
+        error,
+      );
+      handleError(error, 'Failed to retrieve applied applications.');
     }
   }
 }
