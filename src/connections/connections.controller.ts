@@ -260,6 +260,24 @@ export class ConnectionsController {
     return await this.connectionsService.getFollowing(userId, page, limit);
   }
 
+  @Get('/followers/count')
+  async getFollowerCount(@Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userId = request.user['sub'];
+    return await this.connectionsService.getFollowerCount(userId);
+  }
+
+  @Get('/following/count')
+  async getFollowingCount(@Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userId = request.user['sub'];
+    return await this.connectionsService.getFollowingCount(userId);
+  }
+
   @Post('/:userId/endorse-skill')
   @HttpCode(HttpStatus.CREATED)
   async endorseSkill(

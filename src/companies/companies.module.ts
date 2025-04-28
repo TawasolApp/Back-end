@@ -32,7 +32,7 @@ import { JobsModule } from '../jobs/jobs.module';
     AuthModule,
     UsersModule,
     forwardRef(() =>ProfilesModule),
-    ConnectionsModule,
+    forwardRef(() => ConnectionsModule),
     forwardRef(() => JobsModule),
     JwtModule.register({
       secret:
