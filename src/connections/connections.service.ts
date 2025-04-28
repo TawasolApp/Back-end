@@ -989,27 +989,47 @@ export class ConnectionsService {
     }
   }
 
-  async getFollowingCount(userId: string): Promise<number> {
-    try {
-      const count = await this.userConnectionModel.countDocuments({
-        sending_party: new Types.ObjectId(userId),
-        status: ConnectionStatus.Following,
-      });
-      return count;
-    } catch (error) {
-      handleError(error, 'Failed to get following count.');
-    }
-  }
-
-  async getFollowerCount(userId: string): Promise<number> {
+  /**
+   * retrieve count of users following the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where receiving party is userId and status is Following
+   * 2. counts all found documents and returns the count
+   */
+  async getFollowerCount(userId: string): Promise<{ count: number }> {
     try {
       const count = await this.userConnectionModel.countDocuments({
         receiving_party: new Types.ObjectId(userId),
         status: ConnectionStatus.Following,
       });
-      return count;
+      return { count };
     } catch (error) {
       handleError(error, 'Failed to get follower count.');
+    }
+  }
+
+  /**
+   * retrieve count of users followed by the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where sending party is userId and status is Following
+   * 2. counts all found documents and returns the count
+   */
+  async getFollowingCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        sending_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get following count.');
     }
   }
 
