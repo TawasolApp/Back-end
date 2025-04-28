@@ -15,12 +15,20 @@ import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConversationSeeder } from './infrastructure/database/seeders/conversation.seeder';
 import { MessageSeeder } from './infrastructure/database/seeders/message.seeder';
+import { MessagesController } from './messages.controller';
+import { MessagesService } from './messages.service';
+import { MessagesGateway } from '../gateway/messages.gateway';
+import {
+  Profile,
+  ProfileSchema,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
+      { name: Profile.name, schema: ProfileSchema },
     ]),
     AuthModule,
     UsersModule,
@@ -39,6 +47,9 @@ import { MessageSeeder } from './infrastructure/database/seeders/message.seeder'
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    MessagesService,
+    MessagesGateway,
   ],
+  controllers: [MessagesController],
 })
 export class MessagesModule {}
