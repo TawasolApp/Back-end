@@ -20,24 +20,9 @@ export class MediaService {
     let resourceType: 'image' | 'video' | 'raw' = 'raw';
     if (mime.startsWith('image/')) resourceType = 'image';
     else if (mime.startsWith('video/')) resourceType = 'video';
-    else if (ext === 'pdf') resourceType = 'image';
+    else if (ext === 'pdf') resourceType = 'raw';
 
     const publicId = file.originalname.replace(/\.[^/.]+$/, '');
-
-    const uploadStream = this.cloudinary.uploader.upload_stream(
-      {
-        resource_type: resourceType,
-        public_id: `uploads/${publicId}`,
-        format: ext,
-        pages: true,
-      },
-      (error, result) => {
-        if (error || !result) throw error;
-      },
-    );
-
-    const stream = Readable.from(file.buffer);
-    stream.pipe(uploadStream);
 
     const uploadResult: UploadApiResponse = await new Promise(
       (resolve, reject) => {
@@ -46,8 +31,6 @@ export class MediaService {
             {
               resource_type: resourceType,
               public_id: `uploads/${publicId}`,
-              format: ext,
-              pages: true,
             },
             (error, result) => {
               if (error || !result) return reject(error);
@@ -61,8 +44,16 @@ export class MediaService {
     const mediaType = this.detectMediaType(resourceType, uploadResult.format);
     const url = this.buildCloudinaryUrl(uploadResult);
 
+    let finalUrl = url;
+    if (mediaType === 'file') {
+      finalUrl =
+        `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(url)}`.split(
+          '.undefined',
+        )[0];
+    }
+
     return {
-      url,
+      url: finalUrl,
       type: mediaType,
     };
   }
