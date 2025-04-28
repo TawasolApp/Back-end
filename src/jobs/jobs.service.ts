@@ -181,7 +181,7 @@ export class JobsService {
    * retrieves the list of applicants for a given job, can apply optional filter by name.
    *
    * @param jobId - ID of the job.
-   * @returns array of GetUserDto - list of applicants with profile information.
+   * @returns array of ApplicationDto - list of applicants with profile information.
    * @throws NotFoundException - if the job does not exist.
    *
    * function flow:
@@ -195,7 +195,12 @@ export class JobsService {
     jobId: string,
     page: number,
     limit: number,
-  ): Promise<GetUserDto[]> {
+  ): Promise<{
+    applications: ApplicationDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
@@ -208,36 +213,55 @@ export class JobsService {
           'Logged in user does not have management access or employer access to this job posting.',
         );
       }
+
       const skip = (page - 1) * limit;
-      const applicants = await this.applicationModel.aggregate([
-        {
-          $match: {
-            job_id: new Types.ObjectId(jobId),
-          },
-        },
-        {
-          $lookup: {
-            from: 'Profiles',
-            localField: 'user_id',
-            foreignField: '_id',
-            as: 'profile',
-          },
-        },
-        { $unwind: '$profile' },
-        { $sort: { crapplied_at: -1, _id: 1 } },
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $project: {
-            _id: '$profile._id',
-            first_name: '$profile.first_name',
-            last_name: '$profile.last_name',
-            profile_picture: '$profile.profile_picture',
-            headline: '$profile.headline',
-          },
-        },
+
+      const [applications, totalItems] = await Promise.all([
+        this.applicationModel
+          .find({ job_id: new Types.ObjectId(jobId) })
+          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        this.applicationModel.countDocuments({
+          job_id: new Types.ObjectId(jobId),
+        }),
       ]);
-      return applicants.map(toGetUserDto);
+
+      const applicationDtos: ApplicationDto[] = [];
+      for (const application of applications) {
+        // Fetch user data
+        const user = await this.userModel
+          .findById(application.user_id)
+          .select('first_name last_name email')
+          .lean();
+
+        // Fetch profile data
+        const profile = await this.profileModel
+          .findById(application.user_id)
+          .select('profile_picture headline')
+          .lean();
+
+        const applicationDto = toApplicationDto(application);
+        applicationDto.applicantName =
+          user?.first_name && user?.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : undefined;
+        applicationDto.applicantEmail = user?.email || undefined;
+        applicationDto.applicantPicture = profile?.profile_picture || undefined;
+        applicationDto.applicantHeadline = profile?.headline || undefined;
+
+        applicationDtos.push(applicationDto);
+      }
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        applications: applicationDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
     }
@@ -509,13 +533,9 @@ export class JobsService {
       const [applications, totalItems] = await Promise.all([
         this.applicationModel
           .find({ user_id: new Types.ObjectId(userId) })
-          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .sort({ applied_at: -1 })
           .skip(skip)
           .limit(limit)
-          .populate(
-            'profile',
-            'first_name last_name email profile_picture headline',
-          ) // Populate profile details
           .lean(),
         this.applicationModel.countDocuments({
           user_id: new Types.ObjectId(userId),
@@ -525,8 +545,33 @@ export class JobsService {
       console.log(`Total applications found: ${totalItems}`);
       console.log(`Applications fetched: ${applications.length}`);
 
+      const applicationDtos: ApplicationDto[] = [];
+      for (const application of applications) {
+        // Fetch user data
+        const user = await this.userModel
+          .findById(application.user_id)
+          .select('first_name last_name email')
+          .lean();
+
+        // Fetch profile data
+        const profile = await this.profileModel
+          .findById(application.user_id)
+          .select('profile_picture headline')
+          .lean();
+
+        const applicationDto = toApplicationDto(application);
+        applicationDto.applicantName =
+          user?.first_name && user?.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : undefined;
+        applicationDto.applicantEmail = user?.email || undefined;
+        applicationDto.applicantPicture = profile?.profile_picture || undefined;
+        applicationDto.applicantHeadline = profile?.headline || undefined;
+
+        applicationDtos.push(applicationDto);
+      }
+
       const totalPages = Math.ceil(totalItems / limit);
-      const applicationDtos = applications.map(toApplicationDto);
 
       console.log(`Mapped applications to DTOs: ${applicationDtos.length}`);
       return {

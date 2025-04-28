@@ -1,23 +1,24 @@
 import { Application } from '../infrastructure/database/schemas/application.schema';
 import { ApplicationDto } from '../dtos/application.dto';
-import { ApplicationStatus } from '../enums/application-status.enum';
 
 export function toApplicationDto(
   application: Partial<Application>,
 ): ApplicationDto {
-  return {
-    applicationId: application._id?.toString() ?? '',
-    applicantId: application.user_id?.toString() ?? '',
-    applicantName:
-      application['profile']?.first_name && application['profile']?.last_name
-        ? `${application['profile'].first_name} ${application['profile'].last_name}`
-        : undefined,
-    applicantEmail: application['profile']?.email || undefined,
-    applicantPicture: application['profile']?.profile_picture || undefined,
-    applicantHeadline: application['profile']?.headline || undefined,
-    applicantPhoneNumber: application.phone_number || undefined,
-    resumeURL: application.resume_url || undefined,
-    status: application.status ?? ApplicationStatus.Pending,
-    appliedDate: application.applied_at ?? '',
-  };
+  const dto: Partial<ApplicationDto> = {};
+
+  if (application._id) dto.applicationId = application._id.toString();
+  if (application.user_id) dto.applicantId = application.user_id.toString();
+  if (application.phone_number)
+    dto.applicantPhoneNumber = application.phone_number;
+  if (application.resume_url) dto.resumeURL = application.resume_url;
+  if (application.status) dto.status = application.status;
+  if (application.applied_at) dto.appliedDate = application.applied_at;
+
+
+  dto.applicantName = undefined;
+  dto.applicantEmail = undefined;
+  dto.applicantPicture = undefined;
+  dto.applicantHeadline = undefined;
+
+  return dto as ApplicationDto;
 }
