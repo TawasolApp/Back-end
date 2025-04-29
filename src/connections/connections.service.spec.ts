@@ -16,6 +16,8 @@ import { Notification } from '../notifications/infrastructure/database/schemas/n
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
+
+import * as notificationHelpers from '../notifications/helpers/notification.helper';
 import {
   getConnection,
   getFollow,
@@ -23,6 +25,8 @@ import {
   getBlocked,
   getIgnored,
 } from './helpers/connection-helpers';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 jest.mock('../common/utils/exception-handler', () => ({
   handleError: jest.fn(),
@@ -78,6 +82,20 @@ describe('ConnectionsService', () => {
     getClients: jest.fn().mockReturnValue(new Map()),
   };
 
+  const mockUserModel = {
+    findById: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(undefined),
+      }),
+    }),
+  };
+
+  const mockComapnyManagerModel = {
+    findOne: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(undefined),
+    }),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -102,6 +120,14 @@ describe('ConnectionsService', () => {
           provide: NotificationGateway,
           useValue: mockNotificationGateway,
         },
+        {
+          provide: getModelToken(User.name),
+          useValue: mockUserModel,
+        },
+        {
+          provide: getModelToken(CompanyManager.name),
+          useValue: mockComapnyManagerModel,
+        },
       ],
     }).compile();
 
@@ -109,6 +135,10 @@ describe('ConnectionsService', () => {
     userConnectionModel = module.get(getModelToken(UserConnection.name));
     profileModel = module.get(getModelToken(Profile.name));
     jest.clearAllMocks();
+    jest.spyOn(notificationHelpers, 'addNotification').mockResolvedValue(null);
+    jest
+      .spyOn(notificationHelpers, 'deleteNotification')
+      .mockResolvedValue(null);
   });
 
   it('should be defined', () => {
