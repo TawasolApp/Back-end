@@ -22,6 +22,7 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { CheckoutSessionDto } from './dtos/checkout-session.dto';
+import { isPremium } from './helpers/check-premium.helper';
 
 @Injectable()
 export class PaymentsService {
@@ -47,14 +48,14 @@ export class PaymentsService {
     upgradePlanDto: UpgradePlanDto,
   ): Promise<CheckoutSessionDto> {
     try {
-      const existingPlan = await this.planDetailModel.findOne({
-        user_id: new Types.ObjectId(userId),
-        $or: [
-          { auto_renewal: true, cancel_date: null },
-          { auto_renewal: false, expiry_date: { $gte: new Date() } },
-        ],
-      });
-      if (existingPlan) {
+      // const existingPlan = await this.planDetailModel.findOne({
+      //   user_id: new Types.ObjectId(userId),
+      //   $or: [
+      //     { auto_renewal: true, cancel_date: null },
+      //     { auto_renewal: false, expiry_date: { $gte: new Date() } },
+      //   ],
+      // });
+      if (await isPremium(userId, this.planDetailModel)) {
         throw new ConflictException('User already has an active plan.');
       }
       const { planType, autoRenewal } = upgradePlanDto;
@@ -92,6 +93,7 @@ export class PaymentsService {
 
   async handlePaymentSuccess(session: Stripe.Checkout.Session) {
     try {
+      console.log('Enter handle payment success.');
       const userId = session.metadata?.userId;
       const planType = session.metadata?.planType as PlanType;
       const autoRenewal = session.metadata?.autoRenewal === 'true';
@@ -103,6 +105,7 @@ export class PaymentsService {
             startDate.getDate(),
           )
         : undefined;
+      console.log('Expiry date.');
       const plan = await this.planDetailModel.create({
         _id: new Types.ObjectId(),
         user_id: new Types.ObjectId(userId),
@@ -112,6 +115,7 @@ export class PaymentsService {
         auto_renewal: autoRenewal,
         cancel_date: null,
       });
+      console.log('Created plan.');
       await this.paymentModel.create({
         _id: new Types.ObjectId(),
         plan_id: plan._id,
@@ -122,10 +126,12 @@ export class PaymentsService {
         subscription_id: session.subscription as string,
         created_at: new Date(),
       });
+      console.log('Created payment.');
       await this.profileModel.updateOne(
         { _id: new Types.ObjectId(userId) },
         { $set: { is_premium: true } },
       );
+      console.log('Update profile.');
     } catch (error) {
       console.log(error);
       handleError(error, 'Failed to handle successful payment.');
@@ -134,33 +140,36 @@ export class PaymentsService {
 
   async cancelPlan(userId: string) {
     try {
-      const activePlan = await this.planDetailModel.findOne({
-        user_id: new Types.ObjectId(userId),
-        $or: [
-          { auto_renewal: true, cancel_date: null },
-          { auto_renewal: false, expiry_date: { $gte: new Date() } },
-        ],
-      });
-      if (!activePlan) {
+      // const activePlan = await this.planDetailModel.findOne({
+      //   user_id: new Types.ObjectId(userId),
+      //   $or: [
+      //     { auto_renewal: true, cancel_date: null },
+      //     { auto_renewal: false, expiry_date: { $gte: new Date() } },
+      //   ],
+      // });
+      if (!(await isPremium(userId, this.planDetailModel))) {
         throw new BadRequestException('User does not have any active plans.');
       }
       const cancelledPlan = await this.planDetailModel.findOne({
         user_id: new Types.ObjectId(userId),
         cancel_date: { $exists: true, $ne: null },
-      });     
+      });
       if (cancelledPlan) {
         throw new ConflictException('User already cancelled his premium plan.');
-      } 
+      }
+      const activePlan = await this.planDetailModel
+        .findOne({ user_id: new Types.ObjectId(userId) })
+        .sort({ start_date: -1 });
       const payment = await this.paymentModel
-        .findOne({ plan_id: activePlan._id })
+        .findOne({ plan_id: activePlan!._id })
         .sort({ created_at: -1 });
-      if (activePlan.auto_renewal && payment?.subscription_id) {
+      if (activePlan!.auto_renewal && payment?.subscription_id) {
         await this.stripe.subscriptions.update(payment.subscription_id, {
           cancel_at_period_end: true,
         });
       }
-      activePlan.cancel_date = new Date();
-      await activePlan.save();
+      activePlan!.cancel_date = new Date();
+      await activePlan!.save();
       await this.profileModel.updateOne(
         { _id: new Types.ObjectId(userId) },
         { $set: { is_premium: false } },
