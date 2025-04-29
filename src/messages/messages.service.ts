@@ -14,7 +14,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
-import { mapConversations } from './dto/messages.mapper';
+import { getConversations, getMessages } from './dto/messages.mapper';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -36,6 +36,7 @@ export class MessagesService {
     let conversation = await this.conversationModel.findOne({
       participants: { $all: [senderId, receiverId] },
     });
+    console.log('Conversation:', conversation);
 
     if (!conversation) {
       conversation = await this.conversationModel.create({
@@ -57,6 +58,7 @@ export class MessagesService {
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
     await conversation.save();
+    // await newMessage.save();
 
     return { conversation, message: newMessage };
   }
@@ -79,54 +81,120 @@ export class MessagesService {
     );
   }
 
-  async getConversations(userId: Types.ObjectId) {
+  async getConversations(
+    userId: Types.ObjectId,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    // Calculate skip value based on page and limit
+    const skip = (page - 1) * limit;
+
+    // Find all conversations where the user is a participant with pagination
     const conversations = await this.conversationModel
       .find({ participants: userId })
-      .populate({
-        path: 'participants', // Populate participants (users)
-        model: 'User',
-        select: 'first_name last_name ', // This refers to the User model
-      })
-      .populate({
-        path: 'last_message_id', // Populate the last message in the conversation
-        model: 'Message',
-      })
+      // .sort({ 'last_message_id.sent_at': -1 }) // Sort by most recent message first
+      // .skip(skip)
+      // .limit(limit)
       .lean();
+    console.log('Conversations:', conversations);
 
-    // Now, manually populate the profile for each participant
+    // Get total count for pagination metadata
+    const total = await this.conversationModel.countDocuments({
+      participants: userId,
+    });
+
     const modifiedConversations = await Promise.all(
       conversations.map(async (conversation) => {
-        const otherParticipant = conversation.participants.find(
-          (participant: any) =>
-            participant._id.toString() !== userId.toString(),
+        // Find the other participant (not the current user)
+        const otherParticipantId = conversation.participants.find(
+          (participant: any) => participant.toString() !== userId.toString(),
         );
 
-        // Manually populate profile for each participant
-        if (otherParticipant) {
-          const profile = await this.profileModel
-            .findOne({ _id: otherParticipant._id }) // Find profile by user id
-            .select('profile_picture'); // Only select necessary fields
+        if (!otherParticipantId) return null;
 
-          (otherParticipant as any).profile = profile; // Add the profile to the participant (cast to `any` type)
-        }
+        // Fetch the profile data
+        const profile = await this.profileModel
+          .findById(new Types.ObjectId(otherParticipantId))
+          .select('profile_picture first_name last_name')
+          .lean();
+
+        // Fetch the last message
+        const lastMessage = await this.messageModel
+          .findById(conversation.last_message_id)
+          .lean();
 
         return {
           _id: conversation._id,
-          lastMessage: conversation.last_message_id,
+          lastMessage: lastMessage || null,
           unseenCount: conversation.unseen_count,
-          otherParticipant, // Add the populated participant here
+          otherParticipant: {
+            _id: otherParticipantId,
+            first_name: profile?.first_name,
+            last_name: profile?.last_name,
+            profile_picture: profile?.profile_picture,
+          },
         };
       }),
     );
 
-    const mappedConversations = mapConversations(modifiedConversations);
-    const sortedConversations = mappedConversations.sort((a, b) => {
-      const dateA = new Date(a.lastMessage.sentAt);
-      const dateB = new Date(b.lastMessage.sentAt);
+    // Filter out any null conversations
+    const filteredConversations = modifiedConversations.filter(
+      (conv) => conv !== null,
+    );
 
-      // Sort by latest date (descending order)
+    // Sort by last message date (newest first) - might be redundant since we sorted the query
+    const sortedConversations = filteredConversations.sort((a, b) => {
+      const dateA = a.lastMessage?.sent_at
+        ? new Date(a.lastMessage.sent_at)
+        : new Date(0);
+      const dateB = b.lastMessage?.sent_at
+        ? new Date(b.lastMessage.sent_at)
+        : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-    return sortedConversations;
+
+    const mappedConversations = getConversations(sortedConversations);
+    const paginatedConversations = mappedConversations.slice(
+      skip,
+      skip + limit,
+    );
+    return {
+      data: paginatedConversations,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+      },
+    };
+  }
+
+  async getConversationMessages(
+    conversationId: string,
+    page: number = 1,
+    limit: number = 10,
+  ) {
+    const skip = (page - 1) * limit;
+    const total = await this.messageModel.countDocuments({
+      conversation_id: new Types.ObjectId(conversationId),
+    });
+    const messages = await this.messageModel
+      .find({ conversation_id: new Types.ObjectId(conversationId) })
+      .sort({ sent_at: -1 }) // Sort by most recent message first
+      .skip(skip)
+      .limit(limit)
+      .lean();
+
+    console.log(messages);
+    const mappedMessages = getMessages(messages);
+    return {
+      data: mappedMessages,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalItems: total,
+        itemsPerPage: limit,
+      },
+    };
   }
 }

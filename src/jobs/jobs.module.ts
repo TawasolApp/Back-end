@@ -19,6 +19,11 @@ import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { JobsService } from './jobs.service';
 import { JobsController } from './jobs.controller';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  Notification,
+  NotificationSchema,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
 
 @Module({
   imports: [
@@ -26,6 +31,7 @@ import { JobsController } from './jobs.controller';
       { name: Job.name, schema: JobSchema },
       { name: Application.name, schema: ApplicationSchema },
       { name: CompanyEmployer.name, schema: CompanyEmployerSchema },
+      { name: Notification.name, schema: NotificationSchema },
     ]),
     JwtModule.register({
       secret:
@@ -46,6 +52,12 @@ import { JobsController } from './jobs.controller';
     CompanyEmployerSeeder,
     JobsService,
   ],
-  providers: [JobSeeder, ApplicationSeeder, CompanyEmployerSeeder, JobsService],
+  providers: [
+    JobSeeder,
+    ApplicationSeeder,
+    CompanyEmployerSeeder,
+    JobsService,
+    NotificationGateway,
+  ],
 })
 export class JobsModule {}

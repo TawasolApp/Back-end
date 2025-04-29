@@ -20,24 +20,9 @@ export class MediaService {
     let resourceType: 'image' | 'video' | 'raw' = 'raw';
     if (mime.startsWith('image/')) resourceType = 'image';
     else if (mime.startsWith('video/')) resourceType = 'video';
-    else if (ext === 'pdf') resourceType = 'image';
+    else if (ext === 'pdf') resourceType = 'raw';
 
     const publicId = file.originalname.replace(/\.[^/.]+$/, '');
-
-    const uploadStream = this.cloudinary.uploader.upload_stream(
-      {
-        resource_type: resourceType,
-        public_id: `uploads/${publicId}`,
-        format: ext,
-        pages: true,
-      },
-      (error, result) => {
-        if (error || !result) throw error;
-      },
-    );
-
-    const stream = Readable.from(file.buffer);
-    stream.pipe(uploadStream);
 
     const uploadResult: UploadApiResponse = await new Promise(
       (resolve, reject) => {
@@ -46,8 +31,6 @@ export class MediaService {
             {
               resource_type: resourceType,
               public_id: `uploads/${publicId}`,
-              format: ext,
-              pages: true,
             },
             (error, result) => {
               if (error || !result) return reject(error);
@@ -62,7 +45,7 @@ export class MediaService {
     const url = this.buildCloudinaryUrl(uploadResult);
 
     return {
-      url,
+      url: url,
       type: mediaType,
     };
   }
@@ -82,8 +65,7 @@ export class MediaService {
     const base = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}`;
     const path = `${uploadResult.resource_type}/upload`;
     const version = `v${uploadResult.version}`;
-    const file = `${uploadResult.public_id}.${uploadResult.format}`;
-
+    const file = `${uploadResult.public_id}${uploadResult.format ? '.' + uploadResult.format : '.pdf'}`;
     return `${base}/${path}/${version}/${file}`;
   }
 }

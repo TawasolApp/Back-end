@@ -33,6 +33,8 @@ import {
 import { UsersModule } from '../users/users.module';
 import { AuthModule } from '../auth/auth.module';
 import { ReportSeeder } from './infrastructure/database/seeders/report.seeder';
+import { AdminController } from './admin.controller';
+import { AdminService } from './admin.service';
 
 @Module({
   imports: [
@@ -54,8 +56,8 @@ import { ReportSeeder } from './infrastructure/database/seeders/report.seeder';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  providers: [ReportSeeder],
-  exports: [ReportSeeder],
-  //   controllers: [],
+  controllers: [AdminController],
+  providers: [ReportSeeder, AdminService],
+  exports: [ReportSeeder, AdminService],
 })
 export class AdminModule {}

@@ -20,6 +20,9 @@ import { JobsService } from './jobs.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
 import { ApplyJobDto } from './dtos/apply-job.dto';
+import { ApplicationDto } from './dtos/application.dto';
+import { validateId } from '../common/utils/id-validator';
+import { GetJobDto } from './dtos/get-job.dto';
 
 @UseGuards(JwtAuthGuard)
 @Controller('jobs')
@@ -126,5 +129,72 @@ export class JobsController {
 
     const userId = request.user['sub'];
     await this.jobsService.addApplication(userId, applyJobDto);
+  }
+
+  @Get('/applications/applied')
+  @HttpCode(HttpStatus.OK)
+  async getAppliedApplications(
+    @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+  ): Promise<{
+    jobs: GetJobDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+
+    const userId = request.user['sub'];
+    return await this.jobsService.getAppliedApplications(userId, page, limit);
+  }
+
+  @Get('/:jobId/applicants')
+  @HttpCode(HttpStatus.OK)
+  async getJobApplicants(
+    @Param('jobId') jobId: string,
+    @Req() request: Request,
+    @Query('page', ParseIntPipe) page: number,
+    @Query('limit', ParseIntPipe) limit: number,
+    @Query('name') name?: string,
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(jobId, 'job');
+    const userId = request.user['sub'];
+    // const role = request.user['role'];
+    // if (role !== 'manager' && role !== 'employer') {
+    //   throw new ForbiddenException('User cannot access this endpoint.');
+    // }
+    const applicantsDto = await this.jobsService.getJobApplicants(
+      userId,
+      jobId,
+      page,
+      limit,
+    );
+    return applicantsDto;
+  }
+
+  @Patch('/applications/:applicationId/status')
+  @HttpCode(HttpStatus.OK)
+  async updateApplicationStatus(
+    @Param('applicationId') applicationId: string,
+    @Req() request: Request,
+    @Body('status') status: 'Accepted' | 'Rejected',
+  ) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    validateId(applicationId, 'application');
+    const userId = request.user['sub'];
+    await this.jobsService.updateApplicationStatus(
+      userId,
+      applicationId,
+      status,
+    );
+    return { message: 'Application status updated successfully.' };
   }
 }

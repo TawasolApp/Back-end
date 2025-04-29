@@ -34,6 +34,7 @@ npm install
 Create a `.env` file in the root directory and add the following:
 
 ```env
+TEST=OFF
 PORT=3000
 MONGO_URI=mongodb+srv://noorahmedalhadidi:mongodbatlaspassword@tawasolcluster.5irka.mongodb.net/TawasolDB?retryWrites=true&w=majority&appName=TawasolCluster
 JWT_SECRET=4a52519e47d98ddd4b515a71ca31443d530b16bd48218cacd2805ea7d0cdc5d4

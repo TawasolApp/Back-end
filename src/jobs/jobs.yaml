@@ -369,23 +369,50 @@ paths:
         '401':
           description: Unauthorized (user not logged in)
 
-  /applications/applied:
+  jobs/applications/applied:
     get:
       summary: Get all applications made by the user
-      description: Retrieve a list of all job applications submitted by the authenticated user.
+      description: Retrieve a paginated list of all job applications submitted by the authenticated user.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
       responses:
         '200':
           description: Successfully retrieved applications
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ApplicationDto'
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of applications.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '401':
           description: Unauthorized (user not logged in)
 
-  /applications/{applicationId}/status:
+  /jobs/applications/{applicationId}/status:
     patch:
       summary: Update the status of an application
       description: Accept or reject an application by updating its status.
