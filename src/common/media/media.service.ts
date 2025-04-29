@@ -44,10 +44,8 @@ export class MediaService {
     const mediaType = this.detectMediaType(resourceType, uploadResult.format);
     const url = this.buildCloudinaryUrl(uploadResult);
 
-    let finalUrl = url.split('.undefined')[0];
-
     return {
-      url: finalUrl,
+      url: url,
       type: mediaType,
     };
   }
@@ -67,8 +65,7 @@ export class MediaService {
     const base = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}`;
     const path = `${uploadResult.resource_type}/upload`;
     const version = `v${uploadResult.version}`;
-    const file = `${uploadResult.public_id}.${uploadResult.format}`;
-
+    const file = `${uploadResult.public_id}${uploadResult.format ? '.' + uploadResult.format : '.pdf'}`;
     return `${base}/${path}/${version}/${file}`;
   }
 }
