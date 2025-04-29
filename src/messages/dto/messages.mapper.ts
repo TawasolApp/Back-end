@@ -15,7 +15,7 @@ export function getConversations(conversations: any[]): GetConversationDto[] {
 
     return {
       _id: conversation._id.toString(),
-      lastMessage: conversation.lastMessage,
+      lastMessage: getMessage(conversation.lastMessage),
       unseenCount: conversation.unseen_count || 0,
       otherParticipant: {
         _id: otherParticipantId,
