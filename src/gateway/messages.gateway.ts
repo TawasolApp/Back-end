@@ -8,7 +8,6 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { Injectable } from '@nestjs/common';
 import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
 import { SendMessageDto } from '../messages/dto/send-message.dto';
 import { Types } from 'mongoose';
@@ -99,13 +98,22 @@ export class MessagesGateway
 
   @SubscribeMessage('messages_read')
   async handleRead(
-    @MessageBody() conversationId: string,
+    @MessageBody() rawPayload: any,
     @ConnectedSocket() client: Socket,
   ) {
+    const payload =
+      typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
+
+    console.log('convvvvvvvvv: ', payload);
+
     const userId = client.data.userId;
+    const conversationId = payload.conversationId;
+
+    console.log('id==== ', conversationId);
+
     await this.messagesService.markMessagesAsRead(
       new Types.ObjectId(conversationId),
-      client.data.userId,
+      new Types.ObjectId(userId),
     );
   }
 }

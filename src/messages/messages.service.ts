@@ -74,7 +74,12 @@ export class MessagesService {
     // Count messages with status 'Sent' or 'Delivered' for the given conversationId
     const unseenCount = await this.messageModel.countDocuments({
       conversation_id: conversationId,
-      status: { $in: [MessageStatus.Sent, MessageStatus.Delivered] },
+      status: {
+        $in: [
+          MessageStatus.Sent.toString(),
+          MessageStatus.Delivered.toString(),
+        ],
+      },
     });
     console.log('update unseen count: ' + unseenCount);
 
@@ -99,14 +104,21 @@ export class MessagesService {
     conversationId: Types.ObjectId,
     userId: Types.ObjectId,
   ) {
+    console.log('in service read message');
+    console.log('conversation' + conversationId);
+    console.log('userId' + userId);
     await this.messageModel.updateMany(
       {
         conversation_id: conversationId,
         receiver_id: userId,
-        status: MessageStatus.Delivered,
+        status: {
+          $in: [MessageStatus.Sent, MessageStatus.Delivered],
+        }, // ✅ Find both
       },
-      { $set: { status: MessageStatus.Read.toString() } },
+      { $set: { status: MessageStatus.Read } }, // ✅ No .toString() needed
     );
+
+    console.log('after service read message');
   }
 
   async getConversations(
