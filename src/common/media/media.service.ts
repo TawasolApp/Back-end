@@ -44,13 +44,7 @@ export class MediaService {
     const mediaType = this.detectMediaType(resourceType, uploadResult.format);
     const url = this.buildCloudinaryUrl(uploadResult);
 
-    let finalUrl = url;
-    if (mediaType === 'file') {
-      finalUrl =
-        `https://drive.google.com/viewerng/viewer?embedded=true&url=${encodeURIComponent(url)}`.split(
-          '.undefined',
-        )[0];
-    }
+    let finalUrl = url.split('.undefined')[0];
 
     return {
       url: finalUrl,
