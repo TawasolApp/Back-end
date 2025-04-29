@@ -10,7 +10,8 @@ import {
 import { Socket, Server } from 'socket.io';
 import { Injectable } from '@nestjs/common';
 import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
-import { SendMessageDto } from 'src/messages/dto/send-message.dto';
+import { SendMessageDto } from '../messages/dto/send-message.dto';
+import { Types } from 'mongoose';
 
 @WebSocketGateway({
   cors: {
@@ -32,6 +33,7 @@ export class MessagesGateway
       client.data.userId = userId; // Attach userId to socket
       console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
       client.join(userId); // Automatically join their room
+      this.messagesService.markMessagesAsDelivered(userId);
     } else {
       console.log('❌ Connection rejected: userId missing');
       client.disconnect();
@@ -84,6 +86,26 @@ export class MessagesGateway
 
     console.log(
       `📨 Message sent from ${client.data.userId} to ${payload.receiverId}: ${payload.text}`,
+    );
+  }
+
+  // Add these to your gateway
+  @SubscribeMessage('messages_delivered')
+  async handleDelivery(@ConnectedSocket() client: Socket) {
+    const userId = client.data.userId;
+
+    await this.messagesService.markMessagesAsDelivered(userId);
+  }
+
+  @SubscribeMessage('messages_read')
+  async handleRead(
+    @MessageBody() conversationId: string,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const userId = client.data.userId;
+    await this.messagesService.markMessagesAsRead(
+      new Types.ObjectId(conversationId),
+      client.data.userId,
     );
   }
 }

@@ -47,7 +47,8 @@ export class MessagesService {
 
     const newMessage = await this.messageModel.create({
       _id: new Types.ObjectId(),
-      sender_id: senderId,
+      sender_id: new Types.ObjectId(senderId),
+      receiver_id: new Types.ObjectId(receiverId),
       conversation_id: conversation._id,
       text: messageText,
       media: media ?? [],
@@ -58,27 +59,53 @@ export class MessagesService {
 
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
+
     await conversation.save();
+    await this.markMessagesAsRead(
+      conversation._id,
+      new Types.ObjectId(senderId),
+    );
     // await newMessage.save();
+    await this.updateUnseenCount(conversation._id);
 
     return { conversation, message: newMessage };
   }
+  async updateUnseenCount(conversationId: Types.ObjectId): Promise<void> {
+    // Count messages with status 'Sent' or 'Delivered' for the given conversationId
+    const unseenCount = await this.messageModel.countDocuments({
+      conversation_id: conversationId,
+      status: { $in: [MessageStatus.Sent, MessageStatus.Delivered] },
+    });
+    console.log('update unseen count: ' + unseenCount);
 
-  async markMessagesAsDelivered(userId: string) {
-    await this.messageModel.updateMany(
-      { receiver_id: userId, status: MessageStatus.Sent },
-      { $set: { status: MessageStatus.Delivered } },
+    // Update the unseen_count field in the conversation
+    await this.conversationModel.updateOne(
+      { _id: new Types.ObjectId(conversationId) },
+      { $set: { unseen_count: unseenCount } },
     );
   }
 
-  async markMessagesAsRead(conversationId: string, userId: string) {
+  async markMessagesAsDelivered(userId: string) {
+    console.log('messages delivered');
+    console.log('sheeeeeeeeeeeeeesh: ' + MessageStatus.Delivered.toString());
+
+    await this.messageModel.updateMany(
+      { receiver_id: new Types.ObjectId(userId), status: MessageStatus.Sent },
+      { $set: { status: MessageStatus.Delivered.toString() } },
+    );
+  }
+
+  async markMessagesAsRead(
+    conversationId: Types.ObjectId,
+    userId: Types.ObjectId,
+  ) {
     await this.messageModel.updateMany(
       {
         conversation_id: conversationId,
         receiver_id: userId,
         status: MessageStatus.Delivered,
       },
-      { $set: { status: MessageStatus.Read } },
+      { $set: { status: MessageStatus.Read.toString() } },
     );
   }
 

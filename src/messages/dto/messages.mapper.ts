@@ -20,6 +20,7 @@ function getMessage(message: any): GetMessageDto {
   return {
     _id: new Types.ObjectId(message._id),
     senderId: new Types.ObjectId(message.sender_id),
+    receiverId: new Types.ObjectId(message.receiver_id),
     conversationId: new Types.ObjectId(message.conversation_id),
     text: message.text,
     media: message.media ?? [],
