@@ -1,16 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { Post } from '../posts/infrastructure/database/schemas/post.schema';
-import { Job } from '../jobs/infrastructure/database/schemas/job.schema';
+import {
+  Job,
+  JobDocument,
+} from '../jobs/infrastructure/database/schemas/job.schema';
 
 @Injectable()
 export class AdminService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(Post.name) private readonly postModel: Model<Post>,
-    @InjectModel(Job.name) private readonly jobModel: Model<Job>,
+    @InjectModel(Job.name) private readonly jobModel: Model<JobDocument>,
     @InjectModel('Share') private readonly shareModel: Model<any>,
     @InjectModel('Comment') private readonly commentModel: Model<any>,
     @InjectModel('React') private readonly reactModel: Model<any>,
@@ -197,5 +200,14 @@ export class AdminService {
       mostAppliedJob,
       jobReportedCount,
     };
+  }
+
+  async ignoreJob(jobId: string): Promise<boolean> {
+    const result = await this.jobModel.updateOne(
+      { _id: new Types.ObjectId(jobId) },
+      { $set: { is_flagged: false } },
+    );
+
+    return result.matchedCount > 0;
   }
 }

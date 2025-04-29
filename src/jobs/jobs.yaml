@@ -412,7 +412,7 @@ paths:
         '401':
           description: Unauthorized (user not logged in)
 
-  jobs/applications/{applicationId}/status:
+  /jobs/applications/{applicationId}/status:
     patch:
       summary: Update the status of an application
       description: Accept or reject an application by updating its status.

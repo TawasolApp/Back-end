@@ -87,10 +87,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
-  /admin/job-listings/{jobId}/ignore:
-    post:
+  /admin/{jobId}/ignore:
+    patch:
       summary: Ignore a flagged job listing
-      tags: [Reports]
+      tags: [Jobs]
       description: Mark a flagged job as safe by unsetting `isFlagged`.
       security: [{ bearerAuth: [] }]
       parameters:
@@ -101,11 +101,17 @@ paths:
             type: string
       responses:
         '200':
-          description: Job listing ignored
+          description: Job successfully ignored
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
+        '404':
+          description: Job not found
+        '403':
+          description: Forbidden (non-manager access)
+        '401':
+          description: Unauthorized (user not logged in)
 
   /posts/{companyId}/{postId}:
     delete:

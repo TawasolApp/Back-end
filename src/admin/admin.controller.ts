@@ -6,11 +6,14 @@ import {
   UseGuards,
   Req,
   UnauthorizedException,
+  Patch,
+  Param,
+  NotFoundException,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
-import { checkAdmin } from '../common/utils/id-validator';
+import { checkAdmin, validateId } from '../common/utils/id-validator';
 
 @UseGuards(JwtAuthGuard)
 @Controller('admin')
@@ -45,5 +48,22 @@ export class AdminController {
     }
     checkAdmin(request.user);
     return await this.adminService.getJobAnalytics();
+  }
+
+  @Patch('/:jobId/ignore')
+  @HttpCode(HttpStatus.OK)
+  async ignoreJob(@Param('jobId') jobId: string, @Req() request: Request) {
+    validateId(jobId, 'job');
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    checkAdmin(request.user);
+
+    const result = await this.adminService.ignoreJob(jobId);
+    if (!result) {
+      throw new NotFoundException('Job not found.');
+    }
+
+    return { message: 'Job successfully ignored.' };
   }
 }
