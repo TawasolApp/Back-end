@@ -369,7 +369,7 @@ paths:
         '401':
           description: Unauthorized (user not logged in)
 
-  /applications/applied:
+  jobs/applications/applied:
     get:
       summary: Get all applications made by the user
       description: Retrieve a paginated list of all job applications submitted by the authenticated user.
@@ -399,7 +399,7 @@ paths:
                   applications:
                     type: array
                     items:
-                      $ref: '#/components/schemas/ApplicationDto'
+                      $ref: '#/components/schemas/GetJobDto'
                   totalItems:
                     type: integer
                     description: Total number of applications.
@@ -412,7 +412,7 @@ paths:
         '401':
           description: Unauthorized (user not logged in)
 
-  /applications/{applicationId}/status:
+  /jobs/applications/{applicationId}/status:
     patch:
       summary: Update the status of an application
       description: Accept or reject an application by updating its status.
