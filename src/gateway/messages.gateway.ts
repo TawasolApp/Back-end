@@ -116,4 +116,21 @@ export class MessagesGateway
       new Types.ObjectId(userId),
     );
   }
+  @SubscribeMessage('typing')
+  handleTyping(
+    @MessageBody() payload: string | { receiverId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Parse if it's a string
+    const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
+
+    // Extract receiverId
+    const receiverId = parsed.receiverId || parsed;
+
+    console.log('Typing event received for:', receiverId);
+
+    client.to(receiverId).emit('typing', {
+      senderId: client.data.userId,
+    });
+  }
 }

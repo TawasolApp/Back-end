@@ -136,7 +136,7 @@ export class MessagesService {
       // .skip(skip)
       // .limit(limit)
       .lean();
-    // console.log('Conversations:', conversations);
+    console.log('Conversations:', conversations);
 
     // Get total count for pagination metadata
     const total = await this.conversationModel.countDocuments({

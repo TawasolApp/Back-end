@@ -23,6 +23,27 @@ export class Conversation {
 
   @Prop()
   unseen_count: number;
+
+  @Prop({
+    type: [
+      {
+        user_id: { type: Types.ObjectId, ref: 'User' },
+        markedAsUnread: { type: Boolean, default: false },
+      },
+    ],
+    default: function () {
+      return (
+        this.participants?.slice(0, 2).map((participant: Types.ObjectId) => ({
+          user_id: participant,
+          markedAsUnread: false,
+        })) || []
+      );
+    },
+  })
+  read_status: {
+    user_id: Types.ObjectId;
+    markedAsUnread: boolean;
+  }[];
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);
