@@ -54,6 +54,7 @@ export class MessagesService {
       status: MessageStatus.Sent,
       sent_at: messageDate,
     });
+    console.log('Conversation Id:', conversation._id);
 
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
@@ -96,7 +97,7 @@ export class MessagesService {
       // .skip(skip)
       // .limit(limit)
       .lean();
-    console.log('Conversations:', conversations);
+    // console.log('Conversations:', conversations);
 
     // Get total count for pagination metadata
     const total = await this.conversationModel.countDocuments({
@@ -185,7 +186,7 @@ export class MessagesService {
       .limit(limit)
       .lean();
 
-    console.log(messages);
+    // console.log(messages);
     const mappedMessages = getMessages(messages);
     return {
       data: mappedMessages,

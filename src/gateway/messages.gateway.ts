@@ -10,6 +10,7 @@ import {
 import { Socket, Server } from 'socket.io';
 import { Injectable } from '@nestjs/common';
 import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
+import { SendMessageDto } from 'src/messages/dto/send-message.dto';
 
 @WebSocketGateway({
   cors: {
@@ -43,7 +44,7 @@ export class MessagesGateway
 
   @SubscribeMessage('send_message')
   async handleMessage(
-    @MessageBody() rawPayload: any,
+    @MessageBody() rawPayload: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ) {
     let payload;
