@@ -55,8 +55,8 @@ export class MessagesGateway
       return;
     }
 
-    if (!payload.receiverId || !payload.text) {
-      console.error('❌ Invalid payload: missing receiverId or text');
+    if (!payload.receiverId) {
+      console.error('❌ Invalid payload: missing receiverId ');
       return;
     }
 

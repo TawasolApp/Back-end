@@ -2,7 +2,7 @@ import { GetConversationDto } from './get-conversation.dto';
 import { GetMessageDto } from './get-message.dto';
 import { Types } from 'mongoose';
 
-export function mapConversations(conversations: any[]): GetConversationDto[] {
+export function getConversations(conversations: any[]): GetConversationDto[] {
   return conversations.map((conversation) => ({
     _id: conversation._id,
     lastMessage: getMessage(conversation.lastMessage),
@@ -11,8 +11,7 @@ export function mapConversations(conversations: any[]): GetConversationDto[] {
       _id: conversation.otherParticipant._id,
       firstName: conversation.otherParticipant.first_name,
       lastName: conversation.otherParticipant.last_name,
-      profilePicture:
-        conversation.otherParticipant.profile?.profile_picture ?? null,
+      profilePicture: conversation.otherParticipant.profile_picture ?? null,
     },
   }));
 }
@@ -27,4 +26,8 @@ function getMessage(message: any): GetMessageDto {
     status: message.status,
     sentAt: new Date(message.sent_at),
   };
+}
+
+export function getMessages(messages: any[]): GetMessageDto[] {
+  return messages.map((message) => getMessage(message));
 }
