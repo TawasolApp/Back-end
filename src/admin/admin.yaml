@@ -1,0 +1,454 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: Admin Panel API
+  description: API documentation for the Admin Panel module including reports, job moderation, and platform analytics.
+servers:
+  - url: https://api.example.com/v1
+    description: Production Server
+  - url: http://localhost:3000
+    description: Local Development Server
+
+tags:
+  - name: Reports
+    description: Endpoints for managing reported posts, users, and flagged jobs.
+  - name: Analytics
+    description: Endpoints for platform analytics.
+  - name: Jobs
+    description: Endpoints related to job listings.
+
+paths:
+  /admin/reports/posts:
+    get:
+      summary: Fetch reported posts
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Pending, Reviewed, Actioned, Dismissed]
+      responses:
+        '200':
+          description: List of reported posts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportedPostsDto'
+
+  /admin/reports/users:
+    get:
+      summary: Fetch reported users
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [Pending, Reviewed, Actioned, Dismissed]
+      responses:
+        '200':
+          description: List of reported users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportedUsersDto'
+
+  /admin/reports/{reportId}/resolve:
+    post:
+      summary: Resolve a report
+      tags: [Reports]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveReportRequest'
+      responses:
+        '200':
+          description: Report resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /admin/job-listings/{jobId}/ignore:
+    post:
+      summary: Ignore a flagged job listing
+      tags: [Reports]
+      description: Mark a flagged job as safe by unsetting `isFlagged`.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Job listing ignored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /posts/{companyId}/{postId}:
+    delete:
+      summary: Delete a post (admin or author)
+      description: Permanently delete a post. Can be called by the original author or an admin as part of report resolution.
+      tags: [Reports]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: companyId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: postId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Post deleted successfully
+        '401':
+          description: Unauthorized access
+        '403':
+          description: Forbidden
+        '404':
+          description: Post not found
+        '500':
+          description: Failed to delete post
+
+  /jobs:
+    get:
+      summary: Get a list of job postings
+      description: Retrieve a paginated list of job postings with optional filters.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by keyword in the position title.
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by location.
+        - name: industry
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by industry.
+        - name: experienceLevel
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by experience level.
+        - name: company
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by company name.
+        - name: minSalary
+          in: query
+          schema:
+            type: number
+          description: Filter jobs with a minimum salary.
+        - name: maxSalary
+          in: query
+          schema:
+            type: number
+          description: Filter jobs with a maximum salary.
+      responses:
+        '200':
+          description: Successfully retrieved paginated jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of jobs matching the filters.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/{jobId}:
+    delete:
+      summary: Delete a job
+      tags: [Jobs]
+      description: Remove a job listing (admin or manager).
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted successfully
+        '404':
+          description: Job not found
+        '403':
+          description: Forbidden
+        '401':
+          description: Unauthorized
+
+  /admin/analytics/users:
+    get:
+      summary: Get user analytics
+      description: Retrieve analytics for users, including total users and most active users.
+      tags: [Analytics]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Successfully retrieved user analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserAnalytics'
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /admin/analytics/posts:
+    get:
+      summary: Get post analytics
+      description: Retrieve analytics for posts, including total posts, shares, comments, reacts, and the post with the most interactions.
+      tags: [Analytics]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Successfully retrieved post analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostAnalytics'
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /admin/analytics/jobs:
+    get:
+      summary: Get job analytics
+      description: Retrieve analytics for jobs, including total jobs and most applied companies.
+      tags: [Analytics]
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Successfully retrieved job analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobAnalytics'
+        '401':
+          description: Unauthorized (user not logged in)
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ReportedPostsDto:
+      type: object
+      properties:
+        id: { type: string }
+        status:
+          type: string
+          enum: [Pending, Reviewed, Actioned, Dismissed]
+        post_content: { type: string }
+        post_media: { type: string, nullable: true }
+        post_author: { type: string }
+        post_author_role: { type: string }
+        post_author_avatar: { type: string }
+        reported_by: { type: string }
+        reporter_avatar: { type: string }
+        reason: { type: string }
+        report_detail: { type: string }
+        reported_at:
+          type: string
+          format: date-time
+
+    ReportedUsersDto:
+      type: object
+      properties:
+        id: { type: string }
+        status:
+          type: string
+          enum: [Pending, Reviewed, Actioned, Dismissed]
+        reported_user: { type: string }
+        reported_user_role: { type: string }
+        reported_user_avatar: { type: string }
+        reported_by: { type: string }
+        reporter_avatar: { type: string }
+        reason: { type: string }
+        report_detail: { type: string }
+        reported_at:
+          type: string
+          format: date-time
+
+    ResolveReportRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: [delete_post, suspend_user, ignore]
+        comment:
+          type: string
+
+    GetJobDto:
+      type: object
+      properties:
+        jobId: { type: string }
+        companyId: { type: string }
+        companyName: { type: string }
+        companyLogo: { type: string }
+        companyLocation: { type: string }
+        companyDescription: { type: string }
+        position: { type: string }
+        description: { type: string }
+        location: { type: string }
+        experienceLevel:
+          type: string
+          enum: [Entry, Mid, Senior]
+        employmentType:
+          type: string
+          enum: [Full-time, Part-time, Internship, Apprenticeship, Contract]
+        locationType:
+          type: string
+          enum: [On-site, Remote, Hybrid]
+        applicationLink:
+          type: string
+          format: uri
+        applicants: { type: number }
+        isOpen: { type: boolean }
+        isSaved: { type: boolean }
+        postedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Pending, Viewed, Rejected, Accepted]
+
+    SuccessResponse:
+      type: object
+      properties:
+        message: { type: string }
+
+    UserAnalytics:
+      type: object
+      properties:
+        totalUsers:
+          type: integer
+          description: Total number of users.
+        mostActiveUsers:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:
+                type: string
+                description: The ID of the user.
+              activityScore:
+                type: integer
+                description: The user's activity score based on posts, reactions, connections, and reposts.
+        mostReportedUser:
+          type: string
+          description: The ID of the most reported user.
+        userReportedCount:
+          type: integer
+          description: Total number of users who have been reported.
+
+    PostAnalytics:
+      type: object
+      properties:
+        totalPosts:
+          type: integer
+          description: Total number of posts created in the last 30 days.
+        totalShares:
+          type: integer
+          description: Total number of shares in the last 30 days.
+        totalComments:
+          type: integer
+          description: Total number of comments in the last 30 days.
+        totalReacts:
+          type: integer
+          description: Total number of reactions in the last 30 days.
+        postWithMostInteractions:
+          type: string
+          description: The ID of the post with the most interactions (comments, shares, and reactions combined).
+        postReportedCount:
+          type: integer
+          description: Total number of posts that have been reported.
+        mostReportedPost:
+          type: string
+          description: The ID of the most reported post.
+
+    JobAnalytics:
+      type: object
+      properties:
+        totalJobs:
+          type: integer
+          description: Total number of jobs.
+        mostAppliedCompany:
+          type: object
+          description: The company with the highest number of applications.
+          properties:
+            _id:
+              type: string
+              description: The ID of the company.
+            applicationCount:
+              type: integer
+              description: The number of applications received by the company.
+        mostAppliedJob:
+          allOf:
+            - $ref: '#/components/schemas/GetJobDto'
+            - description: The job with the highest number of applications.
+        jobReportedCount:
+          type: integer
+          description: Total number of jobs that have been reported.
