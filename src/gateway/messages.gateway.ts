@@ -40,16 +40,22 @@ export class MessagesGateway
   }
   async updatePremiumStatus(userId: string, isPremium: boolean) {
     // Find all sockets for this user
-    const sockets = await this.server.fetchSockets();
-    const userSockets = sockets.filter(
-      (socket) => socket.data.userId === userId,
-    );
+    try {
+      const sockets = await this.server.fetchSockets();
+      const userSockets = sockets.filter(
+        (socket) => socket.data.userId === userId,
+      );
 
-    // Update premium status for each socket
-    userSockets.forEach((socket) => {
-      socket.data.isPremium = isPremium;
-      console.log(`Updated premium status for user ${userId} to ${isPremium}`);
-    });
+      // Update premium status for each socket
+      userSockets.forEach((socket) => {
+        socket.data.isPremium = isPremium;
+        console.log(
+          `Updated premium status for user ${userId} to ${isPremium}`,
+        );
+      });
+    } catch (error) {
+      console.error('❌ Error updating premium status:', error.message);
+    }
   }
 
   handleConnection(client: Socket) {
