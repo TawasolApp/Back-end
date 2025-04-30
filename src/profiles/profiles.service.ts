@@ -52,7 +52,8 @@ export class ProfilesService {
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     @InjectModel(PlanDetail.name)
     private readonly planDetailModel: Model<PlanDetailDocument>,
   ) {}

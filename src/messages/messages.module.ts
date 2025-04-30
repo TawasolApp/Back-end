@@ -22,6 +22,10 @@ import {
   Profile,
   ProfileSchema,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  PlanDetail,
+  PlanDetailSchema,
+} from '../payments/infrastructure/database/schema/plan-detail.schema';
 
 @Module({
   imports: [
@@ -29,6 +33,7 @@ import {
       { name: Conversation.name, schema: ConversationSchema },
       { name: Message.name, schema: MessageSchema },
       { name: Profile.name, schema: ProfileSchema },
+      { name: PlanDetail.name, schema: PlanDetailSchema },
     ]),
     AuthModule,
     UsersModule,
