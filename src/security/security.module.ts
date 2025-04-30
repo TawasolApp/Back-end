@@ -16,6 +16,14 @@ import {
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { JwtModule } from '@nestjs/jwt';
 import { AuthModule } from '../auth/auth.module';
+import { connection } from 'mongoose';
+import { ConnectionsModule } from '../connections/connections.module';
+import { ConnectionsService } from '../connections/connections.service';
+import { UsersModule } from '../users/users.module';
+import { CompaniesModule } from '../companies/companies.module';
+import { PaymentsModule } from '../payments/payments.module';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Module({
   imports: [
@@ -24,7 +32,12 @@ import { AuthModule } from '../auth/auth.module';
       { name: Job.name, schema: JobSchema },
       { name: Profile.name, schema: ProfileSchema },
     ]),
+    ConnectionsModule,
+    UsersModule,
+    CompaniesModule,
     AuthModule,
+    PaymentsModule,
+    NotificationsModule,
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
@@ -33,6 +46,6 @@ import { AuthModule } from '../auth/auth.module';
     }),
   ],
   controllers: [SecurityController],
-  providers: [SecurityService],
+  providers: [SecurityService, ConnectionsService, NotificationGateway],
 })
 export class SecurityModule {}
