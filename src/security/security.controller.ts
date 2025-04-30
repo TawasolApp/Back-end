@@ -47,7 +47,13 @@ export class SecurityController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    return await this.connectionService.getBlocked(req.user.sub, page, limit);
+    console.log('limit', limit);
+    console.log('page', page);
+    return await this.connectionService.getBlocked(
+      req.user.sub,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Post('block/:userId')
