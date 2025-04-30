@@ -363,6 +363,21 @@ export class ConnectionsService {
           { new: true },
         );
       if (status === ConnectionStatus.Connected) {
+        addNotification(
+          this.notificationModel,
+          new Types.ObjectId(receivingParty),
+          new Types.ObjectId(sendingParty),
+          updatedConnection!._id,
+          updatedConnection!._id,
+          'UserConnection',
+          'accepted your connection request',
+          new Date(),
+          this.notificationGateway,
+          this.profileModel,
+          this.companyModel,
+          this.userModel,
+          this.companyManagerModel,
+        );
         await this.profileModel.findByIdAndUpdate(
           updatedConnection!.sending_party,
           { $inc: { connection_count: 1 } },
@@ -386,6 +401,21 @@ export class ConnectionsService {
             status: ConnectionStatus.Following,
           });
           await newFollow.save();
+          addNotification(
+            this.notificationModel,
+            new Types.ObjectId(sendingParty),
+            new Types.ObjectId(receivingParty),
+            newFollow._id,
+            newFollow._id,
+            'UserConnection',
+            'followed you',
+            new Date(),
+            this.notificationGateway,
+            this.profileModel,
+            this.companyModel,
+            this.userModel,
+            this.companyManagerModel,
+          );
         }
       } else {
         // remove pending connection request notification
@@ -907,6 +937,7 @@ export class ConnectionsService {
         throw new NotFoundException('Follow instance not found.');
       }
       await this.userConnectionModel.findByIdAndDelete(existingFollow._id);
+      deleteNotification(this.notificationModel, existingFollow._id);
     } catch (error) {
       handleError(error, 'Failed to unfollow user.');
     }
