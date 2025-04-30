@@ -4,26 +4,18 @@ import { Types } from 'mongoose';
 export function getConversations(conversations: any[]): GetConversationDto[] {
   return conversations.map((conversation) => {
     // Determine if the OTHER participant marked it as unread
-    const otherParticipantId = conversation.otherParticipant?._id?.toString();
-    const markedAsUnread = otherParticipantId
-      ? conversation.read_status?.some(
-          (status: any) =>
-            status.user_id.toString() === otherParticipantId &&
-            status.markedAsUnread,
-        ) || false
-      : false;
 
     return {
       _id: conversation._id.toString(),
       lastMessage: getMessage(conversation.lastMessage),
       unseenCount: conversation.unseen_count || 0,
+      markedAsUnread: conversation.markedAsUnread,
       otherParticipant: {
-        _id: otherParticipantId,
+        _id: conversation.otherParticipant._id,
         firstName: conversation.otherParticipant.first_name,
         lastName: conversation.otherParticipant.last_name,
         profilePicture: conversation.otherParticipant.profile_picture ?? null,
       },
-      markedAsUnread, // Now derived from otherParticipant
     };
   });
 }

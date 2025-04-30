@@ -132,11 +132,8 @@ export class MessagesService {
     // Find all conversations where the user is a participant with pagination
     const conversations = await this.conversationModel
       .find({ participants: userId })
-      // .sort({ 'last_message_id.sent_at': -1 }) // Sort by most recent message first
-      // .skip(skip)
-      // .limit(limit)
       .lean();
-    console.log('Conversations:', conversations);
+    //console.log('Conversations:', conversations);
 
     // Get total count for pagination metadata
     const total = await this.conversationModel.countDocuments({
@@ -163,10 +160,20 @@ export class MessagesService {
           .findById(conversation.last_message_id)
           .lean();
 
+        // Determine if the current user is the first participant
+        const isFirstParticipant =
+          conversation.participants[0].toString() === userId.toString();
+
+        // Get the correct markedAsUnread value
+        const markedAsUnread = isFirstParticipant
+          ? conversation.markedAsUnread[0]
+          : conversation.markedAsUnread[1];
+
         return {
           _id: conversation._id,
           lastMessage: lastMessage || null,
           unseenCount: conversation.unseen_count,
+          markedAsUnread, // Add this field
           otherParticipant: {
             _id: otherParticipantId,
             first_name: profile?.first_name,
@@ -182,7 +189,7 @@ export class MessagesService {
       (conv) => conv !== null,
     );
 
-    // Sort by last message date (newest first) - might be redundant since we sorted the query
+    // Sort by last message date (newest first)
     const sortedConversations = filteredConversations.sort((a, b) => {
       const dateA = a.lastMessage?.sent_at
         ? new Date(a.lastMessage.sent_at)
@@ -234,6 +241,141 @@ export class MessagesService {
         totalPages: Math.ceil(total / limit),
         totalItems: total,
         itemsPerPage: limit,
+      },
+    };
+  }
+  async setConversationAsUnread(
+    userId: Types.ObjectId,
+    conversationId: Types.ObjectId,
+  ) {
+    // First find the conversation
+    const conversation = await this.conversationModel.findById(conversationId);
+
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+
+    // Determine if the user is the first or second participant
+    const isFirstParticipant = conversation.participants[0] == userId;
+
+    // Update the correct position in markedAsUnread array
+    const update = isFirstParticipant
+      ? { $set: { 'markedAsUnread.0': true } }
+      : { $set: { 'markedAsUnread.1': true } };
+
+    // Update the conversation
+    const updatedConversation = await this.conversationModel
+      .findByIdAndUpdate(conversationId, update, { new: true })
+      .lean();
+
+    if (!updatedConversation) {
+      throw new Error('Failed to update conversation');
+    }
+
+    // Format the response like getConversations
+    const otherParticipantId = updatedConversation.participants.find(
+      (participant: any) => participant.toString() !== userId.toString(),
+    );
+
+    if (!otherParticipantId) {
+      throw new Error('Other participant not found');
+    }
+
+    // Fetch the profile data
+    const profile = await this.profileModel
+      .findById(new Types.ObjectId(otherParticipantId))
+      .select('profile_picture first_name last_name')
+      .lean();
+
+    // Fetch the last message
+    const lastMessage = await this.messageModel
+      .findById(updatedConversation.last_message_id)
+      .lean();
+
+    // Get the correct markedAsUnread value
+    const markedAsUnread = isFirstParticipant
+      ? updatedConversation.markedAsUnread[0]
+      : updatedConversation.markedAsUnread[1];
+
+    return {
+      _id: updatedConversation._id,
+      lastMessage: lastMessage || null,
+      unseenCount: updatedConversation.unseen_count,
+      markedAsUnread,
+      otherParticipant: {
+        _id: otherParticipantId,
+        first_name: profile?.first_name,
+        last_name: profile?.last_name,
+        profile_picture: profile?.profile_picture,
+      },
+    };
+  }
+
+  async setConversationAsRead(
+    userId: Types.ObjectId,
+    conversationId: Types.ObjectId,
+  ) {
+    // First find the conversation
+    const conversation = await this.conversationModel.findById(conversationId);
+
+    if (!conversation) {
+      throw new Error('Conversation not found');
+    }
+
+    // Determine if the user is the first or second participant
+    const isFirstParticipant = conversation.participants[0] == userId;
+
+    // Update the correct position in markedAsUnread array
+    const update = isFirstParticipant
+      ? { $set: { 'markedAsUnread.0': false } }
+      : { $set: { 'markedAsUnread.1': false } };
+
+    // Update the conversation
+    const updatedConversation = await this.conversationModel
+      .findByIdAndUpdate(conversationId, update, { new: true })
+      .lean();
+
+    if (!updatedConversation) {
+      throw new Error('Failed to update conversation');
+    }
+
+    // Format the response like getConversations
+    console.log('updatedConversation:', updatedConversation);
+    const otherParticipantId = updatedConversation.participants.find(
+      (participant: any) => participant.toString() !== userId.toString(),
+    );
+    console.log('otherParticipantId:', otherParticipantId);
+
+    if (!otherParticipantId) {
+      throw new Error('Other participant not found');
+    }
+
+    // Fetch the profile data
+    const profile = await this.profileModel
+      .findById(new Types.ObjectId(otherParticipantId))
+      .select('profile_picture first_name last_name')
+      .lean();
+    console.log('profile:', profile);
+    // Fetch the last message
+    const lastMessage = await this.messageModel
+      .findById(updatedConversation.last_message_id)
+      .lean();
+
+    // Get the correct markedAsUnread value
+    const markedAsUnread = isFirstParticipant
+      ? updatedConversation.markedAsUnread[0]
+      : updatedConversation.markedAsUnread[1];
+
+    return {
+      _id: updatedConversation._id,
+      lastMessage: lastMessage || null,
+      unseenCount: updatedConversation.unseen_count,
+      markedAsUnread,
+      otherParticipant: {
+        _id: otherParticipantId,
+        firstName: profile?.first_name,
+        lastName: profile?.last_name,
+        profilePicture: profile?.profile_picture,
       },
     };
   }

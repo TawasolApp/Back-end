@@ -64,16 +64,7 @@ export class ConversationSeeder {
       conversations.push({
         participants: [firstParticipant._id, secondParticipant._id],
         unseen_count: faker.number.int({ min: 0, max: 10 }),
-        read_status: [
-          {
-            user_id: firstParticipant._id,
-            markedAsUnread: faker.datatype.boolean(),
-          },
-          {
-            user_id: secondParticipant._id,
-            markedAsUnread: faker.datatype.boolean(),
-          },
-        ],
+        markedAsUnread: [faker.datatype.boolean(), faker.datatype.boolean()],
       });
     }
 
