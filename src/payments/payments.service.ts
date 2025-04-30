@@ -18,7 +18,6 @@ import { PlanType } from './enums/plan-type.enum';
 import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { CheckoutSessionDto } from './dtos/checkout-session.dto';
-import { isPremium } from './helpers/check-premium.helper';
 import {
   Profile,
   ProfileDocument,
