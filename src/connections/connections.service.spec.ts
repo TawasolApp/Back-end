@@ -15,6 +15,7 @@ import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
+import { PlanDetail } from '../payments/infrastructure/database/schema/plan-detail.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
@@ -52,8 +53,7 @@ describe('ConnectionsService', () => {
     save: jest.fn(),
   };
 
-  const mockUserModel = {
-  };
+  const mockUserModel = {};
 
   const mockProfileModel = {
     findById: jest.fn(),
@@ -71,6 +71,12 @@ describe('ConnectionsService', () => {
   };
 
   const mockCompanyManagerModel = {
+    findOne: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(undefined),
+    }),
+  };
+
+  const mockPlanDetailModel = {
     findOne: jest.fn().mockReturnValue({
       lean: jest.fn().mockResolvedValue(undefined),
     }),
@@ -112,6 +118,10 @@ describe('ConnectionsService', () => {
         {
           provide: getModelToken(CompanyManager.name),
           useValue: mockCompanyManagerModel,
+        },
+        {
+          provide: getModelToken(PlanDetail.name),
+          useValue: mockPlanDetailModel,
         },
         {
           provide: getModelToken(Notification.name),
