@@ -12,7 +12,6 @@ import {
 class Education {
   _id: Types.ObjectId;
 
-
   school: string;
 
   degree?: string;
@@ -30,7 +29,6 @@ class Education {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
-
 }
 
 class Certification {
@@ -71,9 +69,7 @@ class WorkExperience {
   companyId?: Types.ObjectId;
 
   companyLogo?: string;
-
 }
-
 
 export class GetProfileDto {
   _id: Types.ObjectId;
@@ -111,4 +107,6 @@ export class GetProfileDto {
   connectStatus?: ProfileStatus = ProfileStatus.ME;
 
   followStatus?: ProfileStatus = ProfileStatus.ME;
+
+  isPremium?: boolean;
 }

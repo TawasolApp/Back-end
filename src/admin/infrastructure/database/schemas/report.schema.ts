@@ -24,14 +24,14 @@ export class Report {
   })
   reported_type: string;
 
-  @Prop({ type: Types.ObjectId, ref: 'User' })
-  admin_id: Types.ObjectId;
-
   @Prop({
     type: String,
-    enum: Object.values(ReportStatus),
+    enum: ['Pending', 'Actioned', 'Dismissed'], // Removed 'Reviewed'
   })
   status: ReportStatus;
+
+  @Prop({ type: String, required: true })
+  reason: string;
 
   @Prop()
   reported_at: Date;

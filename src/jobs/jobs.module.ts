@@ -24,6 +24,10 @@ import {
   Notification,
   NotificationSchema,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  PlanDetail,
+  PlanDetailSchema,
+} from '../payments/infrastructure/database/schema/plan-detail.schema';
 
 @Module({
   imports: [
@@ -32,6 +36,7 @@ import {
       { name: Application.name, schema: ApplicationSchema },
       { name: CompanyEmployer.name, schema: CompanyEmployerSchema },
       { name: Notification.name, schema: NotificationSchema },
+      { name: PlanDetail.name, schema: PlanDetailSchema },
     ]),
     JwtModule.register({
       secret:

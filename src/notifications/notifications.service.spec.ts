@@ -83,10 +83,26 @@ describe('NotificationsService', () => {
         _id: new Types.ObjectId(),
         receiver_id: mockUserId,
         sender_id: new Types.ObjectId(),
+        timestamp: undefined, // Ensure one notification has a null timestamp
+      },
+      {
+        _id: new Types.ObjectId(),
+        receiver_id: mockUserId,
+        sender_id: new Types.ObjectId(),
+        timestamp: new Date().toISOString(),
       },
     ];
     const mappedNotifications = [
-      { id: mockNotifications[0]._id.toString(), content: 'Test' },
+      {
+        id: mockNotifications[0]._id.toString(),
+        content: 'Test 1',
+        timestamp: mockNotifications[0].timestamp,
+      },
+      {
+        id: mockNotifications[1]._id.toString(),
+        content: 'Test 2',
+        timestamp: mockNotifications[1].timestamp,
+      },
     ];
 
     notificationModelMock.find.mockReturnValue({
@@ -98,7 +114,8 @@ describe('NotificationsService', () => {
 
     jest
       .spyOn(notificationMappers, 'mapToGetNotificationsDto')
-      .mockResolvedValueOnce(mappedNotifications[0]);
+      .mockResolvedValueOnce(mappedNotifications[0])
+      .mockResolvedValueOnce(mappedNotifications[1]);
 
     const result = await service.getNotifications(
       mockUserId,
@@ -107,7 +124,80 @@ describe('NotificationsService', () => {
       limit,
     );
 
-    expect(result).toEqual(mappedNotifications);
+    const sortedNotifications = mappedNotifications.sort((a, b) => {
+      if (!a || !a.timestamp || !b || !b.timestamp) return 0; // This condition will now be triggered
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+
+    expect(result).toEqual(sortedNotifications);
+    expect(notificationModelMock.find).toHaveBeenCalledWith({
+      receiver_id: new Types.ObjectId(mockUserId),
+      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+    });
+    expect(notificationModelMock.find().skip).toHaveBeenCalledWith(
+      (page - 1) * limit,
+    );
+    expect(notificationModelMock.find().limit).toHaveBeenCalledWith(limit);
+  });
+  it('[2-b] should fetch notifications for a user with pagination', async () => {
+    const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    const page = 1;
+    const limit = 10;
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
+
+    const mockNotifications = [
+      {
+        _id: new Types.ObjectId(),
+        receiver_id: mockUserId,
+        sender_id: new Types.ObjectId(),
+        timestamp: new Date().toISOString(), // Ensure one notification has a null timestamp
+      },
+      {
+        _id: new Types.ObjectId(),
+        receiver_id: mockUserId,
+        sender_id: new Types.ObjectId(),
+        timestamp: new Date().toISOString(),
+      },
+    ];
+    const mappedNotifications = [
+      {
+        id: mockNotifications[0]._id.toString(),
+        content: 'Test 1',
+        timestamp: mockNotifications[0].timestamp,
+      },
+      {
+        id: mockNotifications[1]._id.toString(),
+        content: 'Test 2',
+        timestamp: mockNotifications[1].timestamp,
+      },
+    ];
+
+    notificationModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      lean: jest.fn().mockResolvedValue(mockNotifications),
+    });
+
+    jest
+      .spyOn(notificationMappers, 'mapToGetNotificationsDto')
+      .mockResolvedValueOnce(mappedNotifications[0])
+      .mockResolvedValueOnce(mappedNotifications[1]);
+
+    const result = await service.getNotifications(
+      mockUserId,
+      mockCompanyId,
+      page,
+      limit,
+    );
+
+    const sortedNotifications = mappedNotifications.sort((a, b) => {
+      if (!a || !a.timestamp || !b || !b.timestamp) return 0; // This condition will now be triggered
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
+
+    expect(result).toEqual(sortedNotifications);
     expect(notificationModelMock.find).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
       type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
@@ -331,5 +421,21 @@ describe('NotificationsService', () => {
         $addToSet: { fcm_tokens: mockFcmToken },
       },
     );
+  });
+
+  it('[12] should throw an InternalServerErrorException in getUnreadNotifications', async () => {
+    const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    const page = 1;
+    const limit = 10;
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
+
+    notificationModelMock.find.mockImplementation(() => {
+      throw new Error('Database error');
+    });
+
+    await expect(
+      service.getUnreadNotifications(mockUserId, mockCompanyId, page, limit),
+    ).rejects.toThrow('Failed to fetch unread messages');
   });
 });

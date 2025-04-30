@@ -4,11 +4,12 @@ import { Types } from 'mongoose';
 export function getConversations(conversations: any[]): GetConversationDto[] {
   return conversations.map((conversation) => {
     // Determine if the OTHER participant marked it as unread
+    console.log('mapper:', conversation.unseen_count);
 
     return {
       _id: conversation._id.toString(),
       lastMessage: getMessage(conversation.lastMessage),
-      unseenCount: conversation.unseen_count || 0,
+      unseenCount: conversation.unseen_count,
       markedAsUnread: conversation.markedAsUnread,
       otherParticipant: {
         _id: conversation.otherParticipant._id,

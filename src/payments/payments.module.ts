@@ -25,7 +25,6 @@ import { PaymentsService } from './payments.service';
     ]),
     AuthModule,
     UsersModule,
-    forwardRef(() => ProfilesModule),
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
