@@ -167,10 +167,7 @@ export class ConnectionsService {
           'Cannot request a connection with yourself.',
         );
       }
-      if (
-        !(await isPremium(sendingParty, this.planDetailModel)) &&
-        sendingUser!.connection_count >= 50
-      ) {
+      if (!sendingUser!.is_premium && sendingUser!.connection_count >= 50) {
         throw new ForbiddenException(
           'User has exceeded his limit on connections.',
         );
@@ -328,10 +325,10 @@ export class ConnectionsService {
       const receivingUser = await this.profileModel
         .findById(new Types.ObjectId(receivingParty))
         .lean();
-      const exisitngUser = await this.profileModel
+      const existingUser = await this.profileModel
         .findById(new Types.ObjectId(sendingParty))
         .lean();
-      if (!exisitngUser) {
+      if (!existingUser) {
         throw new NotFoundException('User not found.');
       }
       const existingRequest = await getPending(
@@ -344,10 +341,7 @@ export class ConnectionsService {
       }
       const { isAccept } = updateRequestDto;
       if (isAccept) {
-        if (
-          !(await isPremium(sendingParty, this.planDetailModel)) &&
-          receivingUser!.connection_count >= 50
-        ) {
+        if (!existingUser.is_premium && receivingUser!.connection_count >= 50) {
           throw new ForbiddenException(
             'User has exceeded his limit on connections.',
           );
@@ -1108,6 +1102,28 @@ export class ConnectionsService {
       return { count };
     } catch (error) {
       handleError(error, 'Failed to get following count.');
+    }
+  }
+
+  /**
+   * retrieve count of users following the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where receiving party is userId and status is Pending
+   * 2. counts all found documents and returns the count
+   */
+  async getPendingCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Pending,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get pending requests count.');
     }
   }
 

@@ -278,6 +278,15 @@ export class ConnectionsController {
     return await this.connectionsService.getFollowingCount(userId);
   }
 
+  @Get('/pending/count')
+  async getPendingCount(@Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userId = request.user['sub'];
+    return await this.connectionsService.getPendingCount(userId);
+  }
+
   @Post('/:userId/endorse-skill')
   @HttpCode(HttpStatus.CREATED)
   async endorseSkill(
