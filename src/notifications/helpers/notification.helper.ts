@@ -16,6 +16,7 @@ import {
   CompanyManager,
   CompanyManagerDocument,
 } from '../../companies/infrastructure/database/schemas/company-manager.schema';
+import { get } from 'http';
 
 export async function addNotification(
   notificationModel: Model<NotificationDocument>,
@@ -69,7 +70,7 @@ export async function addNotification(
     profileModel,
     companyModel,
   );
-  console.log('Mapped notification:', getNotification);
+  // console.log('Mapped notification:', getNotification);
 
   // Emit the notification to the specific userId
   const userId = receiverId.toString();
@@ -85,6 +86,11 @@ export async function addNotification(
     const managedCompany = await companyManagerModel
       .find({ company_id: new Types.ObjectId(receiverId) })
       .exec();
+
+    console.log(
+      `Managed companies for receiver ID ${receiverId}:`,
+      managedCompany,
+    );
     if (managedCompany) {
       for (const company of managedCompany) {
         const user = await userModel
@@ -97,14 +103,35 @@ export async function addNotification(
 
         const message = {
           title: 'Managed Company has a new Notification',
-          body: content,
+          body: getNotification?.content,
         };
 
         for (const token of user.fcm_tokens) {
           try {
             await admin.messaging().send({
               token,
-              notification: message,
+              notification: {
+                title: message.title,
+                body: getNotification?.content,
+              },
+              data: {
+                rootId: rootId.toString(),
+              },
+              android: {
+                priority: 'high',
+                notification: {
+                  sound: 'default',
+                  channelId: 'default',
+                },
+              },
+              apns: {
+                payload: {
+                  aps: {
+                    sound: 'default',
+                    channelId: 'default',
+                  },
+                },
+              },
             });
             console.log(`Notification sent via Firebase to token: ${token}`);
           } catch (error) {
@@ -116,23 +143,45 @@ export async function addNotification(
         }
       }
     }
-    if (!managedCompany) {
+    if (managedCompany.length === 0) {
       const user = await userModel.findById(receiverId).select('fcm_tokens');
       if (!user || !user.fcm_tokens || user.fcm_tokens.length === 0) {
         console.warn(`No FCM tokens found for user ID ${receiverId}`);
         return savedNotification;
       }
 
+      console.log(`User FCM tokens:`, user.fcm_tokens);
+
       const message = {
         title: 'New Notification',
-        body: content,
+        body: getNotification?.content,
       };
 
       for (const token of user.fcm_tokens) {
         try {
           await admin.messaging().send({
             token,
-            notification: message,
+            notification: {
+              title: message.title,
+              body: message.body,
+            },
+            data: {
+              rootId: rootId.toString(),
+            },
+            android: {
+              priority: 'high',
+              notification: {
+                sound: 'default',
+                channelId: 'default',
+              },
+            },
+            apns: {
+              payload: {
+                aps: {
+                  sound: 'default',
+                },
+              },
+            },
           });
           console.log(`Notification sent via Firebase to token: ${token}`);
         } catch (error) {

@@ -32,6 +32,9 @@ export async function mapToGetNotificationsDto(
     senderType = 'User';
   } else {
     // Check in Company model
+    console.log(
+      `Profile not found for senderId: ${notification.sender_id}, checking Company model`,
+    );
     const company = await companyModel
       .findOne({ _id: new Types.ObjectId(notification.sender_id) })
       .lean();

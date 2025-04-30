@@ -51,6 +51,11 @@ import {
   CompanyManager,
   CompanyManagerDocument,
 } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  PlanDetail,
+  PlanDetailDocument,
+} from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
 export class ConnectionsService {
@@ -65,6 +70,8 @@ export class ConnectionsService {
     private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
     private readonly companyManagerModel: Model<CompanyManagerDocument>,
+    @InjectModel(PlanDetail.name)
+    private readonly planDetailModel: Model<PlanDetailDocument>,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     private readonly notificationGateway: NotificationGateway,
@@ -144,6 +151,9 @@ export class ConnectionsService {
     createRequestDto: CreateRequestDto,
   ) {
     try {
+      const sendingUser = await this.profileModel
+        .findById(new Types.ObjectId(sendingParty))
+        .lean();
       const { userId } = createRequestDto;
       const receivingParty = userId;
       const exisitngUser = await this.profileModel
@@ -155,6 +165,14 @@ export class ConnectionsService {
       if (sendingParty === receivingParty) {
         throw new BadRequestException(
           'Cannot request a connection with yourself.',
+        );
+      }
+      if (
+        !(await isPremium(sendingParty, this.planDetailModel)) &&
+        sendingUser!.connection_count >= 50
+      ) {
+        throw new ForbiddenException(
+          'User has exceeded his limit on connections.',
         );
       }
       const blocked1 = await getBlocked(
@@ -307,6 +325,9 @@ export class ConnectionsService {
     updateRequestDto: UpdateRequestDto,
   ) {
     try {
+      const receivingUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
       const exisitngUser = await this.profileModel
         .findById(new Types.ObjectId(sendingParty))
         .lean();
@@ -322,6 +343,16 @@ export class ConnectionsService {
         throw new NotFoundException('Connection request was not found.');
       }
       const { isAccept } = updateRequestDto;
+      if (isAccept) {
+        if (
+          !(await isPremium(sendingParty, this.planDetailModel)) &&
+          receivingUser!.connection_count >= 50
+        ) {
+          throw new ForbiddenException(
+            'User has exceeded his limit on connections.',
+          );
+        }
+      }
       const status = isAccept
         ? ConnectionStatus.Connected
         : ConnectionStatus.Ignored;

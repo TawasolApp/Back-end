@@ -1,4 +1,4 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { forwardRef, Module, ValidationPipe } from '@nestjs/common';
 import { PaymentsController } from './payments.controller';
 import { WebhookController } from './webhook/webhook.controller';
 import { APP_PIPE } from '@nestjs/core';
@@ -7,8 +7,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { AuthModule } from '../auth/auth.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { UsersModule } from '../users/users.module';
-import { Payment, PaymentSchema } from './infrastructure/database/schema/payment.schema';
-import { PlanDetail, PlanDetailSchema } from './infrastructure/database/schema/plan-detail.schema';
+import {
+  Payment,
+  PaymentSchema,
+} from './infrastructure/database/schema/payment.schema';
+import {
+  PlanDetail,
+  PlanDetailSchema,
+} from './infrastructure/database/schema/plan-detail.schema';
 import { PaymentsService } from './payments.service';
 
 @Module({
@@ -19,7 +25,6 @@ import { PaymentsService } from './payments.service';
     ]),
     AuthModule,
     UsersModule,
-    ProfilesModule,
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||

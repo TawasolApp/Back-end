@@ -13,9 +13,14 @@ import { UserConnection } from './infrastructure/database/schemas/user-connectio
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { PlanDetail } from '../payments/infrastructure/database/schema/plan-detail.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
+import * as notificationHelpers from '../notifications/helpers/notification.helper';
+
 import {
   getConnection,
   getFollow,
@@ -78,6 +83,24 @@ describe('ConnectionsService', () => {
     getClients: jest.fn().mockReturnValue(new Map()),
   };
 
+  const mockUserModel = {
+    findById: jest.fn().mockReturnValue({
+      select: jest.fn().mockReturnValue({
+        lean: jest.fn().mockResolvedValue(undefined),
+      }),
+    }),
+  };
+
+  const mockComapnyManagerModel = {
+    findOne: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(undefined),
+    }),
+  };
+
+  const mockPlanDetailModel = {
+    findOne: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -102,6 +125,18 @@ describe('ConnectionsService', () => {
           provide: NotificationGateway,
           useValue: mockNotificationGateway,
         },
+        {
+          provide: getModelToken(User.name),
+          useValue: mockUserModel,
+        },
+        {
+          provide: getModelToken(CompanyManager.name),
+          useValue: mockComapnyManagerModel,
+        },
+        {
+          provide: getModelToken(PlanDetail.name),
+          useValue: mockPlanDetailModel,
+        },
       ],
     }).compile();
 
@@ -109,6 +144,10 @@ describe('ConnectionsService', () => {
     userConnectionModel = module.get(getModelToken(UserConnection.name));
     profileModel = module.get(getModelToken(Profile.name));
     jest.clearAllMocks();
+    jest.spyOn(notificationHelpers, 'addNotification').mockResolvedValue(null);
+    jest
+      .spyOn(notificationHelpers, 'deleteNotification')
+      .mockResolvedValue(null);
   });
 
   it('should be defined', () => {

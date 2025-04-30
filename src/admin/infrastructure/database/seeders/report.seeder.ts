@@ -43,10 +43,7 @@ export class ReportSeeder {
 
   async seedReports(count: number): Promise<void> {
     const users = await this.userModel.find().select('_id created_at').lean();
-    const admins = await this.userModel
-      .find({ role: 'admin' })
-      .select('_id')
-      .lean();
+
     const profiles = await this.profileModel.find().select('_id').lean();
     const companies = await this.companyModel.find().select('_id').lean();
     const posts = await this.postModel.find().select('_id posted_at').lean();
@@ -56,7 +53,7 @@ export class ReportSeeder {
       .lean();
     const jobs = await this.jobModel.find().select('_id posted_at').lean();
 
-    if (!users.length || !admins.length) {
+    if (!users.length) {
       console.log('No users or admins found. Aborting report seeding.');
       return;
     }
@@ -69,11 +66,17 @@ export class ReportSeeder {
     const reports: Partial<ReportDocument>[] = [];
     const reportedTypes = [
       'Profile',
-      'Company',
       'Post',
-      'Comment',
-      'Job',
+
     ] as const;
+
+    const reasons = [
+      'Inappropriate content',
+      'Harassment',
+      'Spam',
+      'False information',
+      'Hate speech',
+    ];
 
     for (let i = 0; i < count; i++) {
       const reportingUser = faker.helpers.arrayElement(profiles);
@@ -90,34 +93,17 @@ export class ReportSeeder {
           if (!filteredProfiles.length) continue;
           const profile = faker.helpers.arrayElement(filteredProfiles);
           reportedId = profile._id;
-          entityCreatedAt =
-            userCreatedAtMap.get(profile._id.toString())!;
+          entityCreatedAt = userCreatedAtMap.get(profile._id.toString())!;
           break;
         }
-        case 'Company': {
-          const company = faker.helpers.arrayElement(companies);
-          reportedId = company._id;
-          entityCreatedAt = new Date('2025-04-10');
-          break;
-        }
+
         case 'Post': {
           const post = faker.helpers.arrayElement(posts);
           reportedId = post._id;
           entityCreatedAt = new Date(post.posted_at);
           break;
         }
-        case 'Comment': {
-          const comment = faker.helpers.arrayElement(comments);
-          reportedId = comment._id;
-          entityCreatedAt = new Date(comment.commented_at);
-          break;
-        }
-        case 'Job': {
-          const job = faker.helpers.arrayElement(jobs);
-          reportedId = job._id;
-          entityCreatedAt = new Date(job.posted_at);
-          break;
-        }
+      
       }
 
       const userCreatedAt = userCreatedAtMap.get(reportingUser._id.toString())!;
@@ -132,14 +118,11 @@ export class ReportSeeder {
 
       reports.push({
         user_id: reportingUser._id,
-        admin_id:
-          status === ReportStatus.Pending
-            ? undefined
-            : faker.helpers.arrayElement(admins)._id,
         reported_id: reportedId,
         reported_type: type,
         reported_at: reportedAt,
         status,
+        reason: faker.helpers.arrayElement(reasons),
       });
     }
 

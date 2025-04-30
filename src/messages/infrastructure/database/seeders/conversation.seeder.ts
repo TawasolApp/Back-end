@@ -64,6 +64,7 @@ export class ConversationSeeder {
       conversations.push({
         participants: [firstParticipant._id, secondParticipant._id],
         unseen_count: faker.number.int({ min: 0, max: 10 }),
+        markedAsUnread: [faker.datatype.boolean(), faker.datatype.boolean()],
       });
     }
 
@@ -95,7 +96,7 @@ export class ConversationSeeder {
           { last_message_id: latestMessage._id },
         );
       }
-    } 
+    }
 
     console.log('Updated last message ID for all conversations.');
   }

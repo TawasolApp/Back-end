@@ -174,9 +174,6 @@ export class Profile {
   @Prop()
   connection_count: number;
 
-  @Prop({ default: false })
-  is_premium: boolean;
-
   @Prop({
     type: PlanStatistics,
     default: { message_count: 0, application_count: 0 },

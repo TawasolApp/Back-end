@@ -4,6 +4,7 @@ import { MessageStatus } from '../enums/message-status.enum';
 export class GetMessageDto {
   _id: Types.ObjectId;
   senderId: Types.ObjectId;
+  receiverId: Types.ObjectId;
   conversationId: Types.ObjectId;
   text: string;
   media: string[];
