@@ -12,6 +12,7 @@ import {
   UsePipes,
   Post,
   Body,
+  Query,
 } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -28,12 +29,36 @@ export class NotificationsController {
   async getNotifications(
     @Req() req: Request,
     @Param('companyId') companyId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     const userId = req.user['sub']; // Extract user ID from JWT payload
-    return await this.notificationsService.getNotifications(userId, companyId);
+    return await this.notificationsService.getNotifications(
+      userId,
+      companyId,
+      Number(page),
+      Number(limit),
+    );
   }
 
+  @Get('unread')
+  @HttpCode(HttpStatus.OK)
+  async getUnreadMessages(
+    @Req() req: Request,
+    @Param('companyId') companyId: string,
+    @Query('page') page = 1,
+    @Query('limit') limit = 10,
+  ) {
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    const userId = req.user['sub']; // Extract user ID from JWT payload
+    return await this.notificationsService.getUnreadNotifications(
+      userId,
+      companyId,
+      Number(page),
+      Number(limit),
+    );
+  }
   @Get('unseen')
   @HttpCode(HttpStatus.OK)
   async getUnseenCount(

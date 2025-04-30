@@ -39,7 +39,11 @@ import {
   setConnectionStatus,
   setFollowStatus,
 } from './helpers/set-status.utils';
-
+import { isPremium } from '../payments/helpers/check-premium.helper';
+import {
+  PlanDetail,
+  PlanDetailDocument,
+} from 'src/payments/infrastructure/database/schema/plan-detail.schema';
 @Injectable()
 export class ProfilesService {
   constructor(
@@ -48,6 +52,8 @@ export class ProfilesService {
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(PlanDetail.name)
+    private readonly planDetailModel: Model<PlanDetailDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -104,6 +110,7 @@ export class ProfilesService {
       loggedInUser,
       id.toString(),
     );
+    profileDto.isPremium = await isPremium(id.toString(), this.planDetailModel);
     return profileDto;
   }
   /**
