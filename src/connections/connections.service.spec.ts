@@ -14,15 +14,12 @@ import { Profile } from '../profiles/infrastructure/database/schemas/profile.sch
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
-import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
-import { User } from '../users/infrastructure/database/schemas/user.schema';
-import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { PlanDetail } from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
-
 import {
   getConnection,
   getFollow,
@@ -57,8 +54,6 @@ describe('ConnectionsService', () => {
     save: jest.fn(),
   };
 
-  const mockUserModel = {};
-
   const mockProfileModel = {
     findById: jest.fn(),
     findByIdAndUpdate: jest.fn(),
@@ -75,12 +70,6 @@ describe('ConnectionsService', () => {
   };
 
   const mockCompanyManagerModel = {
-    findOne: jest.fn().mockReturnValue({
-      lean: jest.fn().mockResolvedValue(undefined),
-    }),
-  };
-
-  const mockPlanDetailModel = {
     findOne: jest.fn().mockReturnValue({
       lean: jest.fn().mockResolvedValue(undefined),
     }),
@@ -104,12 +93,6 @@ describe('ConnectionsService', () => {
       select: jest.fn().mockReturnValue({
         lean: jest.fn().mockResolvedValue(undefined),
       }),
-    }),
-  };
-
-  const mockComapnyManagerModel = {
-    findOne: jest.fn().mockReturnValue({
-      lean: jest.fn().mockResolvedValue(undefined),
     }),
   };
 
@@ -156,10 +139,6 @@ describe('ConnectionsService', () => {
         {
           provide: getModelToken(User.name),
           useValue: mockUserModel,
-        },
-        {
-          provide: getModelToken(CompanyManager.name),
-          useValue: mockComapnyManagerModel,
         },
         {
           provide: getModelToken(PlanDetail.name),

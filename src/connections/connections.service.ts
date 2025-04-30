@@ -1207,4 +1207,122 @@ export class ConnectionsService {
       handleError(error, 'Failed to remove endorsement.');
     }
   }
+
+  async block(sendingParty: string, receivingParty: string) {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      if (sendingParty === receivingParty) {
+        throw new BadRequestException('Cannot block yourself.');
+      }
+      const blocked1 = await getBlocked(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      const blocked2 = await getBlocked(
+        this.userConnectionModel,
+        receivingParty,
+        sendingParty,
+      );
+      if (blocked1 || blocked2) {
+        throw new ConflictException('Users are already blocked.');
+      }
+      await this.userConnectionModel.deleteMany({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(sendingParty),
+            receiving_party: new Types.ObjectId(receivingParty),
+          },
+          {
+            sending_party: new Types.ObjectId(receivingParty),
+            receiving_party: new Types.ObjectId(sendingParty),
+          },
+        ],
+      });
+      const newBlock = new this.userConnectionModel({
+        _id: new Types.ObjectId(),
+        sending_party: new Types.ObjectId(sendingParty),
+        receiving_party: new Types.ObjectId(receivingParty),
+        status: ConnectionStatus.Blocked,
+      });
+      await newBlock.save();
+    } catch (error) {
+      handleError(error, 'Failed to block user.');
+    }
+  }
+
+  async unblock(sendingParty: string, receivingParty: string) {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      const existingBlock = await getBlocked(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      if (!existingBlock) {
+        throw new NotFoundException('Block instance not found.');
+      }
+      await this.userConnectionModel.findByIdAndDelete(existingBlock._id);
+    } catch (error) {
+      handleError(error, 'Failed to unblock user.');
+    }
+  }
+
+  async getBlocked(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const followers = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            sending_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Blocked,
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'receiving_party',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: { created_at: -1, _id: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return followers.map(toGetUserDto);
+      return followers.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of blocked users.');
+    }
+  }
 }
