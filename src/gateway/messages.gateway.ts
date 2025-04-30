@@ -15,7 +15,7 @@ import { isPremium } from '../payments/helpers/check-premium.helper';
 import {
   PlanDetail,
   PlanDetailDocument,
-} from '../payments/infrastructure/database/schema/plan-detail.schema';
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { InjectModel } from '@nestjs/mongoose';
 import { BadRequestException } from '@nestjs/common';
 
