@@ -72,7 +72,14 @@ export class NotificationsService {
         ),
       );
 
-      return mappedNotifications.filter(
+      const sortedNotifications = mappedNotifications.sort((a, b) => {
+        if (!a || !a.timestamp || !b || !b.timestamp) return 0;
+        return (
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+        );
+      });
+
+      return sortedNotifications.filter(
         (notification) => notification !== null,
       ) as GetNotificationsDto[];
     } catch (error) {
