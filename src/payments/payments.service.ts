@@ -17,10 +17,6 @@ import {
 import { PlanType } from './enums/plan-type.enum';
 import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
 import { handleError } from '../common/utils/exception-handler';
-import {
-  Profile,
-  ProfileDocument,
-} from '../profiles/infrastructure/database/schemas/profile.schema';
 import { CheckoutSessionDto } from './dtos/checkout-session.dto';
 import { isPremium } from './helpers/check-premium.helper';
 
@@ -38,7 +34,6 @@ export class PaymentsService {
     @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
     @InjectModel(PlanDetail.name)
     private planDetailModel: Model<PlanDetailDocument>,
-    @InjectModel(Profile.name) private profileModel: Model<ProfileDocument>,
   ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
   }
@@ -93,7 +88,6 @@ export class PaymentsService {
 
   async handlePaymentSuccess(session: Stripe.Checkout.Session) {
     try {
-      console.log('Enter handle payment success.');
       const userId = session.metadata?.userId;
       const planType = session.metadata?.planType as PlanType;
       const autoRenewal = session.metadata?.autoRenewal === 'true';
@@ -105,7 +99,6 @@ export class PaymentsService {
             startDate.getDate(),
           )
         : undefined;
-      console.log('Expiry date.');
       const plan = await this.planDetailModel.create({
         _id: new Types.ObjectId(),
         user_id: new Types.ObjectId(userId),
@@ -115,7 +108,6 @@ export class PaymentsService {
         auto_renewal: autoRenewal,
         cancel_date: null,
       });
-      console.log('Created plan.');
       await this.paymentModel.create({
         _id: new Types.ObjectId(),
         plan_id: plan._id,
@@ -126,14 +118,7 @@ export class PaymentsService {
         subscription_id: session.subscription as string,
         created_at: new Date(),
       });
-      console.log('Created payment.');
-      await this.profileModel.updateOne(
-        { _id: new Types.ObjectId(userId) },
-        { $set: { is_premium: true } },
-      );
-      console.log('Update profile.');
     } catch (error) {
-      console.log(error);
       handleError(error, 'Failed to handle successful payment.');
     }
   }
@@ -170,10 +155,6 @@ export class PaymentsService {
       }
       activePlan!.cancel_date = new Date();
       await activePlan!.save();
-      await this.profileModel.updateOne(
-        { _id: new Types.ObjectId(userId) },
-        { $set: { is_premium: false } },
-      );
     } catch (error) {
       handleError(error, 'Failed to cancel premium plan.');
     }
