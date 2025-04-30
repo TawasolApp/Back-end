@@ -15,6 +15,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CompaniesModule } from '../companies/companies.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CompaniesModule } from '../companies/companies.module';
     AuthModule,
     forwardRef(() => ProfilesModule),
     NotificationsModule,
+    forwardRef(() => PaymentsModule),
     forwardRef(() => CompaniesModule),
     JwtModule.register({
       secret:
