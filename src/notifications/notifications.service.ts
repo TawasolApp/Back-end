@@ -40,6 +40,8 @@ export class NotificationsService {
   async getNotifications(
     userId: string,
     companyId: string,
+    page: number,
+    limit: number,
   ): Promise<GetNotificationsDto[]> {
     try {
       const authorId = await getUserAccessed(
@@ -48,7 +50,7 @@ export class NotificationsService {
         this.companyManagerModel,
       );
 
-      console.log('Author ID:', authorId);
+      const skip = (page - 1) * limit;
 
       const notifications = await this.notificationModel
         .find({
@@ -56,8 +58,10 @@ export class NotificationsService {
           type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
         })
         .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(limit)
         .lean();
-      console.log('Notifications:', notifications.length);
+
       const mappedNotifications = await Promise.all(
         notifications.map((notification) =>
           mapToGetNotificationsDto(
@@ -73,6 +77,50 @@ export class NotificationsService {
       ) as GetNotificationsDto[];
     } catch (error) {
       throw new InternalServerErrorException('Failed to fetch notifications');
+    }
+  }
+
+  async getUnreadNotifications(
+    userId: string,
+    companyId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetNotificationsDto[]> {
+    try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+
+      const skip = (page - 1) * limit;
+
+      const notifications = await this.notificationModel
+        .find({
+          receiver_id: new Types.ObjectId(authorId),
+          seen: false, // Only include unseen notifications
+          type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+        })
+        .sort({ timestamp: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const mappedNotifications = await Promise.all(
+        notifications.map((notification) =>
+          mapToGetNotificationsDto(
+            notification,
+            this.profileModel,
+            this.companyModel,
+          ),
+        ),
+      );
+
+      return mappedNotifications.filter(
+        (notification) => notification !== null,
+      ) as GetNotificationsDto[];
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch unread messages');
     }
   }
 
