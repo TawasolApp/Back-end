@@ -9,7 +9,10 @@ import { GetNotificationsDto } from './dto/get-notifications.dto';
 import { addNotification } from './helpers/notification.helper';
 import { mapToGetNotificationsDto } from './mappers/notification.mapper';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
-import { Company } from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
 import { Types } from 'mongoose';
 import { getUserAccessed } from '../posts/helpers/posts.helpers';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
@@ -29,6 +32,8 @@ export class NotificationsService {
     private readonly companyManagerModel: Model<any>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>, // Inject User model
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>, // Inject Company model
     //
   ) {}
 
@@ -52,13 +57,13 @@ export class NotificationsService {
         })
         .sort({ timestamp: -1 })
         .lean();
-
+      console.log('Notifications:', notifications.length);
       const mappedNotifications = await Promise.all(
         notifications.map((notification) =>
           mapToGetNotificationsDto(
             notification,
             this.profileModel,
-            this.companyManagerModel,
+            this.companyModel,
           ),
         ),
       );

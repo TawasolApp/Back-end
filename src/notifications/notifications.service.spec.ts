@@ -18,6 +18,7 @@ describe('NotificationsService', () => {
   let profileModelMock: any;
   let companyManagerModelMock: any;
   let userModelMock: any;
+  let companyModelMock: any;
 
   beforeEach(async () => {
     notificationModelMock = {
@@ -55,6 +56,10 @@ describe('NotificationsService', () => {
         {
           provide: getModelToken(User.name),
           useValue: userModelMock,
+        },
+        {
+          provide: getModelToken(Company.name),
+          useValue: companyModelMock,
         },
       ],
     }).compile();
