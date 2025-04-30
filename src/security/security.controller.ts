@@ -15,7 +15,8 @@ import { SecurityService } from './security.service';
 import { ReportRequestDto } from './dto/report-request.dto';
 import { BlockedUserDto } from './dto/blocked-user.dto';
 import { Types } from 'mongoose';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+
 @UseGuards(JwtAuthGuard)
 @Controller('security')
 export class SecurityController {
