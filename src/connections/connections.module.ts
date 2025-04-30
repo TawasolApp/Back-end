@@ -29,6 +29,7 @@ import { PaymentsModule } from '../payments/payments.module';
     NotificationsModule,
     forwardRef(() => PaymentsModule),
     forwardRef(() => CompaniesModule),
+    forwardRef(() => PaymentsModule),
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
