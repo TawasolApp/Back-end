@@ -54,7 +54,8 @@ export async function addNotification(
       | 'React'
       | 'Comment'
       | 'UserConnection'
-      | 'Message',
+      | 'Message'
+      | 'JobOffer',
     content,
     seen: false, // Always save as unread
     sent_at: sentAt,

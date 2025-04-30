@@ -20,6 +20,7 @@ import {
   User,
   UserDocument,
 } from '../users/infrastructure/database/schemas/user.schema';
+import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 @Injectable()
 export class NotificationsService {
@@ -57,7 +58,7 @@ export class NotificationsService {
           receiver_id: new Types.ObjectId(authorId),
           type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
         })
-        .sort({ timestamp: -1 })
+        .sort({ timestamp: -1, _id: -1 }) // Sort by timestamp and then by ID to ensure consistent ordering
         .skip(skip)
         .limit(limit)
         .lean();
@@ -72,14 +73,14 @@ export class NotificationsService {
         ),
       );
 
-      const sortedNotifications = mappedNotifications.sort((a, b) => {
-        if (!a || !a.timestamp || !b || !b.timestamp) return 0;
-        return (
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-        );
-      });
+      // const sortedNotifications = mappedNotifications.sort((a, b) => {
+      //   if (!a || !a.timestamp || !b || !b.timestamp) return 0;
+      //   return (
+      //     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      //   );
+      // });
 
-      return sortedNotifications.filter(
+      return mappedNotifications.filter(
         (notification) => notification !== null,
       ) as GetNotificationsDto[];
     } catch (error) {
@@ -108,7 +109,7 @@ export class NotificationsService {
           seen: false, // Only include unseen notifications
           type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
         })
-        .sort({ timestamp: -1 })
+        .sort({ timestamp: -1, _id: -1 }) // Sort by timestamp and then by ID to ensure consistent ordering
         .skip(skip)
         .limit(limit)
         .lean();

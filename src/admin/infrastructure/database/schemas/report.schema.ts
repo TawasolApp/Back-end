@@ -26,7 +26,7 @@ export class Report {
 
   @Prop({
     type: String,
-    enum: ['Pending', 'Actioned', 'Dismissed'], // Removed 'Reviewed'
+    enum: ReportStatus,
   })
   status: ReportStatus;
 
