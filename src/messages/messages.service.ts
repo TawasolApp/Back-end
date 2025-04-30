@@ -199,8 +199,20 @@ export class MessagesService {
         : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
+    // console.log('Sorted Conversations:', sortedConversations);
+    // console.log('unseen count in service:', sortedConversations[0].unseenCount);
 
     const mappedConversations = getConversations(sortedConversations);
+    // console.log('Mapped Conversations:', mappedConversations);
+    mappedConversations.forEach((conversation) => {
+      if (conversation.unseenCount === undefined) {
+        conversation.unseenCount =
+          sortedConversations.find(
+            (sortedConversation) =>
+              sortedConversation._id.toString() === conversation._id.toString(),
+          )?.unseenCount ?? 0;
+      }
+    });
     const paginatedConversations = mappedConversations.slice(
       skip,
       skip + limit,
