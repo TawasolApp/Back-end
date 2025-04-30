@@ -65,7 +65,8 @@ export async function mapToGetNotificationsDto(
       | 'React'
       | 'Comment'
       | 'UserConnection'
-      | 'Message',
+      | 'Message'
+      | 'JobOffer',
     content: userName + ' ' + notification.content,
     isRead: notification.seen,
     timestamp: notification.sent_at.toISOString(),
