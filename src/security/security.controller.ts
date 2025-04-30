@@ -9,17 +9,23 @@ import {
   UnauthorizedException,
   UsePipes,
   ValidationPipe,
+  Query,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { SecurityService } from './security.service';
 import { ReportRequestDto } from './dto/report-request.dto';
 import { BlockedUserDto } from './dto/blocked-user.dto';
 import { Types } from 'mongoose';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ConnectionsService } from '../connections/connections.service';
+
 @UseGuards(JwtAuthGuard)
 @Controller('security')
 export class SecurityController {
-  constructor(private readonly securityService: SecurityService) {}
+  constructor(
+    private readonly securityService: SecurityService,
+    private readonly connectionService: ConnectionsService,
+  ) {}
 
   @Post('report')
   @UsePipes(new ValidationPipe())
@@ -35,23 +41,22 @@ export class SecurityController {
     return this.securityService.reportJob(new Types.ObjectId(jobId));
   }
 
-  //   @Get('blocked-users')
-  //   async getBlockedUsers(
-  //     @Req() req,
-  //   ): Promise<{ blockedUsers: BlockedUserDto[] }> {
-  //     const blockedUsers = await this.securityService.getBlockedUsers(
-  //       req.user.sub,
-  //     );
-  //     return { blockedUsers };
-  //   }
+  @Get('blocked-users')
+  async getBlockedUsers(
+    @Req() req,
+    @Query('page') page = 1,
+    @Query('limit') limit = 20,
+  ) {
+    return await this.connectionService.getBlocked(req.user.sub, page, limit);
+  }
 
-  //   @Post('block/:userId')
-  //   async blockUser(@Req() req, @Param('userId') userId: string) {
-  //     return this.securityService.blockUser(req.user.sub, userId);
-  //   }
+  @Post('block/:userId')
+  async blockUser(@Req() req, @Param('userId') userId: string) {
+    return this.connectionService.block(req.user.sub.toString(), userId);
+  }
 
-  //   @Post('unblock/:userId')
-  //   async unblockUser(@Req() req, @Param('userId') userId: string) {
-  //     return this.securityService.unblockUser(req.user.sub, userId);
-  //   }
+  @Post('unblock/:userId')
+  async unblockUser(@Req() req, @Param('userId') userId: string) {
+    return this.connectionService.unblock(req.user.sub.toString(), userId);
+  }
 }
