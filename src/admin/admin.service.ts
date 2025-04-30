@@ -1,26 +1,54 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { User } from '../users/infrastructure/database/schemas/user.schema';
-import { Post } from '../posts/infrastructure/database/schemas/post.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
+import {
+  Post,
+  PostDocument,
+} from '../posts/infrastructure/database/schemas/post.schema';
 import {
   Job,
   JobDocument,
 } from '../jobs/infrastructure/database/schemas/job.schema';
-import { Report } from './infrastructure/database/schemas/report.schema';
+import {
+  Report,
+  ReportDocument,
+} from './infrastructure/database/schemas/report.schema';
 import { ReportedPostsDto } from './dtos/reported-posts.dto';
 import { ReportedUsersDto } from './dtos/reported-users.dto';
+import {
+  Share,
+  ShareDocument,
+} from '../posts/infrastructure/database/schemas/share.schema';
+import {
+  Comment,
+  CommentDocument,
+} from '../posts/infrastructure/database/schemas/comment.schema';
+import {
+  React,
+  ReactDocument,
+} from '../posts/infrastructure/database/schemas/react.schema';
 
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<User>,
-    @InjectModel(Post.name) private readonly postModel: Model<Post>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Post.name) private readonly postModel: Model<PostDocument>,
     @InjectModel(Job.name) private readonly jobModel: Model<JobDocument>,
-    @InjectModel('Share') private readonly shareModel: Model<any>,
-    @InjectModel('Comment') private readonly commentModel: Model<any>,
-    @InjectModel('React') private readonly reactModel: Model<any>,
-    @InjectModel(Report.name) private readonly reportModel: Model<Report>,
+    @InjectModel(Report.name)
+    private readonly reportModel: Model<ReportDocument>,
+    @InjectModel(Share.name) private readonly shareModel: Model<ShareDocument>,
+    @InjectModel(Comment.name)
+    private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(React.name) private readonly reactModel: Model<ReactDocument>,
   ) {}
 
   async getUserAnalytics() {
@@ -241,7 +269,6 @@ export class AdminService {
           as: 'authorProfile',
         },
       },
-      { $unwind: '$authorProfile' },
       {
         $lookup: {
           from: 'Users',
@@ -250,20 +277,32 @@ export class AdminService {
           as: 'authorUser',
         },
       },
-      { $unwind: '$authorUser' },
       {
         $lookup: {
-          from: 'Profiles',
-          localField: 'user_id',
+          from: 'Companies',
+          localField: 'post.author_id',
           foreignField: '_id',
-          as: 'reporterProfile',
+          as: 'authorCompany',
         },
       },
-      { $unwind: '$reporterProfile' },
+      {
+        $addFields: {
+          authorDetails: {
+            $cond: {
+              if: { $eq: ['$post.author_type', 'User'] },
+              then: {
+                profile: { $arrayElemAt: ['$authorProfile', 0] },
+                user: { $arrayElemAt: ['$authorUser', 0] },
+              },
+              else: { company: { $arrayElemAt: ['$authorCompany', 0] } },
+            },
+          },
+        },
+      },
       {
         $lookup: {
           from: 'Users',
-          localField: 'reporterProfile._id',
+          localField: 'user_id',
           foreignField: '_id',
           as: 'reporterUser',
         },
@@ -276,22 +315,41 @@ export class AdminService {
           postContent: '$post.text',
           postMedia: { $arrayElemAt: ['$post.media', 0] },
           postAuthor: {
-            $concat: [
-              '$authorProfile.first_name',
-              ' ',
-              '$authorProfile.last_name',
-            ],
+            $cond: {
+              if: { $eq: ['$post.author_type', 'User'] },
+              then: {
+                $concat: [
+                  '$authorDetails.profile.first_name',
+                  ' ',
+                  '$authorDetails.profile.last_name',
+                ],
+              },
+              else: '$authorDetails.company.name',
+            },
           },
-          postAuthorRole: '$authorUser.role',
-          postAuthorAvatar: '$authorProfile.profile_picture',
+          postAuthorRole: {
+            $cond: {
+              if: { $eq: ['$post.author_type', 'User'] },
+              then: '$authorDetails.user.role',
+              else: 'Company',
+            },
+          },
+          postAuthorAvatar: {
+            $cond: {
+              if: { $eq: ['$post.author_type', 'User'] },
+              then: '$authorDetails.profile.profile_picture',
+              else: '$authorDetails.company.logo',
+            },
+          },
+          postAuthorType: '$post.author_type',
           reportedBy: {
             $concat: [
-              '$reporterProfile.first_name',
+              '$reporterUser.first_name',
               ' ',
-              '$reporterProfile.last_name',
+              '$reporterUser.last_name',
             ],
           },
-          reporterAvatar: '$reporterProfile.profile_picture',
+          reporterAvatar: '$reporterUser.profile_picture',
           reason: 1,
           reportedAt: '$reported_at',
         },
@@ -306,6 +364,7 @@ export class AdminService {
       postAuthor: report.postAuthor,
       postAuthorRole: report.postAuthorRole,
       postAuthorAvatar: report.postAuthorAvatar,
+      postAuthorType: report.postAuthorType,
       reportedBy: report.reportedBy,
       reporterAvatar: report.reporterAvatar,
       reason: report.reason,
@@ -395,5 +454,92 @@ export class AdminService {
       reason: report.reason,
       reportedAt: report.reportedAt,
     }));
+  }
+
+  async suspendUser(reportId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(reportId)) {
+      throw new BadRequestException('Invalid report ID format.');
+    }
+
+    const report = await this.reportModel
+      .findOne({ _id: new Types.ObjectId(reportId) })
+      .lean();
+
+    if (!report) {
+      throw new NotFoundException('Report not found.');
+    }
+
+    let userId: Types.ObjectId;
+
+    if (report.reported_type === 'Profile') {
+      userId = new Types.ObjectId(report.reported_id);
+    } else if (report.reported_type === 'Post') {
+      const post = await this.postModel.findById(report.reported_id).lean();
+
+      if (!post) {
+        throw new NotFoundException('Post not found.');
+      }
+
+      if (post.author_type === 'Company') {
+        throw new BadRequestException(
+          'Cannot suspend a company for a reported post.',
+        );
+      }
+
+      userId = new Types.ObjectId(post.author_id);
+    } else {
+      throw new BadRequestException(
+        'Invalid report type. Only profiles or posts can be used to suspend users.',
+      );
+    }
+
+    if (!Types.ObjectId.isValid(userId)) {
+      throw new BadRequestException('Invalid user ID format.');
+    }
+
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    const suspensionEndDate = new Date();
+    suspensionEndDate.setDate(suspensionEndDate.getDate() + 7);
+
+    user.is_suspended = true;
+    user.suspension_end_date = suspensionEndDate;
+    await user.save();
+
+    const updateResult = await this.reportModel.updateOne(
+      { _id: new Types.ObjectId(reportId) },
+      { $set: { status: 'Actioned' } },
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      throw new InternalServerErrorException('Failed to update report status.');
+    }
+  }
+
+  async ignoreReport(reportId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(reportId)) {
+      throw new BadRequestException('Invalid report ID format.');
+    }
+
+    const report = await this.reportModel
+      .findOne({ _id: new Types.ObjectId(reportId) })
+      .lean();
+
+    if (!report) {
+      throw new NotFoundException('Report not found.');
+    }
+
+    const updateResult = await this.reportModel.updateOne(
+      { _id: new Types.ObjectId(reportId) },
+      { $set: { status: 'Dismissed' } },
+    );
+
+    if (updateResult.modifiedCount === 0) {
+      throw new InternalServerErrorException('Failed to update report status.');
+    }
   }
 }

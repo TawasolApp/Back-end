@@ -118,6 +118,20 @@ export class AuthService {
       throw new ForbiddenException('Email not verified');
     }
 
+    if (user.is_suspended) {
+      const now = new Date();
+      if (!user.suspension_end_date || user.suspension_end_date > now) {
+        throw new ForbiddenException(
+          'Your account is suspended. Please try again later.',
+        );
+      } else {
+      
+        user.is_suspended = false;
+        user.suspension_end_date = null;
+        await user.save();
+      }
+    }
+
     const payload = { sub: user._id, email: user.email, role: user.role };
     const accessToken = this.jwtService.sign(payload, { expiresIn: '1h' });
     const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
@@ -125,7 +139,7 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      role: user.role, // Include the user's role in the response
+      role: user.role,
       is_social_login: user.is_social_login,
     };
   }

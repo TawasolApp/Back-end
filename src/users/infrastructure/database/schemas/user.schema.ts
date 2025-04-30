@@ -39,6 +39,12 @@ export class User {
 
   @Prop()
   created_at: Date;
+
+  @Prop({ default: false })
+  is_suspended: boolean;
+
+  @Prop({ type: Date, default: null }) 
+  suspension_end_date: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);
