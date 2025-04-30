@@ -10,7 +10,14 @@ import {
 import { Socket, Server } from 'socket.io';
 import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
 import { SendMessageDto } from '../messages/dto/send-message.dto';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { isPremium } from '../payments/helpers/check-premium.helper';
+import {
+  PlanDetail,
+  PlanDetailDocument,
+} from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { InjectModel } from '@nestjs/mongoose';
+import { BadRequestException } from '@nestjs/common';
 
 @WebSocketGateway({
   cors: {
@@ -20,9 +27,29 @@ import { Types } from 'mongoose';
 export class MessagesGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    @InjectModel(PlanDetail.name)
+    private readonly planDetailModel: Model<PlanDetailDocument>,
+  ) {}
+  private server: Server;
+
   afterInit(server: Server) {
+    this.server = server; // Initialize the server property
     console.log('✅ WebSocket server initialized');
+  }
+  async updatePremiumStatus(userId: string, isPremium: boolean) {
+    // Find all sockets for this user
+    const sockets = await this.server.fetchSockets();
+    const userSockets = sockets.filter(
+      (socket) => socket.data.userId === userId,
+    );
+
+    // Update premium status for each socket
+    userSockets.forEach((socket) => {
+      socket.data.isPremium = isPremium;
+      console.log(`Updated premium status for user ${userId} to ${isPremium}`);
+    });
   }
 
   handleConnection(client: Socket) {
@@ -30,6 +57,8 @@ export class MessagesGateway
 
     if (userId) {
       client.data.userId = userId; // Attach userId to socket
+      client.data.isPremium = isPremium(userId, this.planDetailModel); // Check if user is premium
+      client.data.messageCount = 0; // Initialize message count
       console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
       client.join(userId); // Automatically join their room
       this.messagesService.markMessagesAsDelivered(userId);
@@ -48,6 +77,12 @@ export class MessagesGateway
     @MessageBody() rawPayload: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ) {
+    if (client.data.messageCount >= 30 && !client.data.isPremium) {
+      throw new BadRequestException(
+        'You have reached the limit of 30 messages. Upgrade to premium to send more messages.',
+      );
+    }
+    client.data.messageCount += 1; // Increment message count
     let payload;
     try {
       payload =
