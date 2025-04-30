@@ -19,14 +19,14 @@ export class Report {
   reported_id: Types.ObjectId;
 
   @Prop({
-    enum: ['Profile', 'Company', 'Post', 'Comment', 'Job'],
+    enum: ['Profile', 'Post'],
     required: true,
   })
   reported_type: string;
 
   @Prop({
     type: String,
-    enum: ['Pending', 'Actioned', 'Dismissed'], // Removed 'Reviewed'
+    enum: ReportStatus,
   })
   status: ReportStatus;
 

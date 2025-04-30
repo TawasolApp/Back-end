@@ -1,26 +1,49 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
-import { User } from '../users/infrastructure/database/schemas/user.schema';
-import { Post } from '../posts/infrastructure/database/schemas/post.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
+import {
+  Post,
+  PostDocument,
+} from '../posts/infrastructure/database/schemas/post.schema';
 import {
   Job,
   JobDocument,
 } from '../jobs/infrastructure/database/schemas/job.schema';
-import { Report } from './infrastructure/database/schemas/report.schema';
+import {
+  Report,
+  ReportDocument,
+} from './infrastructure/database/schemas/report.schema';
 import { ReportedPostsDto } from './dtos/reported-posts.dto';
 import { ReportedUsersDto } from './dtos/reported-users.dto';
+import {
+  Share,
+  ShareDocument,
+} from '../posts/infrastructure/database/schemas/share.schema';
+import {
+  Comment,
+  CommentDocument,
+} from '../posts/infrastructure/database/schemas/comment.schema';
+import {
+  React,
+  ReactDocument,
+} from '../posts/infrastructure/database/schemas/react.schema';
 
 @Injectable()
 export class AdminService {
   constructor(
-    @InjectModel(User.name) private readonly userModel: Model<User>,
-    @InjectModel(Post.name) private readonly postModel: Model<Post>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Post.name) private readonly postModel: Model<PostDocument>,
     @InjectModel(Job.name) private readonly jobModel: Model<JobDocument>,
-    @InjectModel('Share') private readonly shareModel: Model<any>,
-    @InjectModel('Comment') private readonly commentModel: Model<any>,
-    @InjectModel('React') private readonly reactModel: Model<any>,
-    @InjectModel(Report.name) private readonly reportModel: Model<Report>,
+    @InjectModel(Report.name)
+    private readonly reportModel: Model<ReportDocument>,
+    @InjectModel(Share.name) private readonly shareModel: Model<ShareDocument>,
+    @InjectModel(Comment.name)
+    private readonly commentModel: Model<CommentDocument>,
+    @InjectModel(React.name) private readonly reactModel: Model<ReactDocument>,
   ) {}
 
   async getUserAnalytics() {
