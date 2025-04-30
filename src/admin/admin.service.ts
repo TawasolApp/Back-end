@@ -202,12 +202,14 @@ export class AdminService {
     };
   }
 
-  async ignoreJob(jobId: string): Promise<boolean> {
+  async ignoreJob(jobId: string): Promise<void> {
     const result = await this.jobModel.updateOne(
       { _id: new Types.ObjectId(jobId) },
       { $set: { is_flagged: false } },
     );
 
-    return result.matchedCount > 0;
+    if (result.matchedCount === 0) {
+      throw new NotFoundException('Job not found.');
+    }
   }
 }

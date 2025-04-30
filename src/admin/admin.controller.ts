@@ -8,7 +8,6 @@ import {
   UnauthorizedException,
   Patch,
   Param,
-  NotFoundException,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -59,11 +58,6 @@ export class AdminController {
     }
     checkAdmin(request.user);
 
-    const result = await this.adminService.ignoreJob(jobId);
-    if (!result) {
-      throw new NotFoundException('Job not found.');
-    }
-
-    return { message: 'Job successfully ignored.' };
+    return await this.adminService.ignoreJob(jobId);
   }
 }

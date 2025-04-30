@@ -45,6 +45,11 @@ import {
   Notification,
   NotificationDocument,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  PlanDetail,
+  PlanDetailDocument,
+} from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
 export class JobsService {
@@ -63,6 +68,8 @@ export class JobsService {
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
+    @InjectModel(PlanDetail.name)
+    private readonly planDetailModel: Model<PlanDetailDocument>,
     private readonly notificationGateway: NotificationGateway,
   ) {}
 
@@ -482,20 +489,26 @@ export class JobsService {
         throw new ForbiddenException('You have already applied for this job.');
       }
 
-      const userProfile = await this.profileModel.findById(
-        new Types.ObjectId(userId),
-      );
-      if (!userProfile) {
-        throw new NotFoundException('User profile not found.');
-      }
+      
+      const premiumStatus = await isPremium(userId, this.planDetailModel);
+      if (!premiumStatus) {
+      
+        const userProfile = await this.profileModel.findById(
+          new Types.ObjectId(userId),
+        );
 
-      if (!userProfile.is_premium) {
+        if (!userProfile) {
+          throw new NotFoundException('User profile not found.');
+        }
+
+       
         if (userProfile.plan_statistics.application_count <= 0) {
           throw new ForbiddenException(
             'You have reached your application limit. Upgrade to premium to apply for more jobs.',
           );
         }
 
+      
         await this.profileModel.updateOne(
           { _id: new Types.ObjectId(userId) },
           { $inc: { 'plan_statistics.application_count': -1 } },
@@ -633,15 +646,15 @@ export class JobsService {
 
       await addNotification(
         this.notificationModel,
-        new Types.ObjectId(company._id), 
-        new Types.ObjectId(application.user_id), 
-        new Types.ObjectId(job._id), 
-        new Types.ObjectId(application._id), 
-        'JobOffer', 
+        new Types.ObjectId(company._id),
+        new Types.ObjectId(application.user_id),
+        new Types.ObjectId(job._id),
+        new Types.ObjectId(application._id),
+        'JobOffer',
         notificationMessage,
         new Date(),
         this.notificationGateway,
-        this.profileModel, 
+        this.profileModel,
         this.companyModel,
         this.userModel,
         this.companyManagerModel,
