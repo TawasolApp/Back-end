@@ -97,7 +97,7 @@ async function bootstrap() {
   await conversationSeeder.updateLastMessage();
 
   await notificationSeeder.clearNotifications();
-  await notificationSeeder.seedNotifications(10);
+  await notificationSeeder.seedNotifications();
 
   await app.close();
 }

@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, RequestMethod } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -19,9 +19,17 @@ import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from './users/users.module';
 import { MediaModule } from './common/media/media.module';
 import { NotificationGateway } from './gateway/notification.gateway';
+import { RawBodyMiddleware } from './payments/webhook/raw-body.middleware';
+import {
+  User,
+  UserSchema,
+} from './users/infrastructure/database/schemas/user.schema';
 
 @Module({
   imports: [
+    MongooseModule.forFeature([
+      { name: User.name, schema: UserSchema }, // Add User model
+    ]),
     ConfigModule.forRoot({ isGlobal: true }),
     MongooseModule.forRoot(process.env.MONGO_URI || ''),
     JwtModule.register({
@@ -48,4 +56,10 @@ import { NotificationGateway } from './gateway/notification.gateway';
   controllers: [AppController],
   providers: [AppService, NotificationGateway],
 })
-export class AppModule {}
+export class AppModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer
+      .apply(RawBodyMiddleware)
+      .forRoutes({ path: 'api/webhook/stripe', method: RequestMethod.POST });
+  }
+}

@@ -65,6 +65,10 @@ import {
 } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  UserDocument,
+  User,
+} from '../users/infrastructure/database/schemas/user.schema';
 
 @Injectable()
 export class PostsService {
@@ -82,6 +86,8 @@ export class PostsService {
     private readonly notificationGateway: NotificationGateway, // Inject NotificationGateway
     @InjectModel(CompanyManager.name)
     private companyManagerModel: Model<CompanyManager>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>, // Inject User model
   ) {}
 
   /**
@@ -203,16 +209,19 @@ export class PostsService {
 
       let authorType: 'User' | 'Company';
       let authorCompany;
+
+      console.log('authorId:', authorId);
       const authorProfile = await this.profileModel
         .findById(new Types.ObjectId(authorId))
         .exec();
+      console.log(authorProfile);
       if (authorProfile) {
         authorType = 'User';
       } else {
         authorCompany = await this.companyModel
           .findById(new Types.ObjectId(authorId))
           .exec();
-        //console.log(authorCompany);
+        console.log(authorCompany);
         if (authorCompany) {
           authorType = 'Company';
         } else {
@@ -248,6 +257,8 @@ export class PostsService {
           : null,
         is_silent_repost: createPostDto.isSilentRepost,
       });
+
+      console.log('createdPost:', createdPost);
 
       await createdPost.save();
       return getPostInfo(
@@ -359,11 +370,20 @@ export class PostsService {
 
         if (
           post.visibility === 'Public' &&
-          !followingUserIds.some((id) => id.toString() === authorIdStr) &&
-          !connectedUserIds.some((id) => id.toString() === authorIdStr)
+          !isIdInArray(followingUserIds, authorIdStr) &&
+          !isIdInArray(connectedUserIds, authorIdStr)
         ) {
           // 50% chance to show public post of unrelated user
           return Math.random() < 0.5;
+        }
+
+        function isIdInArray(array: Types.ObjectId[], id: string): boolean {
+          for (const item of array) {
+            if (item.toString() === id) {
+              return true;
+            }
+          }
+          return false;
         }
 
         return false;
@@ -529,6 +549,8 @@ export class PostsService {
         companyId,
         this.companyManagerModel,
       );
+      console.log('authorId:', authorId);
+      console.log('post.author_id:', post.author_id.toString());
       if (post.author_id.toString() !== authorId) {
         throw new ForbiddenException('User not authorized to delete this post');
       }
@@ -628,6 +650,8 @@ export class PostsService {
         this.companyManagerModel,
       );
 
+      console.log('authorId:', authorId);
+
       const objectIdUserId = new Types.ObjectId(authorId);
       const objectIdPostId = new Types.ObjectId(postId);
 
@@ -699,12 +723,15 @@ export class PostsService {
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(post.author_id),
                 new Types.ObjectId(newReaction._id),
+                new Types.ObjectId(post._id),
                 'React',
                 `reacted to your post`,
                 new Date(),
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
               await post.save();
             }
@@ -719,12 +746,15 @@ export class PostsService {
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(newReaction._id),
+                new Types.ObjectId(comment.post_id),
                 'React',
                 `reacted to your comment`,
                 new Date(),
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
               await comment.save();
             }
@@ -742,20 +772,23 @@ export class PostsService {
               existingReaction.react_type = reactionType;
               deleteNotification(
                 this.notificationModel,
-                new Types.ObjectId(existingReaction._id),
+                new Types.ObjectId(existingReaction._id), // Pass the item
               );
 
               addNotification(
                 this.notificationModel, // Pass the notification model
-                new Types.ObjectId(authorId),
-                new Types.ObjectId(post.author_id),
-                new Types.ObjectId(existingReaction._id),
+                new Types.ObjectId(authorId), // Pass the sender
+                new Types.ObjectId(post.author_id), // Pass the receiver
+                new Types.ObjectId(existingReaction._id), // Pass the item
+                new Types.ObjectId(post._id),
                 'React',
                 `reacted to your post`,
                 new Date(),
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
             }
 
@@ -779,12 +812,15 @@ export class PostsService {
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(existingReaction._id),
+                new Types.ObjectId(comment.post_id),
                 'React',
                 `reacted to your comment`,
                 new Date(),
                 this.notificationGateway, // Pass NotificationGateway
                 this.profileModel, // Pass Profile model
                 this.companyModel, // Pass Company model
+                this.userModel, // Pass User model
+                this.companyManagerModel, // Pass CompanyManager model
               );
             }
 
@@ -1138,12 +1174,15 @@ export class PostsService {
           new Types.ObjectId(authorId),
           new Types.ObjectId(post.author_id),
           new Types.ObjectId(newComment._id),
+          new Types.ObjectId(post._id),
           'Comment',
           `commented on your post`,
           new Date(),
           this.notificationGateway, // Pass NotificationGateway
           this.profileModel, // Pass Profile model
           this.companyModel, // Pass Company model
+          this.userModel, // Pass User model
+          this.companyManagerModel, // Pass CompanyManager model
         );
         await post.save();
       } else if (comment) {
@@ -1153,12 +1192,15 @@ export class PostsService {
           new Types.ObjectId(authorId),
           new Types.ObjectId(comment.author_id),
           new Types.ObjectId(newComment._id),
+          new Types.ObjectId(comment.post_id),
           'Comment',
           `replied to your comment`,
           new Date(),
           this.notificationGateway, // Pass NotificationGateway
           this.profileModel, // Pass Profile model
           this.companyModel, // Pass Company model
+          this.userModel, // Pass User model
+          this.companyManagerModel, // Pass CompanyManager model
         );
         await comment?.save();
       }
@@ -1399,15 +1441,6 @@ export class PostsService {
   ): Promise<GetPostDto[]> {
     const skip = (page - 1) * limit;
 
-    // console.log(
-    //   'searchPosts',
-    //   userId,
-    //   query,
-    //   networkOnly,
-    //   timeframe,
-    //   page,
-    //   limit,
-    // );
     try {
       const authorId = await getUserAccessed(
         userId,

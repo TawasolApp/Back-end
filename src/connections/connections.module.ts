@@ -12,6 +12,10 @@ import { UserConnectionSeeder } from './infrastructure/database/seeders/user-con
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationsModule } from '../notifications/notifications.module';
+import { CompaniesModule } from '../companies/companies.module';
+import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
@@ -22,6 +26,9 @@ import { ProfilesModule } from '../profiles/profiles.module';
     UsersModule,
     AuthModule,
     forwardRef(() => ProfilesModule),
+    NotificationsModule,
+    forwardRef(() => PaymentsModule),
+    forwardRef(() => CompaniesModule),
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
@@ -37,6 +44,7 @@ import { ProfilesModule } from '../profiles/profiles.module';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    NotificationGateway,
   ],
   controllers: [ConnectionsController],
 })

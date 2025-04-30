@@ -337,13 +337,27 @@ export async function getUserAccessed(
   companyId: string,
   companyManagerModel,
 ): Promise<string> {
+  userId = userId.trim(); // Remove spaces from userId
+  companyId = companyId.trim(); // Remove spaces from companyId
+
+  console.log('userId', userId);
+  console.log('companyId', companyId);
+
   if (userId === companyId) return userId;
-  await companyManagerModel.findOne({
-    user_id: new Types.ObjectId(userId),
-    company_id: new Types.ObjectId(companyId),
-  });
-  if (!companyManagerModel) {
-    throw new NotFoundException('User does not have access to this company');
+
+  const managed = await companyManagerModel
+    .find({
+      manager_id: new Types.ObjectId(userId), // Ensure user_id is an ObjectId
+      company_id: new Types.ObjectId(companyId), // Ensure company_id is an ObjectId
+    })
+    .exec();
+
+  console.log('Managed records:', managed);
+
+  if (!managed || managed.length === 0) {
+    console.log('User is not a manager of the company');
+    return userId;
   }
+
   return companyId;
 }

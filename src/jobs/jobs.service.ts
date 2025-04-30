@@ -26,12 +26,25 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
 import { PostJobDto } from './dtos/post-job.dto';
 import { GetJobDto } from './dtos/get-job.dto';
+import { ApplyJobDto } from './dtos/apply-job.dto';
+import { ApplicationDto } from './dtos/application.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
+import { toApplicationDto } from './mappers/application.mapper';
+import { addNotification } from '../notifications/helpers/notification.helper';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
 
 @Injectable()
 export class JobsService {
@@ -47,9 +60,20 @@ export class JobsService {
     private readonly companyEmployerModel: Model<CompanyEmployerDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   async checkAccess(userId: string, companyId: string) {
+    const user = await this.userModel
+      .findById(new Types.ObjectId(userId))
+      .lean();
+    if (user?.role === 'admin') {
+      return true;
+    }
+
     const allowedManager = await this.companyManagerModel
       .findOne({
         manager_id: new Types.ObjectId(userId),
@@ -62,11 +86,8 @@ export class JobsService {
         company_id: new Types.ObjectId(companyId),
       })
       .lean();
-    if (allowedManager || allowedEmployer) {
-      return true;
-    } else {
-      return false;
-    }
+
+    return !!(allowedManager || allowedEmployer);
   }
 
   /**
@@ -131,7 +152,7 @@ export class JobsService {
       const jobDto = toGetJobDto(job);
       jobDto.companyName = company.name;
       jobDto.companyLogo = company.logo;
-      jobDto.companyLocation = company.address; // Map company.address to companyLocation
+      jobDto.companyLocation = company.address;
       jobDto.companyDescription = company.description;
 
       jobDto.isSaved =
@@ -150,13 +171,26 @@ export class JobsService {
     } catch (error) {
       handleError(error, 'Failed to retrieve job details.');
     }
+    /**
+     * retrieves the list of applicants for a given job, can apply optional filter by name.
+     *
+     * @param jobId - ID of the job.
+     * @returns array of GetUserDto - list of applicants with profile information.
+     * @throws NotFoundException - if the job does not exist.
+     *
+     * function flow:
+     * 1. verify the job's existence.
+     * 2. fetch applicants from the database.
+     * 3. retrieve profile details for each applicants.
+     * 4. map profile data to DTO and return.
+     */
   }
 
   /**
    * retrieves the list of applicants for a given job, can apply optional filter by name.
    *
    * @param jobId - ID of the job.
-   * @returns array of GetUserDto - list of applicants with profile information.
+   * @returns array of ApplicationDto - list of applicants with profile information.
    * @throws NotFoundException - if the job does not exist.
    *
    * function flow:
@@ -170,7 +204,12 @@ export class JobsService {
     jobId: string,
     page: number,
     limit: number,
-  ): Promise<GetUserDto[]> {
+  ): Promise<{
+    applications: ApplicationDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
@@ -183,42 +222,71 @@ export class JobsService {
           'Logged in user does not have management access or employer access to this job posting.',
         );
       }
+
       const skip = (page - 1) * limit;
-      const applicants = await this.applicationModel.aggregate([
-        {
-          $match: {
-            job_id: new Types.ObjectId(jobId),
-          },
-        },
-        {
-          $lookup: {
-            from: 'Profiles',
-            localField: 'user_id',
-            foreignField: '_id',
-            as: 'profile',
-          },
-        },
-        { $unwind: '$profile' },
-        { $sort: { crapplied_at: -1, _id: 1 } },
-        { $skip: skip },
-        { $limit: limit },
-        {
-          $project: {
-            _id: '$profile._id',
-            first_name: '$profile.first_name',
-            last_name: '$profile.last_name',
-            profile_picture: '$profile.profile_picture',
-            headline: '$profile.headline',
-          },
-        },
+
+      const [applications, totalItems] = await Promise.all([
+        this.applicationModel
+          .find({ job_id: new Types.ObjectId(jobId) })
+          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        this.applicationModel.countDocuments({
+          job_id: new Types.ObjectId(jobId),
+        }),
       ]);
-      return applicants.map(toGetUserDto);
+
+      const applicationDtos: ApplicationDto[] = [];
+      for (const application of applications) {
+        // Fetch user data
+        const user = await this.userModel
+          .findById(application.user_id)
+          .select('first_name last_name email')
+          .lean();
+
+        // Fetch profile data
+        const profile = await this.profileModel
+          .findById(application.user_id)
+          .select('profile_picture headline')
+          .lean();
+
+        const applicationDto = toApplicationDto(application);
+        applicationDto.applicantName =
+          user?.first_name && user?.last_name
+            ? `${user.first_name} ${user.last_name}`
+            : undefined;
+        applicationDto.applicantEmail = user?.email || undefined;
+        applicationDto.applicantPicture = profile?.profile_picture || undefined;
+        applicationDto.applicantHeadline = profile?.headline || undefined;
+
+        applicationDtos.push(applicationDto);
+      }
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      return {
+        applications: applicationDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
     } catch (error) {
       handleError(error, 'Failed to retrieve job applicants.');
     }
   }
 
-  async getJobs(userId: string, filters: any): Promise<GetJobDto[]> {
+  async getJobs(
+    userId: string,
+    filters: any,
+    page: number,
+    limit: number,
+  ): Promise<{
+    jobs: GetJobDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
     try {
       const query: any = {};
 
@@ -248,12 +316,20 @@ export class JobsService {
       if (filters.minSalary || filters.maxSalary) {
         query.salary = {};
         if (filters.minSalary !== undefined)
-          query.salary.$gte = Number(filters.minSalary);
+          query.salary.$gte = parseFloat(filters.minSalary);
         if (filters.maxSalary !== undefined)
-          query.salary.$lte = Number(filters.maxSalary);
+          query.salary.$lte = parseFloat(filters.maxSalary);
       }
 
-      const jobs = await this.jobModel.find(query).lean();
+      const totalItems = await this.jobModel.countDocuments(query);
+      const totalPages = Math.ceil(totalItems / limit);
+      const skip = (page - 1) * limit;
+
+      const jobs = await this.jobModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .lean();
 
       const jobDtos: GetJobDto[] = [];
       for (const job of jobs) {
@@ -268,9 +344,46 @@ export class JobsService {
         jobDtos.push(jobDto);
       }
 
-      return jobDtos;
+      return {
+        jobs: jobDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
     } catch (error) {
       handleError(error, 'Failed to retrieve jobs.');
+    }
+  }
+
+  async saveJob(userId: string, jobId: string): Promise<void> {
+    try {
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $addToSet: { saved_by: new Types.ObjectId(userId) } },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to save job.');
+    }
+  }
+
+  async unsaveJob(userId: string, jobId: string): Promise<void> {
+    try {
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $pull: { saved_by: new Types.ObjectId(userId) } },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to unsave job.');
     }
   }
 
@@ -296,10 +409,245 @@ export class JobsService {
         job_id: new Types.ObjectId(jobId),
       });
 
-      // Delete the job itself
       await this.jobModel.deleteOne({ _id: new Types.ObjectId(jobId) });
     } catch (error) {
       handleError(error, 'Failed to delete job.');
+    }
+  }
+
+  async getSavedJobs(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
+    jobs: GetJobDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    try {
+      const query = { saved_by: { $in: [new Types.ObjectId(userId)] } };
+
+      const totalItems = await this.jobModel.countDocuments(query);
+      const totalPages = Math.ceil(totalItems / limit);
+      const skip = (page - 1) * limit;
+
+      const jobs = await this.jobModel
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .lean();
+
+      const jobDtos: GetJobDto[] = [];
+      for (const job of jobs) {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company?.name || null;
+        jobDto.companyLogo = company?.logo || null;
+        jobDto.companyLocation = company?.address || null;
+        jobDto.companyDescription = company?.description || null;
+        jobDto.isSaved = true;
+        jobDtos.push(jobDto);
+      }
+
+      return {
+        jobs: jobDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
+    } catch (error) {
+      handleError(error, 'Failed to retrieve saved jobs.');
+    }
+  }
+
+  async addApplication(
+    userId: string,
+    applyJobDto: ApplyJobDto,
+  ): Promise<void> {
+    try {
+      const { jobId, phoneNumber, resumeURL } = applyJobDto;
+
+      const job = await this.jobModel.findById(new Types.ObjectId(jobId));
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      const existingApplication = await this.applicationModel.findOne({
+        user_id: new Types.ObjectId(userId),
+        job_id: new Types.ObjectId(jobId),
+      });
+
+      if (existingApplication) {
+        throw new ForbiddenException('You have already applied for this job.');
+      }
+
+      const userProfile = await this.profileModel.findById(
+        new Types.ObjectId(userId),
+      );
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found.');
+      }
+
+      if (!userProfile.is_premium) {
+        if (userProfile.plan_statistics.application_count <= 0) {
+          throw new ForbiddenException(
+            'You have reached your application limit. Upgrade to premium to apply for more jobs.',
+          );
+        }
+
+        await this.profileModel.updateOne(
+          { _id: new Types.ObjectId(userId) },
+          { $inc: { 'plan_statistics.application_count': -1 } },
+        );
+      }
+
+      const newApplication = new this.applicationModel({
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(userId),
+        job_id: new Types.ObjectId(jobId),
+        phone_number: phoneNumber,
+        resume_url: resumeURL,
+        status: 'Pending',
+        applied_at: new Date().toISOString(),
+      });
+
+      await newApplication.save();
+
+      await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $inc: { applicants: 1 } },
+      );
+    } catch (error) {
+      handleError(error, 'Failed to apply for the job.');
+    }
+  }
+
+  async getAppliedApplications(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<{
+    jobs: GetJobDto[];
+    totalItems: number;
+    totalPages: number;
+    currentPage: number;
+  }> {
+    try {
+      console.log(`Fetching jobs applied by user: ${userId}`);
+      console.log(`Pagination - Page: ${page}, Limit: ${limit}`);
+
+      const skip = (page - 1) * limit;
+
+      const [applications, totalItems] = await Promise.all([
+        this.applicationModel
+          .find({ user_id: new Types.ObjectId(userId) })
+          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .skip(skip)
+          .limit(limit)
+          .lean(),
+        this.applicationModel.countDocuments({
+          user_id: new Types.ObjectId(userId),
+        }),
+      ]);
+
+      console.log(`Total applications found: ${totalItems}`);
+      console.log(`Applications fetched: ${applications.length}`);
+
+      const jobIds = applications.map((application) => application.job_id);
+      const jobs = await this.jobModel.find({ _id: { $in: jobIds } }).lean();
+
+      const jobDtos: GetJobDto[] = [];
+      for (const job of jobs) {
+        const company = await this.companyModel.findById(job.company_id).lean();
+        const jobDto = toGetJobDto(job);
+        jobDto.companyName = company?.name || null;
+        jobDto.companyLogo = company?.logo || null;
+        jobDto.companyLocation = company?.address || null;
+        jobDto.companyDescription = company?.description || null;
+        jobDto.isSaved =
+          job.saved_by?.some((id) => id.toString() === userId) || false;
+
+        const application = applications.find(
+          (app) => app.job_id.toString() === job._id.toString(),
+        );
+        jobDto.status = application?.status || null;
+
+        jobDtos.push(jobDto);
+      }
+
+      const totalPages = Math.ceil(totalItems / limit);
+
+      console.log(`Mapped jobs to DTOs: ${jobDtos.length}`);
+      return {
+        jobs: jobDtos,
+        totalItems,
+        totalPages,
+        currentPage: page,
+      };
+    } catch (error) {
+      console.error(`Error fetching jobs applied by user: ${userId}`, error);
+      handleError(error, 'Failed to retrieve applied jobs.');
+    }
+  }
+
+  async updateApplicationStatus(
+    userId: string,
+    applicationId: string,
+    status: 'Accepted' | 'Rejected',
+  ): Promise<void> {
+    try {
+      const application = await this.applicationModel
+        .findById(new Types.ObjectId(applicationId))
+        .lean();
+      if (!application) {
+        throw new NotFoundException('Application not found.');
+      }
+
+      const job = await this.jobModel.findById(application.job_id).lean();
+      if (!job) {
+        throw new NotFoundException('Job not found.');
+      }
+
+      if (!(await this.checkAccess(userId, job.company_id.toString()))) {
+        throw new ForbiddenException(
+          'You do not have permission to update the status of this application.',
+        );
+      }
+
+      await this.applicationModel.updateOne(
+        { _id: new Types.ObjectId(applicationId) },
+        { $set: { status } },
+      );
+
+      // Send notification based on the status
+      const company = await this.companyModel.findById(job.company_id).lean();
+      if (!company) {
+        throw new NotFoundException('Company not found.');
+      }
+
+      const notificationMessage =
+        status === 'Accepted'
+          ? `accepted your application for the position of ${job.position}.`
+          : `rejected your application for the position of ${job.position}.`;
+
+      await addNotification(
+        this.notificationModel,
+        new Types.ObjectId(company._id), 
+        new Types.ObjectId(application.user_id), 
+        new Types.ObjectId(job._id), 
+        new Types.ObjectId(application._id), 
+        'JobOffer', 
+        notificationMessage,
+        new Date(),
+        this.notificationGateway,
+        this.profileModel, 
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
+    } catch (error) {
+      handleError(error, 'Failed to update application status.');
     }
   }
 }

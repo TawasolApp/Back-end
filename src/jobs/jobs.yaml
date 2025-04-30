@@ -111,38 +111,78 @@ paths:
   /jobs:
     get:
       summary: Get a list of job postings
-      description: Filter by keyword, location, industry, experience level, company, or salary range
+      description: Retrieve a paginated list of job postings with optional filters.
       parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
         - name: keyword
           in: query
-          schema: { type: string }
+          schema:
+            type: string
+          description: Filter jobs by keyword in the position title.
         - name: location
           in: query
-          schema: { type: string }
+          schema:
+            type: string
+          description: Filter jobs by location.
         - name: industry
           in: query
-          schema: { type: string }
+          schema:
+            type: string
+          description: Filter jobs by industry.
         - name: experienceLevel
           in: query
-          schema: { type: string }
+          schema:
+            type: string
+          description: Filter jobs by experience level.
         - name: company
           in: query
-          schema: { type: string }
+          schema:
+            type: string
+          description: Filter jobs by company name.
         - name: minSalary
           in: query
-          schema: { type: number }
+          schema:
+            type: number
+          description: Filter jobs with a minimum salary.
         - name: maxSalary
           in: query
-          schema: { type: number }
+          schema:
+            type: number
+          description: Filter jobs with a maximum salary.
       responses:
         '200':
-          description: Successfully retrieved jobs
+          description: Successfully retrieved paginated jobs
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GetJobDto'
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of jobs matching the filters.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '400':
           description: Invalid query parameters
         '401':
@@ -236,7 +276,7 @@ paths:
         '401':
           description: Unauthorized (user not logged in)
 
-  /jobs/{jobId}/applications:
+  /companies/jobs/{jobId}/applicants:
     get:
       summary: Get applications for a job (manager only)
       parameters:
@@ -244,15 +284,41 @@ paths:
           in: path
           required: true
           schema: { type: string }
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
       responses:
         '200':
           description: Applications retrieved successfully
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ApplicationDto'
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApplicationDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of applications.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '403':
           description: Forbidden (non-manager access)
         '404':
@@ -263,36 +329,90 @@ paths:
   /jobs/saved:
     get:
       summary: Get all jobs saved by the user
-      description: Retrieve a list of jobs that the authenticated user has saved.
+      description: Retrieve a paginated list of jobs that the authenticated user has saved.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
       responses:
         '200':
           description: Successfully retrieved saved jobs
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/GetJobDto'
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of saved jobs.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '401':
           description: Unauthorized (user not logged in)
 
-  /applications/applied:
+  jobs/applications/applied:
     get:
       summary: Get all applications made by the user
-      description: Retrieve a list of all job applications submitted by the authenticated user.
+      description: Retrieve a paginated list of all job applications submitted by the authenticated user.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
       responses:
         '200':
           description: Successfully retrieved applications
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/ApplicationDto'
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of applications.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
         '401':
           description: Unauthorized (user not logged in)
 
-  /applications/{applicationId}/status:
+  /jobs/applications/{applicationId}/status:
     patch:
       summary: Update the status of an application
       description: Accept or reject an application by updating its status.

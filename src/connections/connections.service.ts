@@ -30,14 +30,51 @@ import {
 } from './helpers/connection-helpers';
 import { handleError } from '../common/utils/exception-handler';
 import { getSortData } from './helpers/sort-helper';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  addNotification,
+  deleteNotification,
+} from '../notifications/helpers/notification.helper';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  PlanDetail,
+  PlanDetailDocument,
+} from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
 export class ConnectionsService {
   constructor(
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>,
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
+    @InjectModel(PlanDetail.name)
+    private readonly planDetailModel: Model<PlanDetailDocument>,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   /**
@@ -114,6 +151,9 @@ export class ConnectionsService {
     createRequestDto: CreateRequestDto,
   ) {
     try {
+      const sendingUser = await this.profileModel
+        .findById(new Types.ObjectId(sendingParty))
+        .lean();
       const { userId } = createRequestDto;
       const receivingParty = userId;
       const exisitngUser = await this.profileModel
@@ -125,6 +165,14 @@ export class ConnectionsService {
       if (sendingParty === receivingParty) {
         throw new BadRequestException(
           'Cannot request a connection with yourself.',
+        );
+      }
+      if (
+        !(await isPremium(sendingParty, this.planDetailModel)) &&
+        sendingUser!.connection_count >= 50
+      ) {
+        throw new ForbiddenException(
+          'User has exceeded his limit on connections.',
         );
       }
       const blocked1 = await getBlocked(
@@ -189,6 +237,22 @@ export class ConnectionsService {
         status: ConnectionStatus.Pending,
       });
       await newConnection.save();
+      // send connection request notification
+      addNotification(
+        this.notificationModel,
+        new Types.ObjectId(sendingParty),
+        new Types.ObjectId(receivingParty),
+        newConnection._id,
+        newConnection._id,
+        'UserConnection',
+        'sent you a connection request',
+        new Date(),
+        this.notificationGateway,
+        this.profileModel,
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
     } catch (error) {
       handleError(error, 'Failed to request connection.');
     }
@@ -230,6 +294,8 @@ export class ConnectionsService {
         );
       } else if (existingPending) {
         await this.userConnectionModel.findByIdAndDelete(existingPending._id);
+        // remove pending connection request notification
+        deleteNotification(this.notificationModel, existingPending._id);
       } else if (existingIgnored) {
         await this.userConnectionModel.findByIdAndDelete(existingIgnored._id);
       }
@@ -259,6 +325,9 @@ export class ConnectionsService {
     updateRequestDto: UpdateRequestDto,
   ) {
     try {
+      const receivingUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
       const exisitngUser = await this.profileModel
         .findById(new Types.ObjectId(sendingParty))
         .lean();
@@ -274,6 +343,16 @@ export class ConnectionsService {
         throw new NotFoundException('Connection request was not found.');
       }
       const { isAccept } = updateRequestDto;
+      if (isAccept) {
+        if (
+          !(await isPremium(sendingParty, this.planDetailModel)) &&
+          receivingUser!.connection_count >= 50
+        ) {
+          throw new ForbiddenException(
+            'User has exceeded his limit on connections.',
+          );
+        }
+      }
       const status = isAccept
         ? ConnectionStatus.Connected
         : ConnectionStatus.Ignored;
@@ -285,12 +364,12 @@ export class ConnectionsService {
         );
       if (status === ConnectionStatus.Connected) {
         await this.profileModel.findByIdAndUpdate(
-          updatedConnection?.sending_party,
+          updatedConnection!.sending_party,
           { $inc: { connection_count: 1 } },
           { new: true },
         );
         await this.profileModel.findByIdAndUpdate(
-          updatedConnection?.receiving_party,
+          updatedConnection!.receiving_party,
           { $inc: { connection_count: 1 } },
           { new: true },
         );
@@ -308,6 +387,9 @@ export class ConnectionsService {
           });
           await newFollow.save();
         }
+      } else {
+        // remove pending connection request notification
+        deleteNotification(this.notificationModel, updatedConnection!._id);
       }
     } catch (error) {
       handleError(error, 'Failed to update connection request status.');
@@ -775,6 +857,22 @@ export class ConnectionsService {
         status: ConnectionStatus.Following,
       });
       await newConnection.save();
+      // send follow notification
+      addNotification(
+        this.notificationModel,
+        new Types.ObjectId(sendingParty),
+        new Types.ObjectId(receivingParty),
+        newConnection._id,
+        newConnection._id,
+        'UserConnection',
+        'followed you',
+        new Date(),
+        this.notificationGateway,
+        this.profileModel,
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
     } catch (error) {
       handleError(error, 'Failed to follow user.');
     }
@@ -935,6 +1033,50 @@ export class ConnectionsService {
       });
     } catch (error) {
       handleError(error, 'Failed to retrieve list of followed users.');
+    }
+  }
+
+  /**
+   * retrieve count of users following the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where receiving party is userId and status is Following
+   * 2. counts all found documents and returns the count
+   */
+  async getFollowerCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get follower count.');
+    }
+  }
+
+  /**
+   * retrieve count of users followed by the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where sending party is userId and status is Following
+   * 2. counts all found documents and returns the count
+   */
+  async getFollowingCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        sending_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get following count.');
     }
   }
 

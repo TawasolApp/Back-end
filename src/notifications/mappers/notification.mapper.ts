@@ -19,6 +19,9 @@ export async function mapToGetNotificationsDto(
   let profilePicture = '';
   let senderType: 'User' | 'Company' | undefined;
 
+  console.log(
+    `Mapping notification: ${notification._id}, senderId: ${notification.sender_id}`,
+  );
   // Check in Profile model
   const profile = await profileModel
     .findOne({ _id: new Types.ObjectId(notification.sender_id) })
@@ -29,9 +32,16 @@ export async function mapToGetNotificationsDto(
     senderType = 'User';
   } else {
     // Check in Company model
+    console.log(
+      `Profile not found for senderId: ${notification.sender_id}, checking Company model`,
+    );
     const company = await companyModel
       .findOne({ _id: new Types.ObjectId(notification.sender_id) })
       .lean();
+
+    console.log(
+      `Company found: ${company ? company.name : 'No company found'}`,
+    );
     if (company) {
       userName = company.name;
       profilePicture = company.logo || '';
@@ -49,7 +59,7 @@ export async function mapToGetNotificationsDto(
     notificationId: notification._id.toString(),
     userName,
     profilePicture,
-    refrenceId: notification.sender_id.toString(),
+    referenceId: notification.sender_id.toString(),
     senderType,
     type: notification.reference_type as
       | 'React'
@@ -59,5 +69,6 @@ export async function mapToGetNotificationsDto(
     content: userName + ' ' + notification.content,
     isRead: notification.seen,
     timestamp: notification.sent_at.toISOString(),
+    rootItemId: notification.root_item_id.toString(), // Ensure this is a string
   };
 }

@@ -14,7 +14,6 @@ const profileId3 = new Types.ObjectId();
 const profileId4 = new Types.ObjectId();
 const profileId5 = new Types.ObjectId();
 
-
 export const mockCompanies = [
   {
     _id: companyId1,
@@ -22,6 +21,9 @@ export const mockCompanies = [
     company_size: CompanySize.Large,
     industry: 'Software',
     email: 'test1@gmail.com',
+    logo: 'logo',
+    address: 'address',
+    description: 'description',
   },
   {
     _id: companyId2,
@@ -52,23 +54,23 @@ export const mockCompanies = [
 export const mockUsers = [
   {
     _id: profileId1,
-    role: 'manager'
+    role: 'manager',
   },
   {
     _id: profileId2,
-    role: 'manager'
+    role: 'manager',
   },
   {
     _id: profileId3,
-    role: 'customer'
+    role: 'customer',
   },
   {
     _id: profileId4,
-    role: 'customer'
+    role: 'customer',
   },
   {
     _id: profileId5,
-    role: 'employer'
+    role: 'employer',
   },
 ];
 
@@ -183,17 +185,17 @@ export const mockJobs = [
   {
     _id: new Types.ObjectId(),
     company_id: companyId1,
-    position: "Designer",
+    position: 'Designer',
   },
   {
     _id: new Types.ObjectId(),
     company_id: companyId1,
-    position: "Engineer",
+    position: 'Engineer',
   },
   {
     _id: new Types.ObjectId(),
     company_id: companyId2,
-    position: "Architect",
+    position: 'Architect',
   },
 ];
 

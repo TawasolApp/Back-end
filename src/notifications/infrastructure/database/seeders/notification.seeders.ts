@@ -52,35 +52,25 @@ export class NotificationSeeder {
     private connectionModel: Model<UserConnectionDocument>,
   ) {}
 
-  async seedNotifications(count: number): Promise<void> {
-    const users = await this.userModel
-      .find()
-      .select('_id first_name last_name')
-      .lean();
-    const posts = await this.postModel.find().select('_id author_id').lean();
-    const comments = await this.commentModel
-      .find()
-      .select('_id post_id author_id commented_at')
-      .lean();
-    const reacts = await this.reactModel
-      .find()
-      .select('_id user_id post_type post_id reacted_at')
-      .lean();
-    const messages = await this.messageModel
-      .find()
-      .select('_id sender_id conversation_id sent_at')
-      .lean();
-    const conversations = await this.conversationModel
-      .find()
-      .select('_id participants')
-      .lean();
+  async seedNotifications(): Promise<void> {
+    const users = await this.userModel.find().exec();
+    // console.log('Users:', users.length);
+    const posts = await this.postModel.find().exec();
+    // console.log('Posts:', posts.length);
+    const comments = await this.commentModel.find().exec();
+    // console.log('Comments:', comments.length);
+    const reacts = await this.reactModel.find().exec();
+    // console.log('Reacts:', reacts.length);
+    const messages = await this.messageModel.find().exec();
+    // console.log('Messages:', messages.length);
+    const conversations = await this.conversationModel.find().exec();
+    // console.log('Conversations:', conversations.length);
     const connections = await this.connectionModel
       .find({
         status: { $in: [ConnectionStatus.Pending, ConnectionStatus.Following] },
       })
-      .select('_id sending_party receiving_party status created_at')
-      .lean();
-
+      .exec();
+    // console.log('Connections:', connections.length);
     const usersMap = new Map(users.map((u) => [u._id.toString(), u]));
     const postsMap = new Map(posts.map((p) => [p._id.toString(), p]));
     const commentsMap = new Map(comments.map((c) => [c._id.toString(), c]));
@@ -89,125 +79,140 @@ export class NotificationSeeder {
     );
 
     const notifications: Partial<NotificationDocument>[] = [];
-    const types = ['React', 'Comment', 'Message', 'UserConnection'] as const;
+    let reactCount = 0;
+    let commentCount = 0;
+    let messageCount = 0;
+    let connectionCount = 0;
 
-    for (let i = 0; i < count; i++) {
-      const type = faker.helpers.arrayElement(types);
-      let referenceId, sentAt, receiver, content, senderId;
+    // Process React notifications
+    for (const react of reacts) {
+      let receiver, content, rootItemId;
 
-      switch (type) {
-        case 'React': {
-          const react = faker.helpers.arrayElement(reacts);
-          if (!react) continue;
-
-          referenceId = react._id;
-          sentAt = new Date(react.reacted_at);
-          const sender = usersMap.get(react.user_id.toString());
-          if (!sender) continue;
-
-          const senderName = `${sender.first_name} ${sender.last_name}`;
-
-          if (react.post_type === 'Comment') {
-            const comment = commentsMap.get(react.post_id.toString());
-            if (!comment) continue;
-            receiver = comment.author_id;
-            content = `reacted to your comment`;
-            senderId = react.user_id;
-          } else {
-            const post = postsMap.get(react.post_id.toString());
-            if (!post) continue;
-            receiver = post.author_id;
-            content = `reacted to your post`;
-            senderId = react.user_id;
-          }
-          break;
+      if (react.post_type === 'Comment') {
+        const comment = commentsMap.get(react.post_id.toString());
+        if (!comment) {
+          console.log(`Comment not found for react: ${react._id}`);
+          continue;
         }
-
-        case 'Comment': {
-          const comment = faker.helpers.arrayElement(comments);
-          if (!comment) continue;
-
-          referenceId = comment._id;
-          sentAt = comment.commented_at;
-          const commenter = usersMap.get(comment.author_id.toString());
-          if (!commenter) continue;
-
-          const commenterName = `${commenter.first_name} ${commenter.last_name}`;
-
-          const post = postsMap.get(comment.post_id.toString());
-          if (!post) continue;
-
-          receiver = post.author_id;
-          senderId = comment.author_id;
-          content = `commented on your post`;
-          break;
+        receiver = comment.author_id;
+        content = `reacted to your comment`;
+        rootItemId = comment.post_id;
+      } else {
+        const post = postsMap.get(react.post_id.toString());
+        if (!post) {
+          console.log(`Post not found for react: ${react._id}`);
+          continue;
         }
-
-        case 'Message': {
-          const message = faker.helpers.arrayElement(messages);
-          if (!message) continue;
-
-          const conversation = conversationsMap.get(
-            message.conversation_id.toString(),
-          );
-          if (!conversation) continue;
-
-          referenceId = message._id;
-          sentAt = message.sent_at;
-
-          const sender = usersMap.get(message.sender_id.toString());
-          if (!sender) continue;
-
-          const senderName = `${sender.first_name} ${sender.last_name}`;
-
-          const receiverId = conversation.participants.find(
-            (p) => p.toString() !== message.sender_id.toString(),
-          );
-          if (!receiverId) continue;
-
-          receiver = receiverId;
-          senderId = message.sender_id;
-          content = `sent you a message`;
-          break;
-        }
-
-        case 'UserConnection': {
-          const connection = faker.helpers.arrayElement(connections);
-          if (!connection) continue;
-
-          referenceId = connection._id;
-          sentAt = new Date(connection.created_at);
-
-          const sender = usersMap.get(connection.sending_party.toString());
-          if (!sender) continue;
-
-          const senderName = `${sender.first_name} ${sender.last_name}`;
-          receiver = connection.receiving_party;
-          senderId = connection.sending_party;
-
-          content =
-            connection.status === ConnectionStatus.Pending
-              ? `sent you a connection request`
-              : `followed you`;
-          break;
-        }
+        receiver = post.author_id;
+        content = `reacted to your post`;
+        rootItemId = post._id;
       }
 
-      if (!receiver || !referenceId) continue;
-
       notifications.push({
-        sender_id: senderId,
+        sender_id: react.user_id,
         receiver_id: receiver,
-        item_id: referenceId,
-        reference_type: type,
+        item_id: react._id,
+        root_item_id: rootItemId,
+        reference_type: 'React',
         content,
         seen: faker.datatype.boolean(),
-        sent_at: sentAt,
+        sent_at: new Date(react.reacted_at),
       });
+      reactCount++;
+    }
+
+    // Process Comment notifications
+    for (const comment of comments) {
+      const post = postsMap.get(comment.post_id.toString());
+      if (!post) {
+        const commented = commentsMap.get(comment.post_id.toString());
+        if (!commented) {
+          console.log(`Post not found for comment: ${comment._id}`);
+          continue;
+        }
+        notifications.push({
+          sender_id: comment.author_id,
+          receiver_id: commented.author_id,
+          item_id: comment._id,
+          root_item_id: commented._id,
+          reference_type: 'Comment',
+          content: `commented on your comment`,
+          seen: faker.datatype.boolean(),
+          sent_at: comment.commented_at,
+        });
+        commentCount++;
+        continue;
+      }
+
+      notifications.push({
+        sender_id: comment.author_id,
+        receiver_id: post.author_id,
+        item_id: comment._id,
+        root_item_id: post._id,
+        reference_type: 'Comment',
+        content: `commented on your post`,
+        seen: faker.datatype.boolean(),
+        sent_at: comment.commented_at,
+      });
+      commentCount++;
+    }
+
+    // Process Message notifications
+    for (const message of messages) {
+      const conversation = conversationsMap.get(
+        message.conversation_id.toString(),
+      );
+      if (!conversation) continue;
+
+      const sender = usersMap.get(message.sender_id.toString());
+      if (!sender) continue;
+
+      const receiverId = conversation.participants.find(
+        (p) => p.toString() !== message.sender_id.toString(),
+      );
+      if (!receiverId) continue;
+
+      notifications.push({
+        sender_id: message.sender_id,
+        receiver_id: receiverId,
+        item_id: message._id,
+        root_item_id: conversation._id,
+        reference_type: 'Message',
+        content: `sent you a message`,
+        seen: faker.datatype.boolean(),
+        sent_at: message.sent_at,
+      });
+      messageCount++;
+    }
+
+    // Process UserConnection notifications
+    for (const connection of connections) {
+      const content =
+        connection.status === ConnectionStatus.Pending
+          ? `sent you a connection request`
+          : `followed you`;
+
+      notifications.push({
+        sender_id: connection.sending_party,
+        receiver_id: connection.receiving_party,
+        item_id: connection._id,
+        root_item_id: connection._id,
+        reference_type: 'UserConnection',
+        content,
+        seen: faker.datatype.boolean(),
+        sent_at: new Date(connection.created_at),
+      });
+      connectionCount++;
     }
 
     await this.notificationModel.insertMany(notifications);
-    console.log(`${notifications.length} notifications seeded successfully!`);
+    console.log(`${reactCount} React notifications added.`);
+    console.log(`${commentCount} Comment notifications added.`);
+    console.log(`${messageCount} Message notifications added.`);
+    console.log(`${connectionCount} UserConnection notifications added.`);
+    console.log(
+      `${notifications.length} total notifications seeded successfully!`,
+    );
   }
 
   async clearNotifications(): Promise<void> {

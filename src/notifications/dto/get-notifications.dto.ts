@@ -21,7 +21,11 @@ export class GetNotificationsDto {
 
   @IsOptional()
   @IsString()
-  refrenceId?: string;
+  referenceId?: string;
+
+  @IsOptional()
+  @IsString()
+  rootItemId?: string; // ID of the root item (e.g., post, comment)
 
   @IsOptional()
   @IsEnum(['User', 'Company'])
@@ -29,7 +33,7 @@ export class GetNotificationsDto {
 
   @IsOptional()
   @IsString()
-  type?: 'React' | 'Comment' | 'UserConnection' | 'Message';
+  type?: 'React' | 'Comment' | 'UserConnection' | 'Message' | 'JobOffer';
 
   @IsOptional()
   @IsString()

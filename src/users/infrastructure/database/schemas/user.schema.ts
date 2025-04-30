@@ -34,6 +34,9 @@ export class User {
   @Prop({ default: false })
   is_social_login: boolean;
 
+  @Prop({ type: [String], default: [] })
+  fcm_tokens: string[];
+
   @Prop()
   created_at: Date;
 }

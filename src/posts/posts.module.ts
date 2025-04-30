@@ -55,6 +55,10 @@ import {
   CompanyManager,
   CompanyManagerSchema,
 } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  User,
+  UserSchema,
+} from '../users/infrastructure/database/schemas/user.schema';
 
 @Module({
   imports: [
@@ -69,6 +73,7 @@ import {
       { name: UserConnection.name, schema: UserConnectionSchema },
       { name: Notification.name, schema: NotificationSchema },
       { name: CompanyManager.name, schema: CompanyManagerSchema },
+      { name: User.name, schema: UserSchema }, // Add User model
     ]),
     AuthModule,
     CompaniesModule,
