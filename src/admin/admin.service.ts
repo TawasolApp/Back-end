@@ -7,6 +7,9 @@ import {
   Job,
   JobDocument,
 } from '../jobs/infrastructure/database/schemas/job.schema';
+import { Report } from './infrastructure/database/schemas/report.schema';
+import { ReportedPostsDto } from './dtos/reported-posts.dto';
+import { ReportedUsersDto } from './dtos/reported-users.dto';
 
 @Injectable()
 export class AdminService {
@@ -17,7 +20,7 @@ export class AdminService {
     @InjectModel('Share') private readonly shareModel: Model<any>,
     @InjectModel('Comment') private readonly commentModel: Model<any>,
     @InjectModel('React') private readonly reactModel: Model<any>,
-    @InjectModel('Report') private readonly reportModel: Model<any>,
+    @InjectModel(Report.name) private readonly reportModel: Model<Report>,
   ) {}
 
   async getUserAnalytics() {
@@ -211,5 +214,186 @@ export class AdminService {
     if (result.matchedCount === 0) {
       throw new NotFoundException('Job not found.');
     }
+  }
+
+  async getReportedPosts(status?: string): Promise<ReportedPostsDto[]> {
+    const matchStage: any = { reported_type: 'Post' };
+    if (status) {
+      matchStage.status = status;
+    }
+
+    const reportedPosts = await this.reportModel.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'Posts',
+          localField: 'reported_id',
+          foreignField: '_id',
+          as: 'post',
+        },
+      },
+      { $unwind: '$post' },
+      {
+        $lookup: {
+          from: 'Profiles',
+          localField: 'post.author_id',
+          foreignField: '_id',
+          as: 'authorProfile',
+        },
+      },
+      { $unwind: '$authorProfile' },
+      {
+        $lookup: {
+          from: 'Users',
+          localField: 'authorProfile._id',
+          foreignField: '_id',
+          as: 'authorUser',
+        },
+      },
+      { $unwind: '$authorUser' },
+      {
+        $lookup: {
+          from: 'Profiles',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'reporterProfile',
+        },
+      },
+      { $unwind: '$reporterProfile' },
+      {
+        $lookup: {
+          from: 'Users',
+          localField: 'reporterProfile._id',
+          foreignField: '_id',
+          as: 'reporterUser',
+        },
+      },
+      { $unwind: '$reporterUser' },
+      {
+        $project: {
+          id: '$_id',
+          status: 1,
+          postContent: '$post.text',
+          postMedia: { $arrayElemAt: ['$post.media', 0] },
+          postAuthor: {
+            $concat: [
+              '$authorProfile.first_name',
+              ' ',
+              '$authorProfile.last_name',
+            ],
+          },
+          postAuthorRole: '$authorUser.role',
+          postAuthorAvatar: '$authorProfile.profile_picture',
+          reportedBy: {
+            $concat: [
+              '$reporterProfile.first_name',
+              ' ',
+              '$reporterProfile.last_name',
+            ],
+          },
+          reporterAvatar: '$reporterProfile.profile_picture',
+          reason: 1,
+          reportedAt: '$reported_at',
+        },
+      },
+    ]);
+
+    return reportedPosts.map((report) => ({
+      id: report.id,
+      status: report.status,
+      postContent: report.postContent,
+      postMedia: report.postMedia,
+      postAuthor: report.postAuthor,
+      postAuthorRole: report.postAuthorRole,
+      postAuthorAvatar: report.postAuthorAvatar,
+      reportedBy: report.reportedBy,
+      reporterAvatar: report.reporterAvatar,
+      reason: report.reason,
+      reportedAt: report.reportedAt,
+    }));
+  }
+
+  async getReportedUsers(status?: string): Promise<ReportedUsersDto[]> {
+    const matchStage: any = { reported_type: 'Profile' };
+    if (status) {
+      matchStage.status = status;
+    }
+
+    const reportedUsers = await this.reportModel.aggregate([
+      { $match: matchStage },
+      {
+        $lookup: {
+          from: 'Profiles',
+          localField: 'reported_id',
+          foreignField: '_id',
+          as: 'reportedUserProfile',
+        },
+      },
+      { $unwind: '$reportedUserProfile' },
+      {
+        $lookup: {
+          from: 'Users',
+          localField: 'reportedUserProfile._id',
+          foreignField: '_id',
+          as: 'reportedUser',
+        },
+      },
+      { $unwind: '$reportedUser' },
+      {
+        $lookup: {
+          from: 'Profiles',
+          localField: 'user_id',
+          foreignField: '_id',
+          as: 'reporterProfile',
+        },
+      },
+      { $unwind: '$reporterProfile' },
+      {
+        $lookup: {
+          from: 'Users',
+          localField: 'reporterProfile._id',
+          foreignField: '_id',
+          as: 'reporterUser',
+        },
+      },
+      { $unwind: '$reporterUser' },
+      {
+        $project: {
+          id: '$_id',
+          status: 1,
+          reportedUser: {
+            $concat: [
+              '$reportedUserProfile.first_name',
+              ' ',
+              '$reportedUserProfile.last_name',
+            ],
+          },
+          reportedUserRole: '$reportedUser.role',
+          reportedUserAvatar: '$reportedUserProfile.profile_picture',
+          reportedBy: {
+            $concat: [
+              '$reporterProfile.first_name',
+              ' ',
+              '$reporterProfile.last_name',
+            ],
+          },
+          reporterAvatar: '$reporterProfile.profile_picture',
+          reason: 1,
+          reportedAt: '$reported_at',
+        },
+      },
+    ]);
+
+    return reportedUsers.map((report) => ({
+      id: report.id,
+      status: report.status,
+      reportedUser: report.reportedUser,
+      reportedUserRole: report.reportedUserRole,
+      reportedUserAvatar: report.reportedUserAvatar,
+      reportedBy: report.reportedBy,
+      reporterAvatar: report.reporterAvatar,
+      reason: report.reason,
+      reportedAt: report.reportedAt,
+    }));
   }
 }
