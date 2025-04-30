@@ -8,8 +8,9 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { Injectable } from '@nestjs/common';
 import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
+import { SendMessageDto } from '../messages/dto/send-message.dto';
+import { Types } from 'mongoose';
 
 @WebSocketGateway({
   cors: {
@@ -31,6 +32,7 @@ export class MessagesGateway
       client.data.userId = userId; // Attach userId to socket
       console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
       client.join(userId); // Automatically join their room
+      this.messagesService.markMessagesAsDelivered(userId);
     } else {
       console.log('❌ Connection rejected: userId missing');
       client.disconnect();
@@ -43,7 +45,7 @@ export class MessagesGateway
 
   @SubscribeMessage('send_message')
   async handleMessage(
-    @MessageBody() rawPayload: any,
+    @MessageBody() rawPayload: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ) {
     let payload;
@@ -84,5 +86,51 @@ export class MessagesGateway
     console.log(
       `📨 Message sent from ${client.data.userId} to ${payload.receiverId}: ${payload.text}`,
     );
+  }
+
+  // Add these to your gateway
+  @SubscribeMessage('messages_delivered')
+  async handleDelivery(@ConnectedSocket() client: Socket) {
+    const userId = client.data.userId;
+
+    await this.messagesService.markMessagesAsDelivered(userId);
+  }
+
+  @SubscribeMessage('messages_read')
+  async handleRead(
+    @MessageBody() rawPayload: any,
+    @ConnectedSocket() client: Socket,
+  ) {
+    const payload =
+      typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
+
+    console.log('convvvvvvvvv: ', payload);
+
+    const userId = client.data.userId;
+    const conversationId = payload.conversationId;
+
+    console.log('id==== ', conversationId);
+
+    await this.messagesService.markMessagesAsRead(
+      new Types.ObjectId(conversationId),
+      new Types.ObjectId(userId),
+    );
+  }
+  @SubscribeMessage('typing')
+  handleTyping(
+    @MessageBody() payload: string | { receiverId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    // Parse if it's a string
+    const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
+
+    // Extract receiverId
+    const receiverId = parsed.receiverId || parsed;
+
+    console.log('Typing event received for:', receiverId);
+
+    client.to(receiverId).emit('typing', {
+      senderId: client.data.userId,
+    });
   }
 }

@@ -10,4 +10,5 @@ export class GetConversationDto {
     lastName: string;
     profilePicture: string;
   };
+  markedAsUnread: boolean; // Added this field to indicate if the conversation is marked as unread
 }

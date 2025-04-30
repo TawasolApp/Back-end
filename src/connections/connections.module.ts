@@ -27,6 +27,7 @@ import { PaymentsModule } from '../payments/payments.module';
     AuthModule,
     forwardRef(() => ProfilesModule),
     NotificationsModule,
+    forwardRef(() => PaymentsModule),
     forwardRef(() => CompaniesModule),
     forwardRef(() => PaymentsModule),
     JwtModule.register({
