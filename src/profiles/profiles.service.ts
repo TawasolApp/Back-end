@@ -43,7 +43,8 @@ import { isPremium } from '../payments/helpers/check-premium.helper';
 import {
   PlanDetail,
   PlanDetailDocument,
-} from 'src/payments/infrastructure/database/schema/plan-detail.schema';
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
+
 @Injectable()
 export class ProfilesService {
   constructor(

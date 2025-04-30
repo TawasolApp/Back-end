@@ -9,11 +9,11 @@ import { Model, Types } from 'mongoose';
 import {
   Payment,
   PaymentDocument,
-} from './infrastructure/database/schema/payment.schema';
+} from './infrastructure/database/schemas/payment.schema';
 import {
   PlanDetail,
   PlanDetailDocument,
-} from './infrastructure/database/schema/plan-detail.schema';
+} from './infrastructure/database/schemas/plan-detail.schema';
 import { PlanType } from './enums/plan-type.enum';
 import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
 import { handleError } from '../common/utils/exception-handler';

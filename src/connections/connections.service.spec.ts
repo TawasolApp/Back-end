@@ -14,7 +14,7 @@ import { Profile } from '../profiles/infrastructure/database/schemas/profile.sch
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
-import { PlanDetail } from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { PlanDetail } from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';

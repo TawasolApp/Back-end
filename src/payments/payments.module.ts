@@ -10,11 +10,11 @@ import { UsersModule } from '../users/users.module';
 import {
   Payment,
   PaymentSchema,
-} from './infrastructure/database/schema/payment.schema';
+} from './infrastructure/database/schemas/payment.schema';
 import {
   PlanDetail,
   PlanDetailSchema,
-} from './infrastructure/database/schema/plan-detail.schema';
+} from './infrastructure/database/schemas/plan-detail.schema';
 import { PaymentsService } from './payments.service';
 
 @Module({

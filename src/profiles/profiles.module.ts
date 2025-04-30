@@ -19,7 +19,7 @@ import { CompaniesModule } from '../companies/companies.module';
 import {
   PlanDetail,
   PlanDetailSchema,
-} from '../payments/infrastructure/database/schema/plan-detail.schema';
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
 
 @Module({
   imports: [
