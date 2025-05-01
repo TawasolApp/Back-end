@@ -29,7 +29,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [Pending, Reviewed, Actioned, Dismissed]
+            enum: [Pending, Actioned, Dismissed]
       responses:
         '200':
           description: List of reported posts
@@ -51,7 +51,7 @@ paths:
           required: false
           schema:
             type: string
-            enum: [Pending, Reviewed, Actioned, Dismissed]
+            enum: [Pending, Actioned, Dismissed]
       responses:
         '200':
           description: List of reported users
@@ -306,17 +306,16 @@ components:
         id: { type: string }
         status:
           type: string
-          enum: [Pending, Reviewed, Actioned, Dismissed]
-        post_content: { type: string }
-        post_media: { type: string, nullable: true }
-        post_author: { type: string }
-        post_author_role: { type: string }
-        post_author_avatar: { type: string }
-        reported_by: { type: string }
-        reporter_avatar: { type: string }
+          enum: [Pending, Actioned, Dismissed]
+        postContent: { type: string }
+        postMedia: { type: string, nullable: true }
+        postAuthor: { type: string }
+        postAuthorRole: { type: string }
+        postAuthorAvatar: { type: string, nullable: true }
+        reportedBy: { type: string }
+        reporterAvatar: { type: string, nullable: true }
         reason: { type: string }
-        report_detail: { type: string }
-        reported_at:
+        reportedAt:
           type: string
           format: date-time
 
@@ -326,15 +325,14 @@ components:
         id: { type: string }
         status:
           type: string
-          enum: [Pending, Reviewed, Actioned, Dismissed]
-        reported_user: { type: string }
-        reported_user_role: { type: string }
-        reported_user_avatar: { type: string }
-        reported_by: { type: string }
-        reporter_avatar: { type: string }
+          enum: [Pending, Actioned, Dismissed]
+        reportedUser: { type: string }
+        reportedUserRole: { type: string }
+        reportedUserAvatar: { type: string, nullable: true }
+        reportedBy: { type: string }
+        reporterAvatar: { type: string, nullable: true }
         reason: { type: string }
-        report_detail: { type: string }
-        reported_at:
+        reportedAt:
           type: string
           format: date-time
 

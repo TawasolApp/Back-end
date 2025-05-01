@@ -23,6 +23,13 @@ export class Conversation {
 
   @Prop()
   unseen_count: number;
+
+  @Prop({
+    type: [{ type: Boolean, ref: 'User' }],
+    required: true,
+    default: [false, false],
+  })
+  markedAsUnread: Boolean[];
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

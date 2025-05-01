@@ -13,11 +13,14 @@ import { UserConnection } from './infrastructure/database/schemas/user-connectio
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { PlanDetail } from '../payments/infrastructure/database/schema/plan-detail.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
-
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
+
 import {
   getConnection,
   getFollow,
@@ -25,8 +28,6 @@ import {
   getBlocked,
   getIgnored,
 } from './helpers/connection-helpers';
-import { User } from '../users/infrastructure/database/schemas/user.schema';
-import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 
 jest.mock('../common/utils/exception-handler', () => ({
   handleError: jest.fn(),
@@ -96,6 +97,10 @@ describe('ConnectionsService', () => {
     }),
   };
 
+  const mockPlanDetailModel = {
+    findOne: jest.fn(),
+  };
+
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -127,6 +132,10 @@ describe('ConnectionsService', () => {
         {
           provide: getModelToken(CompanyManager.name),
           useValue: mockComapnyManagerModel,
+        },
+        {
+          provide: getModelToken(PlanDetail.name),
+          useValue: mockPlanDetailModel,
         },
       ],
     }).compile();

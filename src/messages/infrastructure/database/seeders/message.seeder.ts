@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { faker } from '@faker-js/faker';
 import { Message, MessageDocument } from '../schemas/message.schema';
 import { Conversation } from '../schemas/conversation.schema';
@@ -47,7 +47,11 @@ export class MessageSeeder {
     for (let i = 0; i < count; i++) {
       const conversation = faker.helpers.arrayElement(conversations);
       const sender = faker.helpers.arrayElement(conversation.participants);
-
+      const receiver = faker.helpers.arrayElement(
+        conversation.participants.filter(
+          (participant) => participant !== sender,
+        ),
+      );
       const user1CreatedAt = userCreatedAtMap.get(
         conversation.participants[0]._id.toString(),
       )!;
@@ -62,7 +66,8 @@ export class MessageSeeder {
       });
 
       messages.push({
-        sender_id: sender,
+        sender_id: new Types.ObjectId(sender),
+        receiver_id: new Types.ObjectId(receiver),
         conversation_id: conversation._id,
         text: faker.lorem.sentence(),
         media: faker.datatype.boolean()
