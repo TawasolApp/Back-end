@@ -44,7 +44,7 @@ import {
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [MongooseModule, ConversationSeeder, MessageSeeder],
+  exports: [MongooseModule, ConversationSeeder, MessageSeeder, MessagesGateway],
   providers: [
     ConversationSeeder,
     MessageSeeder,

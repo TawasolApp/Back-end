@@ -7,10 +7,10 @@ export enum ReportedType {
 
 export class ReportRequestDto {
   @IsString()
-  reported_id: string;
+  reportedId: string;
 
   @IsEnum(ReportedType)
-  reported_type: ReportedType;
+  reportedType: ReportedType;
 
   @IsString()
   reason: string;
