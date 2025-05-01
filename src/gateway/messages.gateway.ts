@@ -17,7 +17,8 @@ import {
   PlanDetailDocument,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { InjectModel } from '@nestjs/mongoose';
-import { BadRequestException } from '@nestjs/common';
+
+import Redis from 'ioredis';
 
 @WebSocketGateway({
   cors: {
@@ -27,11 +28,17 @@ import { BadRequestException } from '@nestjs/common';
 export class MessagesGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
+  private redis: Redis;
   constructor(
     private readonly messagesService: MessagesService,
     @InjectModel(PlanDetail.name)
     private readonly planDetailModel: Model<PlanDetailDocument>,
-  ) {}
+  ) {
+    this.redis = new Redis();
+    this.redis.on('error', (err) => {
+      console.error('Redis error:', err.message);
+    });
+  }
   private server: Server;
 
   afterInit(server: Server) {
@@ -58,15 +65,14 @@ export class MessagesGateway
     }
   }
 
-  handleConnection(client: Socket) {
+  async handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
 
     if (userId) {
-      client.data.userId = userId; // Attach userId to socket
-      client.data.isPremium = isPremium(userId, this.planDetailModel); // Check if user is premium
-      client.data.messageCount = 0; // Initialize message count
+      client.data.userId = userId;
+      client.data.isPremium = await isPremium(userId, this.planDetailModel);
       console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
-      client.join(userId); // Automatically join their room
+      client.join(userId);
       this.messagesService.markMessagesAsDelivered(userId);
     } else {
       console.log('❌ Connection rejected: userId missing');
@@ -83,12 +89,33 @@ export class MessagesGateway
     @MessageBody() rawPayload: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ) {
-    if (client.data.messageCount >= 30 && !client.data.isPremium) {
-      throw new BadRequestException(
-        'You have reached the limit of 30 messages. Upgrade to premium to send more messages.',
-      );
+    const userId = client.data.userId;
+    const isPremiumUser = client.data.isPremium;
+
+    const redisKey = `message_count:${userId}`;
+    let count = parseInt((await this.redis.get(redisKey)) || '0');
+    console.log('Current message count:', count);
+
+    if (count >= 30 && !isPremiumUser) {
+      console.log('❌ Message limit reached for non-premium user');
+
+      client.emit('error_message', {
+        type: 'LIMIT_REACHED',
+        message:
+          'You have reached the limit of 30 messages. Upgrade to premium.',
+      });
+
+      return;
     }
-    client.data.messageCount += 1; // Increment message count
+
+    await this.redis.incr(redisKey); // Increment count
+
+    // Optional: Set an expiry for daily reset
+    if (count === 0) {
+      await this.redis.expire(redisKey, 86400); // 24 hours
+    }
+
+    // Parse and send message (your existing logic below)
     let payload;
     try {
       payload =
@@ -103,12 +130,10 @@ export class MessagesGateway
       return;
     }
 
-    console.log('✅ Parsed payload:', payload);
     const messageDate = new Date();
-
     const media = Array.isArray(payload.media) ? payload.media : [];
+    const senderId = client.data.userId;
 
-    const senderId = client.data.userId; // Assuming you attached userId at connect time
     const { conversation, message } = await this.messagesService.createMessage(
       senderId,
       payload.receiverId,
@@ -118,14 +143,14 @@ export class MessagesGateway
     );
 
     client.to(payload.receiverId).emit('receive_message', {
-      senderId: client.data.userId,
+      senderId,
       text: payload.text,
-      media: media,
+      media,
       sentAt: messageDate,
     });
 
     console.log(
-      `📨 Message sent from ${client.data.userId} to ${payload.receiverId}: ${payload.text}`,
+      `📨 Message sent from ${senderId} to ${payload.receiverId}: ${payload.text}`,
     );
   }
 

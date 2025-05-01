@@ -36,7 +36,7 @@ export class MessagesService {
     let conversation = await this.conversationModel.findOne({
       participants: { $all: [senderId, receiverId] },
     });
-    console.log('Conversation:', conversation);
+    //console.log('Conversation:', conversation);
 
     if (!conversation) {
       conversation = await this.conversationModel.create({
@@ -55,7 +55,7 @@ export class MessagesService {
       status: MessageStatus.Sent,
       sent_at: messageDate,
     });
-    console.log('Conversation Id:', conversation._id);
+    //console.log('Conversation Id:', conversation._id);
 
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
@@ -81,7 +81,7 @@ export class MessagesService {
         ],
       },
     });
-    console.log('update unseen count: ' + unseenCount);
+    //console.log('update unseen count: ' + unseenCount);
 
     // Update the unseen_count field in the conversation
     await this.conversationModel.updateOne(
