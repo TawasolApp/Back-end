@@ -55,6 +55,7 @@ import { UserConnection } from '../connections/infrastructure/database/schemas/u
 import { getPostInfo } from './helpers/posts.helpers';
 import * as postHelpers from '../posts/helpers/posts.helpers';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
+import * as connectionHelpers from '../connections/helpers/connection-helpers';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
@@ -199,6 +200,7 @@ describe('PostsService', () => {
       .spyOn(notificationHelpers, 'deleteNotification')
       .mockResolvedValue(null);
   });
+  jest.spyOn(connectionHelpers, 'getBlockedList').mockResolvedValue([]);
 
   it('[1] should be defined', () => {
     expect(service).toBeDefined();

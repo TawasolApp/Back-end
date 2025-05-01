@@ -53,6 +53,7 @@ import { UserConnection } from '../connections/infrastructure/database/schemas/u
 import { getPostInfo } from './helpers/posts.helpers';
 import * as postHelpers from '../posts/helpers/posts.helpers';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
+import * as connectionHelpers from '../connections/helpers/connection-helpers';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
@@ -194,21 +195,12 @@ describe('PostsService', () => {
     }).compile();
 
     service = module.get<PostsService>(PostsService);
-
-    // jest.mock('./helpers/posts.helpers', () => ({
-    //   ...jest.requireActual('./helpers/posts.helpers'),
-    //   getUserAccessed: jest.fn().mockResolvedValue(mockUserId), // Mock getUserAccessed
-    // }));
-    // jest.mock('../notifications/helpers/notification.helper', () => ({
-    //   ...jest.requireActual('../notifications/helpers/notification.helper'),
-    //   addNotification: jest.fn(), // Mock addNotification to do nothing
-    //   deleteNotification: jest.fn(), // Mock deleteNotification to do nothing
-    // }));
     jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
     jest.spyOn(notificationHelpers, 'addNotification').mockResolvedValue(null);
     jest
       .spyOn(notificationHelpers, 'deleteNotification')
       .mockResolvedValue(null);
+    jest.spyOn(connectionHelpers, 'getBlockedList').mockResolvedValue([]);
   });
 
   it('[1] should be defined', () => {
