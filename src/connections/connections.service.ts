@@ -1106,7 +1106,7 @@ export class ConnectionsService {
   }
 
   /**
-   * retrieve count of users following the logged in user.
+   * retrieve count of pending connection requests for logged in user.
    *
    * @param userId - string ID of the logged in user.
    * @returns count
