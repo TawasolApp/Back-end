@@ -565,7 +565,7 @@ export class AdminService {
 
       await this.postModel.deleteOne({ _id: post._id });
       await this.reportModel.updateOne(
-        { _id: reportId },
+        { _id: new Types.ObjectId(reportId) },
         { $set: { status: 'Actioned' } },
       );
     } else if (action === 'suspend_user') {
