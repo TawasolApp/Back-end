@@ -323,7 +323,6 @@ export class PostsService {
       const objectId = new Types.ObjectId(authorId);
       // Step 0: Get Blocked Users
       const blocked = await getBlockedList(this.userConnectionModel, authorId);
-      console.log(blocked);
       // Step 1: Get connected users (both directions)
       const connected = await this.userConnectionModel
         .find({
