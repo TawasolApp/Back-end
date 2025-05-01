@@ -1337,12 +1337,10 @@ export class ConnectionsService {
         { $limit: limit },
         {
           $project: {
-            _id: '$profile._id',
+            userId: '$profile._id',
             first_name: '$profile.first_name',
             last_name: '$profile.last_name',
             profile_picture: '$profile.profile_picture',
-            headline: '$profile.headline',
-            created_at: '$created_at',
           },
         },
       ]);
