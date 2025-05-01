@@ -12,10 +12,7 @@ import {
   CompanyConnection,
   CompanyConnectionSchema,
 } from './infrastructure/database/schemas/company-connection.schema';
-import {
-  CompanyManager,
-  CompanyManagerSchema,
-} from './infrastructure/database/schemas/company-manager.schema';
+import { CompanyManager, CompanyManagerSchema, } from './infrastructure/database/schemas/company-manager.schema';
 import { CompanySeeder } from './infrastructure/database/seeders/company.seeder';
 import { CompanyConnectionSeeder } from './infrastructure/database/seeders/company-connection.seeder';
 import { CompanyManagerSeeder } from './infrastructure/database/seeders/company-manager.seeder';
@@ -24,11 +21,6 @@ import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { ConnectionsModule } from '../connections/connections.module';
 import { JobsModule } from '../jobs/jobs.module';
-import {
-  Notification,
-  NotificationSchema,
-} from '../notifications/infrastructure/database/schemas/notification.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Module({
   imports: [
@@ -36,11 +28,10 @@ import { NotificationGateway } from '../gateway/notification.gateway';
       { name: Company.name, schema: CompanySchema },
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
       { name: CompanyManager.name, schema: CompanyManagerSchema },
-      { name: Notification.name, schema: NotificationSchema },
     ]),
     AuthModule,
     UsersModule,
-    forwardRef(() => ProfilesModule),
+    forwardRef(() =>ProfilesModule),
     forwardRef(() => ConnectionsModule),
     forwardRef(() => JobsModule),
     JwtModule.register({
@@ -50,13 +41,7 @@ import { NotificationGateway } from '../gateway/notification.gateway';
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [
-    MongooseModule,
-    CompanySeeder,
-    CompanyConnectionSeeder,
-    CompanyManagerSeeder,
-    CompaniesService,
-  ],
+  exports: [MongooseModule, CompanySeeder, CompanyConnectionSeeder, CompanyManagerSeeder, CompaniesService],
   providers: [
     CompanySeeder,
     CompanyConnectionSeeder,
@@ -66,7 +51,6 @@ import { NotificationGateway } from '../gateway/notification.gateway';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
-    NotificationGateway,
   ],
   controllers: [CompaniesController],
 })

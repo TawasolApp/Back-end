@@ -60,15 +60,6 @@ import { toGetJobDto } from '../jobs/mappers/job.mapper';
 import { handleError } from '../common/utils/exception-handler';
 import { AddAccessDto } from './dtos/add-access.dto';
 import { validateId } from '../common/utils/id-validator';
-import {
-  addNotification,
-  deleteNotification,
-} from '../notifications/helpers/notification.helper';
-import {
-  Notification,
-  NotificationDocument,
-} from '../notifications/infrastructure/database/schemas/notification.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Injectable()
 export class CompaniesService {
@@ -90,9 +81,6 @@ export class CompaniesService {
     private readonly companyEmployerModel: Model<CompanyEmployerDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(Notification.name)
-    private notificationModel: Model<NotificationDocument>,
-    private readonly notificationGateway: NotificationGateway, // Inject NotificationGateway
   ) {}
 
   async checkAccess(userId: string, companyId: string) {
@@ -524,22 +512,6 @@ export class CompaniesService {
         { $inc: { followers: 1 } },
         { new: true },
       );
-
-      addNotification(
-        this.notificationModel,
-        new Types.ObjectId(userId),
-        new Types.ObjectId(companyId),
-        new Types.ObjectId(newFollow._id),
-        new Types.ObjectId(companyId),
-        'UserConnection',
-        'started following you',
-        new Date(),
-        this.notificationGateway,
-        this.profileModel,
-        this.companyModel,
-        this.userModel,
-        this.companyManagerModel,
-      );
     } catch (error) {
       handleError(error, 'Failed to follow company.');
     }
@@ -577,11 +549,6 @@ export class CompaniesService {
         new Types.ObjectId(companyId),
         { $inc: { followers: -1 } },
         { new: true },
-      );
-
-      deleteNotification(
-        this.notificationModel,
-        new Types.ObjectId(deletedFollow._id),
       );
     } catch (error) {
       handleError(error, 'Failed to unfollow company.');
