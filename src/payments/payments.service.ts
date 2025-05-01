@@ -22,6 +22,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import { MessagesGateway } from '../gateway/messages.gateway';
 
 @Injectable()
 export class PaymentsService {
@@ -40,6 +41,7 @@ export class PaymentsService {
     private readonly planDetailModel: Model<PlanDetailDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    private readonly messagesGateway: MessagesGateway,
   ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
   }
@@ -131,6 +133,7 @@ export class PaymentsService {
         { _id: new Types.ObjectId(userId) },
         { $set: { is_premium: true } },
       );
+      await this.messagesGateway.updatePremiumStatus(userId!, true);
     } catch (error) {
       handleError(error, 'Failed to handle successful payment.');
     }
@@ -168,6 +171,7 @@ export class PaymentsService {
         { _id: new Types.ObjectId(userId) },
         { $set: { is_premium: false } },
       );
+      await this.messagesGateway.updatePremiumStatus(userId!, false);
     } catch (error) {
       handleError(error, 'Failed to cancel premium plan.');
     }
