@@ -76,3 +76,17 @@ export async function getBlocked(
     .lean();
   return blockedRecord || null;
 }
+
+export async function getBlockedList(
+  userConnectionModel: Model<UserConnectionDocument>,
+  userId: string,
+) {
+  const blockedUsers = await userConnectionModel
+    .find({
+      sending_party: new Types.ObjectId(userId),
+      status: ConnectionStatus.Blocked,
+    })
+    .select('receiving_party')
+    .lean();
+  return blockedUsers.map((record) => record.receiving_party.toString());
+}
