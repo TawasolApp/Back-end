@@ -96,13 +96,13 @@ export class MessagesGateway
     let count = parseInt((await this.redis.get(redisKey)) || '0');
     console.log('Current message count:', count);
 
-    if (count >= 30 && !isPremiumUser) {
+    if (count >= 5 && !isPremiumUser) {
       console.log('❌ Message limit reached for non-premium user');
 
       client.emit('error_message', {
         type: 'LIMIT_REACHED',
         message:
-          'You have reached the limit of 30 messages. Upgrade to premium.',
+          'You have reached the limit of 5 messages. Upgrade to premium.',
       });
 
       return;
