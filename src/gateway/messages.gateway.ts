@@ -19,6 +19,10 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 
 import Redis from 'ioredis';
+import {
+  Profile,
+  ProfileDocument,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @WebSocketGateway({
   cors: {
@@ -33,8 +37,17 @@ export class MessagesGateway
     private readonly messagesService: MessagesService,
     @InjectModel(PlanDetail.name)
     private readonly planDetailModel: Model<PlanDetailDocument>,
+    @InjectModel(Profile.name)
+    private readonly profileModel: Model<ProfileDocument>, // Inject the Profile model
   ) {
-    this.redis = new Redis();
+    this.redis = new Redis({
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    }); // Initialize Redis without maxListeners
+
+    // Set max listeners globally to prevent warnings
+    require('events').EventEmitter.defaultMaxListeners = 50;
+
     this.redis.on('error', (err) => {
       console.error('Redis error:', err.message);
     });
@@ -70,7 +83,12 @@ export class MessagesGateway
 
     if (userId) {
       client.data.userId = userId;
-      client.data.isPremium = await isPremium(userId, this.planDetailModel);
+      //client.data.isPremium = await isPremium(userId, this.planDetailModel);
+      const profile = await this.profileModel
+        .findById(new Types.ObjectId(userId))
+        .lean();
+      client.data.isPremium = profile?.is_premium;
+      console.log('isPremium: ', client.data.isPremium);
       console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
       client.join(userId);
       this.messagesService.markMessagesAsDelivered(userId);
@@ -96,6 +114,7 @@ export class MessagesGateway
     let count = parseInt((await this.redis.get(redisKey)) || '0');
     console.log('Current message count:', count);
 
+    await this.redis.expire(redisKey, 864000); // Set expiry to 24 hours
     if (count >= 5 && !isPremiumUser) {
       console.log('❌ Message limit reached for non-premium user');
 
@@ -107,13 +126,16 @@ export class MessagesGateway
 
       return;
     }
-
     await this.redis.incr(redisKey); // Increment count
 
+    client.emit('error_message', {
+      type: 'ACK',
+      message: 'Your message has been sent.',
+    });
+
     // Optional: Set an expiry for daily reset
-    if (count === 0) {
-      await this.redis.expire(redisKey, 86400); // 24 hours
-    }
+
+    // 24 hours
 
     // Parse and send message (your existing logic below)
     let payload;
