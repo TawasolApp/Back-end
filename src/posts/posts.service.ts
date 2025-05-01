@@ -322,7 +322,8 @@ export class PostsService {
 
       const objectId = new Types.ObjectId(authorId);
       // Step 0: Get Blocked Users
-      const blocked = getBlockedList(this.userConnectionModel, authorId);
+      const blocked = await getBlockedList(this.userConnectionModel, authorId);
+      console.log(blocked);
       // Step 1: Get connected users (both directions)
       const connected = await this.userConnectionModel
         .find({
@@ -357,7 +358,6 @@ export class PostsService {
         })
         .sort({ posted_at: -1 })
         .exec();
-
       // Step 4: Filter posts based on the new logic
       const filteredPosts = candidatePosts.filter((post) => {
         const authorIdStr = post.author_id.toString();
