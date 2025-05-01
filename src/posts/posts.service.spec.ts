@@ -819,6 +819,7 @@ describe('PostsService', () => {
   // Test for getUserPosts
   it('[11] should get user posts', async () => {
     postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([mockPost]),
@@ -1488,6 +1489,7 @@ describe('PostsService', () => {
 
   it('[37] should throw an error if no posts are found for the user', async () => {
     postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([]),
@@ -2406,6 +2408,7 @@ describe('PostsService', () => {
 
   it('[101] should throw InternalServerErrorException when getUserPosts fails', async () => {
     postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
       skip: jest.fn().mockReturnThis(),
       limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockRejectedValue(new Error('Get user posts failed')),

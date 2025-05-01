@@ -69,6 +69,7 @@ import {
   UserDocument,
   User,
 } from '../users/infrastructure/database/schemas/user.schema';
+import { timeStamp } from 'console';
 
 @Injectable()
 export class PostsService {
@@ -487,6 +488,7 @@ export class PostsService {
       const skip = (page - 1) * limit;
       const posts = await this.postModel
         .find({ author_id: new Types.ObjectId(searchedUserId) })
+        .sort({ timeStamp: -1 })
         .skip(skip)
         .limit(limit)
         .exec();
