@@ -33,6 +33,9 @@ import { CompanyType } from './enums/company-type.enum';
 import { toGetCompanyDto } from './mappers/company.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { ApplicationStatus } from '../jobs/enums/application-status.enum';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import * as postHelpers from '../posts/helpers/posts.helpers';
+import * as notificationHelpers from '../notifications/helpers/notification.helper';
 
 jest.mock('../common/utils/exception-handler', () => ({
   handleError: jest.fn(),
@@ -49,6 +52,8 @@ describe('CompaniesService', () => {
   let userConnectionModel: any;
   let jobModel: any;
   let applicationModel: any;
+  let notificationModelMock: any;
+  let notificationGatewayMock;
 
   const mockCompanyModel = {
     findOne: jest.fn(),
@@ -162,6 +167,14 @@ describe('CompaniesService', () => {
           provide: getModelToken(Application.name),
           useValue: mockApplicationModel,
         },
+        {
+          provide: getModelToken(Notification.name),
+          useValue: notificationModelMock,
+        }, // Add this mock
+        {
+          provide: NotificationGateway,
+          useValue: notificationGatewayMock,
+        },
       ],
     }).compile();
 
@@ -177,6 +190,10 @@ describe('CompaniesService', () => {
     jobModel = module.get(getModelToken(Job.name));
     applicationModel = module.get(getModelToken(Application.name));
     jest.clearAllMocks();
+    jest.spyOn(notificationHelpers, 'addNotification').mockResolvedValue(null);
+    jest
+      .spyOn(notificationHelpers, 'deleteNotification')
+      .mockResolvedValue(null);
   });
 
   it('should be defined', () => {
