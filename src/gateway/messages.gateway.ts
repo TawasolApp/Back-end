@@ -48,9 +48,7 @@ export class MessagesGateway
     // Set max listeners globally to prevent warnings
     require('events').EventEmitter.defaultMaxListeners = 50;
 
-    this.redis.on('error', (err) => {
-      console.error('Redis error:', err.message);
-    });
+    this.redis.on('error', (err) => {});
   }
   private server: Server;
 
