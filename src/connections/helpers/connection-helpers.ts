@@ -80,7 +80,7 @@ export async function getBlocked(
 export async function getBlockedList(
   userConnectionModel: Model<UserConnectionDocument>,
   userId: string,
-) {
+): Promise<Types.ObjectId[]> {
   const blockedUsers = await userConnectionModel
     .find({
       sending_party: new Types.ObjectId(userId),
@@ -88,5 +88,5 @@ export async function getBlockedList(
     })
     .select('receiving_party')
     .lean();
-  return blockedUsers.map((record) => record.receiving_party.toString());
+  return blockedUsers.map((record) => record.receiving_party);
 }
