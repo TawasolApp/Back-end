@@ -26,6 +26,7 @@ import {
   PlanDetail,
   PlanDetailSchema,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
+import { NotificationGateway } from '../gateway/notification.gateway';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import {
     },
     MessagesService,
     MessagesGateway,
+    NotificationGateway,
   ],
   controllers: [MessagesController],
 })
