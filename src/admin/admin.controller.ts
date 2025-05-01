@@ -97,7 +97,7 @@ export class AdminController {
   async resolveReport(
     @Param('reportId') reportId: string,
     @Req() request: Request,
-    @Body('action') action: 'suspend_user' | 'ignore',
+    @Body('action') action: 'suspend_user' | 'ignore' | 'delete_post',
   ) {
     validateId(reportId, 'report');
     if (!request.user) {
@@ -109,6 +109,8 @@ export class AdminController {
       return await this.adminService.suspendUser(reportId);
     } else if (action === 'ignore') {
       return await this.adminService.ignoreReport(reportId);
+    } else if (action === 'delete_post') {
+      return await this.adminService.resolveReport(reportId, action);
     } else {
       throw new BadRequestException('Invalid action.');
     }
