@@ -152,9 +152,9 @@ export class MessagesService {
         receiver_id: userId,
         status: {
           $in: [MessageStatus.Sent, MessageStatus.Delivered],
-        }, // ✅ Find both
+        },
       },
-      { $set: { status: MessageStatus.Read } }, // ✅ No .toString() needed
+      { $set: { status: MessageStatus.Read } },
     );
 
     console.log('after service read message');

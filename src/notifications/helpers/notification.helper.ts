@@ -2,22 +2,22 @@ import { Model, Types } from 'mongoose';
 import { NotificationDocument } from '../infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../../gateway/notification.gateway';
 import { mapToGetNotificationsDto } from '../mappers/notification.mapper';
-import { profile } from 'console';
 import { ProfileDocument } from '../../profiles/infrastructure/database/schemas/profile.schema';
 import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
 import * as admin from 'firebase-admin';
-import { firebaseAdminProvider } from '../firebase-admin.provider'; // Import the provider
-import {
-  User,
-  UserDocument,
-} from '../../users/infrastructure/database/schemas/user.schema';
-import { InjectModel } from '@nestjs/mongoose';
-import {
-  CompanyManager,
-  CompanyManagerDocument,
-} from '../../companies/infrastructure/database/schemas/company-manager.schema';
-import { get } from 'http';
+import { UserDocument } from '../../users/infrastructure/database/schemas/user.schema';
 
+/**
+ * Add a new notification to the database and send it to the receiver
+ *
+ * Process:
+ * 1. Validate that the sender and receiver are not the same
+ * 2. Create a new notification document with the provided details
+ * 3. Save the notification to the database
+ * 4. Map the notification to a DTO and send it via the NotificationGateway
+ * 5. If the receiver is not connected, send a push notification via Firebase
+ * 6. Handle managed company notifications if applicable
+ */
 export async function addNotification(
   notificationModel: Model<NotificationDocument>,
   senderId: Types.ObjectId,
@@ -32,11 +32,11 @@ export async function addNotification(
     | 'JobOffer',
   content: string,
   sentAt: Date,
-  notificationGateway: NotificationGateway, // Inject NotificationGateway
-  profileModel: Model<ProfileDocument>, // Inject Profile model
-  companyModel: Model<CompanyDocument>, // Inject Company model
-  userModel: Model<UserDocument>, // Inject User model
-  companyManagerModel: Model<any>, // Inject CompanyManager model
+  notificationGateway: NotificationGateway,
+  profileModel: Model<ProfileDocument>,
+  companyModel: Model<CompanyDocument>,
+  userModel: Model<UserDocument>,
+  companyManagerModel: Model<any>,
 ) {
   if (senderId.equals(receiverId)) {
     console.log(
@@ -57,7 +57,7 @@ export async function addNotification(
       | 'Message'
       | 'JobOffer',
     content,
-    seen: false, // Always save as unread
+    seen: false,
     sent_at: sentAt,
     root_item_id: rootId,
   });
@@ -71,18 +71,15 @@ export async function addNotification(
     profileModel,
     companyModel,
   );
-  // console.log('Mapped notification:', getNotification);
 
-  // Emit the notification to the specific userId
   const userId = receiverId.toString();
-  const targetClient = notificationGateway.getClients().get(userId); // Use the public getter
+  const targetClient = notificationGateway.getClients().get(userId);
   if (targetClient) {
     targetClient.emit('newNotification', getNotification);
   } else {
     console.warn(`User with ID ${userId} is not connected.`);
   }
 
-  // Send notification via Firebase using all FCM tokens
   try {
     const managedCompany = await companyManagerModel
       .find({ company_id: new Types.ObjectId(receiverId) })
@@ -200,6 +197,14 @@ export async function addNotification(
   return savedNotification;
 }
 
+/**
+ * Delete a notification from the database
+ *
+ * Process:
+ * 1. Find the notification by its item ID
+ * 2. Delete the notification if it exists
+ * 3. Log the result of the deletion process
+ */
 export async function deleteNotification(
   notificationModel: Model<NotificationDocument>,
   itemId: Types.ObjectId,

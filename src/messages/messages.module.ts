@@ -1,4 +1,4 @@
-import { forwardRef, Module, ValidationPipe } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_PIPE } from '@nestjs/core';
@@ -12,7 +12,6 @@ import {
 } from './infrastructure/database/schemas/message.schema';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
-import { ProfilesModule } from '../profiles/profiles.module';
 import { ConversationSeeder } from './infrastructure/database/seeders/conversation.seeder';
 import { MessageSeeder } from './infrastructure/database/seeders/message.seeder';
 import { MessagesController } from './messages.controller';
@@ -55,7 +54,13 @@ import {
       signOptions: { expiresIn: '1h' },
     }),
   ],
-  exports: [MongooseModule, ConversationSeeder, MessageSeeder, MessagesGateway],
+  exports: [
+    MongooseModule,
+    ConversationSeeder,
+    MessageSeeder,
+    MessagesService,
+    MessagesGateway,
+  ],
   providers: [
     ConversationSeeder,
     MessageSeeder,
