@@ -14,7 +14,6 @@ import { Profile } from '../profiles/infrastructure/database/schemas/profile.sch
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
-import { PlanDetail } from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
@@ -44,23 +43,6 @@ describe('ConnectionsService', () => {
   let service: ConnectionsService;
   let userConnectionModel: any;
   let profileModel: any;
-
-  //   const mockUserConnectionModel: any = Object.assign(
-  //     jest.fn().mockImplementation((data) => ({
-  //       ...data,
-  //       save: jest.fn(),
-  //     })),
-  //     {
-  //       findOne: jest.fn(),
-  //       find: jest.fn(),
-  //       findById: jest.fn(),
-  //       findByIdAndUpdate: jest.fn(),
-  //       findByIdAndDelete: jest.fn(),
-  //       deleteMany: jest.fn(),
-  //       aggregate: jest.fn(),
-  //       countDocuments: jest.fn(),
-  //     },
-  //   );
 
   const mockUserConnectionModel = {
     findOne: jest.fn(),
@@ -113,10 +95,6 @@ describe('ConnectionsService', () => {
     }),
   };
 
-  const mockPlanDetailModel = {
-    findOne: jest.fn(),
-  };
-
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -142,10 +120,6 @@ describe('ConnectionsService', () => {
           useValue: mockCompanyManagerModel,
         },
         {
-          provide: getModelToken(PlanDetail.name),
-          useValue: mockPlanDetailModel,
-        },
-        {
           provide: getModelToken(Notification.name),
           useValue: mockNotificationModel,
         },
@@ -156,10 +130,6 @@ describe('ConnectionsService', () => {
         {
           provide: getModelToken(User.name),
           useValue: mockUserModel,
-        },
-        {
-          provide: getModelToken(PlanDetail.name),
-          useValue: mockPlanDetailModel,
         },
       ],
     }).compile();
