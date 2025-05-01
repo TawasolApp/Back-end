@@ -48,7 +48,7 @@ import {
 import {
   PlanDetail,
   PlanDetailDocument,
-} from '../payments/infrastructure/database/schema/plan-detail.schema';
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
@@ -489,18 +489,16 @@ export class JobsService {
         throw new ForbiddenException('You have already applied for this job.');
       }
 
-      
-      const premiumStatus = await isPremium(userId, this.planDetailModel);
+      const userProfile = await this.profileModel.findById(
+        new Types.ObjectId(userId),
+      );
+      if (!userProfile) {
+        throw new NotFoundException('User profile not found.');
+      }
+
+      const premiumStatus = userProfile?.is_premium
+
       if (!premiumStatus) {
-      
-        const userProfile = await this.profileModel.findById(
-          new Types.ObjectId(userId),
-        );
-
-        if (!userProfile) {
-          throw new NotFoundException('User profile not found.');
-        }
-
        
         if (userProfile.plan_statistics.application_count <= 0) {
           throw new ForbiddenException(

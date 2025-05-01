@@ -9,16 +9,20 @@ import { Model, Types } from 'mongoose';
 import {
   Payment,
   PaymentDocument,
-} from './infrastructure/database/schema/payment.schema';
+} from './infrastructure/database/schemas/payment.schema';
 import {
   PlanDetail,
   PlanDetailDocument,
-} from './infrastructure/database/schema/plan-detail.schema';
+} from './infrastructure/database/schemas/plan-detail.schema';
 import { PlanType } from './enums/plan-type.enum';
 import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { CheckoutSessionDto } from './dtos/checkout-session.dto';
-import { isPremium } from './helpers/check-premium.helper';
+import {
+  Profile,
+  ProfileDocument,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
+import { MessagesGateway } from '../gateway/messages.gateway';
 
 @Injectable()
 export class PaymentsService {
@@ -31,9 +35,13 @@ export class PaymentsService {
   private readonly CANCEL_URL = process.env.PAYMENT_CANCEL_URL;
 
   constructor(
-    @InjectModel(Payment.name) private paymentModel: Model<PaymentDocument>,
+    @InjectModel(Payment.name)
+    private readonly paymentModel: Model<PaymentDocument>,
     @InjectModel(PlanDetail.name)
-    private planDetailModel: Model<PlanDetailDocument>,
+    private readonly planDetailModel: Model<PlanDetailDocument>,
+    @InjectModel(Profile.name)
+    private readonly profileModel: Model<ProfileDocument>,
+    private readonly messagesGateway: MessagesGateway,
   ) {
     this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
   }
@@ -50,8 +58,11 @@ export class PaymentsService {
       //     { auto_renewal: false, expiry_date: { $gte: new Date() } },
       //   ],
       // });
-      if (await isPremium(userId, this.planDetailModel)) {
-        throw new ConflictException('User already has an active plan.');
+      const user = await this.profileModel
+        .findById(new Types.ObjectId(userId))
+        .lean();
+      if (user!.is_premium) {
+        throw new ConflictException('User is already on a premium plan.');
       }
       const { planType, autoRenewal } = upgradePlanDto;
       const amount =
@@ -118,6 +129,11 @@ export class PaymentsService {
         subscription_id: session.subscription as string,
         created_at: new Date(),
       });
+      await this.profileModel.updateOne(
+        { _id: new Types.ObjectId(userId) },
+        { $set: { is_premium: true } },
+      );
+      await this.messagesGateway.updatePremiumStatus(userId!, true);
     } catch (error) {
       handleError(error, 'Failed to handle successful payment.');
     }
@@ -132,29 +148,30 @@ export class PaymentsService {
       //     { auto_renewal: false, expiry_date: { $gte: new Date() } },
       //   ],
       // });
-      if (!(await isPremium(userId, this.planDetailModel))) {
+      const user = await this.profileModel
+        .findById(new Types.ObjectId(userId))
+        .lean();
+      if (!user!.is_premium) {
         throw new BadRequestException('User does not have any active plans.');
       }
-      const cancelledPlan = await this.planDetailModel.findOne({
-        user_id: new Types.ObjectId(userId),
-        cancel_date: { $exists: true, $ne: null },
-      });
-      if (cancelledPlan) {
-        throw new ConflictException('User already cancelled his premium plan.');
-      }
-      const activePlan = await this.planDetailModel
+      const plan = await this.planDetailModel
         .findOne({ user_id: new Types.ObjectId(userId) })
         .sort({ start_date: -1 });
       const payment = await this.paymentModel
-        .findOne({ plan_id: activePlan!._id })
+        .findOne({ plan_id: plan!._id })
         .sort({ created_at: -1 });
-      if (activePlan!.auto_renewal && payment?.subscription_id) {
+      if (plan!.auto_renewal && payment?.subscription_id) {
         await this.stripe.subscriptions.update(payment.subscription_id, {
           cancel_at_period_end: true,
         });
       }
-      activePlan!.cancel_date = new Date();
-      await activePlan!.save();
+      plan!.cancel_date = new Date();
+      await plan!.save();
+      await this.profileModel.updateOne(
+        { _id: new Types.ObjectId(userId) },
+        { $set: { is_premium: false } },
+      );
+      await this.messagesGateway.updatePremiumStatus(userId!, false);
     } catch (error) {
       handleError(error, 'Failed to cancel premium plan.');
     }

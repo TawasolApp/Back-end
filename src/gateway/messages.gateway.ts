@@ -10,7 +10,19 @@ import {
 import { Socket, Server } from 'socket.io';
 import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
 import { SendMessageDto } from '../messages/dto/send-message.dto';
-import { Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
+import { isPremium } from '../payments/helpers/check-premium.helper';
+import {
+  PlanDetail,
+  PlanDetailDocument,
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
+import { InjectModel } from '@nestjs/mongoose';
+
+import Redis from 'ioredis';
+import {
+  Profile,
+  ProfileDocument,
+} from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @WebSocketGateway({
   cors: {
@@ -20,18 +32,65 @@ import { Types } from 'mongoose';
 export class MessagesGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  constructor(private readonly messagesService: MessagesService) {}
+  private redis: Redis;
+  constructor(
+    private readonly messagesService: MessagesService,
+    @InjectModel(PlanDetail.name)
+    private readonly planDetailModel: Model<PlanDetailDocument>,
+    @InjectModel(Profile.name)
+    private readonly profileModel: Model<ProfileDocument>, // Inject the Profile model
+  ) {
+    this.redis = new Redis({
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    }); // Initialize Redis without maxListeners
+
+    // Set max listeners globally to prevent warnings
+    require('events').EventEmitter.defaultMaxListeners = 50;
+
+    this.redis.on('error', (err) => {
+      console.error('Redis error:', err.message);
+    });
+  }
+  private server: Server;
+
   afterInit(server: Server) {
+    this.server = server; // Initialize the server property
     console.log('✅ WebSocket server initialized');
   }
+  async updatePremiumStatus(userId: string, isPremium: boolean) {
+    // Find all sockets for this user
+    try {
+      const sockets = await this.server.fetchSockets();
+      const userSockets = sockets.filter(
+        (socket) => socket.data.userId === userId,
+      );
 
-  handleConnection(client: Socket) {
+      // Update premium status for each socket
+      userSockets.forEach((socket) => {
+        socket.data.isPremium = isPremium;
+        console.log(
+          `Updated premium status for user ${userId} to ${isPremium}`,
+        );
+      });
+    } catch (error) {
+      console.error('❌ Error updating premium status:', error.message);
+    }
+  }
+
+  async handleConnection(client: Socket) {
     const userId = client.handshake.query.userId as string;
 
     if (userId) {
-      client.data.userId = userId; // Attach userId to socket
+      client.data.userId = userId;
+      //client.data.isPremium = await isPremium(userId, this.planDetailModel);
+      const profile = await this.profileModel
+        .findById(new Types.ObjectId(userId))
+        .lean();
+      client.data.isPremium = profile?.is_premium;
+      console.log('isPremium: ', client.data.isPremium);
       console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
-      client.join(userId); // Automatically join their room
+      client.join(userId);
       this.messagesService.markMessagesAsDelivered(userId);
     } else {
       console.log('❌ Connection rejected: userId missing');
@@ -48,6 +107,37 @@ export class MessagesGateway
     @MessageBody() rawPayload: SendMessageDto,
     @ConnectedSocket() client: Socket,
   ) {
+    const userId = client.data.userId;
+    const isPremiumUser = client.data.isPremium;
+
+    const redisKey = `message_count:${userId}`;
+    let count = parseInt((await this.redis.get(redisKey)) || '0');
+    console.log('Current message count:', count);
+
+    await this.redis.expire(redisKey, 864000); // Set expiry to 24 hours
+    if (count >= 5 && !isPremiumUser) {
+      console.log('❌ Message limit reached for non-premium user');
+
+      client.emit('error_message', {
+        type: 'LIMIT_REACHED',
+        message:
+          'You have reached the limit of 5 messages. Upgrade to premium.',
+      });
+
+      return;
+    }
+    await this.redis.incr(redisKey); // Increment count
+
+    client.emit('error_message', {
+      type: 'ACK',
+      message: 'Your message has been sent.',
+    });
+
+    // Optional: Set an expiry for daily reset
+
+    // 24 hours
+
+    // Parse and send message (your existing logic below)
     let payload;
     try {
       payload =
@@ -62,12 +152,10 @@ export class MessagesGateway
       return;
     }
 
-    console.log('✅ Parsed payload:', payload);
     const messageDate = new Date();
-
     const media = Array.isArray(payload.media) ? payload.media : [];
+    const senderId = client.data.userId;
 
-    const senderId = client.data.userId; // Assuming you attached userId at connect time
     const { conversation, message } = await this.messagesService.createMessage(
       senderId,
       payload.receiverId,
@@ -77,14 +165,14 @@ export class MessagesGateway
     );
 
     client.to(payload.receiverId).emit('receive_message', {
-      senderId: client.data.userId,
+      senderId,
       text: payload.text,
-      media: media,
+      media,
       sentAt: messageDate,
     });
 
     console.log(
-      `📨 Message sent from ${client.data.userId} to ${payload.receiverId}: ${payload.text}`,
+      `📨 Message sent from ${senderId} to ${payload.receiverId}: ${payload.text}`,
     );
   }
 

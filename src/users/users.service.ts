@@ -77,6 +77,14 @@ export class UsersService {
         { userId, newEmail },
         { expiresIn: '1h' },
       );
+
+      if (process.env.TEST === 'ON') {
+        return {
+          message: 'Test mode: Email update token generated.',
+          verifyToken: token,
+        };
+      }
+
       await this.mailerService.sendEmailChangeConfirmation(newEmail, token);
 
       return { message: 'Please check your new email to confirm the change.' };

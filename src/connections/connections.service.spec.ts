@@ -11,16 +11,15 @@ import { mockProfiles, mockConnections } from './mock.data';
 import { ConnectionsService } from './connections.service';
 import { UserConnection } from './infrastructure/database/schemas/user-connection.schema';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
-import { Company } from '../companies/infrastructure/database/schemas/company.schema';
-import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
-import { PlanDetail } from '../payments/infrastructure/database/schema/plan-detail.schema';
+import { Company } from '../companies/infrastructure/database/schemas/company.schema';
+import { PlanDetail } from '../payments/infrastructure/database/schemas/plan-detail.schema';
+import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
-
 import {
   getConnection,
   getFollow,
@@ -70,6 +69,12 @@ describe('ConnectionsService', () => {
     }),
   };
 
+  const mockCompanyManagerModel = {
+    findOne: jest.fn().mockReturnValue({
+      lean: jest.fn().mockResolvedValue(undefined),
+    }),
+  };
+
   const mockNotificationModel = Object.assign(
     jest.fn().mockImplementation(() => ({
       save: jest.fn(),
@@ -91,12 +96,6 @@ describe('ConnectionsService', () => {
     }),
   };
 
-  const mockComapnyManagerModel = {
-    findOne: jest.fn().mockReturnValue({
-      lean: jest.fn().mockResolvedValue(undefined),
-    }),
-  };
-
   const mockPlanDetailModel = {
     findOne: jest.fn(),
   };
@@ -114,8 +113,20 @@ describe('ConnectionsService', () => {
           useValue: mockProfileModel,
         },
         {
+          provide: getModelToken(User.name),
+          useValue: mockUserModel,
+        },
+        {
           provide: getModelToken(Company.name),
           useValue: mockCompanyModel,
+        },
+        {
+          provide: getModelToken(CompanyManager.name),
+          useValue: mockCompanyManagerModel,
+        },
+        {
+          provide: getModelToken(PlanDetail.name),
+          useValue: mockPlanDetailModel,
         },
         {
           provide: getModelToken(Notification.name),
@@ -128,10 +139,6 @@ describe('ConnectionsService', () => {
         {
           provide: getModelToken(User.name),
           useValue: mockUserModel,
-        },
-        {
-          provide: getModelToken(CompanyManager.name),
-          useValue: mockComapnyManagerModel,
         },
         {
           provide: getModelToken(PlanDetail.name),

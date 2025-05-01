@@ -43,7 +43,8 @@ import { isPremium } from '../payments/helpers/check-premium.helper';
 import {
   PlanDetail,
   PlanDetailDocument,
-} from 'src/payments/infrastructure/database/schema/plan-detail.schema';
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
+
 @Injectable()
 export class ProfilesService {
   constructor(
@@ -51,7 +52,8 @@ export class ProfilesService {
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
     @InjectModel(PlanDetail.name)
     private readonly planDetailModel: Model<PlanDetailDocument>,
   ) {}
@@ -110,7 +112,7 @@ export class ProfilesService {
       loggedInUser,
       id.toString(),
     );
-    profileDto.isPremium = await isPremium(id.toString(), this.planDetailModel);
+    // profileDto.isPremium = await isPremium(id.toString(), this.planDetailModel);
     return profileDto;
   }
   /**

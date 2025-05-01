@@ -63,7 +63,7 @@ paths:
                   $ref: '#/components/schemas/ReportedUsersDto'
 
   /admin/reports/{reportId}/resolve:
-    post:
+    patch:
       summary: Resolve a report
       tags: [Reports]
       security: [{ bearerAuth: [] }]
@@ -81,11 +81,13 @@ paths:
               $ref: '#/components/schemas/ResolveReportRequest'
       responses:
         '200':
-          description: Report resolved
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/SuccessResponse'
+          description: Report resolved successfully
+        '400':
+          description: Invalid input
+        '404':
+          description: Report or user not found
+        '401':
+          description: Unauthorized (user not logged in)
 
   /admin/{jobId}/ignore:
     patch:
@@ -304,6 +306,7 @@ components:
       type: object
       properties:
         id: { type: string }
+        postId: { type: string }
         status:
           type: string
           enum: [Pending, Actioned, Dismissed]
@@ -312,6 +315,9 @@ components:
         postAuthor: { type: string }
         postAuthorRole: { type: string }
         postAuthorAvatar: { type: string, nullable: true }
+        postAuthorType:
+          type: string
+          enum: [User, Company]
         reportedBy: { type: string }
         reporterAvatar: { type: string, nullable: true }
         reason: { type: string }
@@ -341,7 +347,7 @@ components:
       properties:
         action:
           type: string
-          enum: [delete_post, suspend_user, ignore]
+          enum: [suspend_user, ignore, delete_post]
         comment:
           type: string
 

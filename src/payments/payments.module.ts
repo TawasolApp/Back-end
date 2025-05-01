@@ -10,12 +10,14 @@ import { UsersModule } from '../users/users.module';
 import {
   Payment,
   PaymentSchema,
-} from './infrastructure/database/schema/payment.schema';
+} from './infrastructure/database/schemas/payment.schema';
 import {
   PlanDetail,
   PlanDetailSchema,
-} from './infrastructure/database/schema/plan-detail.schema';
+} from './infrastructure/database/schemas/plan-detail.schema';
 import { PaymentsService } from './payments.service';
+import { MessagesModule } from '../messages/messages.module';
+import { MessagesGateway } from '../gateway/messages.gateway';
 
 @Module({
   imports: [
@@ -25,6 +27,8 @@ import { PaymentsService } from './payments.service';
     ]),
     AuthModule,
     UsersModule,
+    forwardRef(() => ProfilesModule),
+    MessagesModule,
     JwtModule.register({
       secret:
         process.env.JWT_SECRET ||
@@ -39,6 +43,7 @@ import { PaymentsService } from './payments.service';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
+    MessagesGateway,
   ],
   controllers: [PaymentsController, WebhookController],
 })
