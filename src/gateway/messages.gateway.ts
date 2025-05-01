@@ -96,6 +96,7 @@ export class MessagesGateway
     let count = parseInt((await this.redis.get(redisKey)) || '0');
     console.log('Current message count:', count);
 
+    await this.redis.expire(redisKey, 864000); // Set expiry to 24 hours
     if (count >= 5 && !isPremiumUser) {
       console.log('❌ Message limit reached for non-premium user');
 
@@ -107,13 +108,11 @@ export class MessagesGateway
 
       return;
     }
-
     await this.redis.incr(redisKey); // Increment count
 
     // Optional: Set an expiry for daily reset
-    if (count === 0) {
-      await this.redis.expire(redisKey, 86400); // 24 hours
-    }
+
+    // 24 hours
 
     // Parse and send message (your existing logic below)
     let payload;
