@@ -23,7 +23,7 @@ export class MessagesService {
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
     @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
+    private readonly profileModel: Model<ProfileDocument>,
   ) {}
 
   async createMessage(
@@ -113,9 +113,9 @@ export class MessagesService {
         receiver_id: userId,
         status: {
           $in: [MessageStatus.Sent, MessageStatus.Delivered],
-        }, // ✅ Find both
+        },
       },
-      { $set: { status: MessageStatus.Read } }, // ✅ No .toString() needed
+      { $set: { status: MessageStatus.Read } },
     );
 
     console.log('after service read message');
