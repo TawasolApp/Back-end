@@ -27,6 +27,14 @@ import {
   PlanDetailSchema,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { NotificationGateway } from '../gateway/notification.gateway';
+import {
+  NotificationSchema,
+  Notification,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  Company,
+  CompanySchema,
+} from '../companies/infrastructure/database/schemas/company.schema';
 
 @Module({
   imports: [
@@ -35,6 +43,8 @@ import { NotificationGateway } from '../gateway/notification.gateway';
       { name: Message.name, schema: MessageSchema },
       { name: Profile.name, schema: ProfileSchema },
       { name: PlanDetail.name, schema: PlanDetailSchema },
+      { name: Notification.name, schema: NotificationSchema },
+      { name: Company.name, schema: CompanySchema },
     ]),
     AuthModule,
     UsersModule,
