@@ -159,7 +159,11 @@ describe('ConnectionsService', () => {
           }),
         }),
       });
-      const result = await service.searchUsers(1, 5);
+      const result = await service.searchUsers(
+        mockProfiles[1]._id.toString(),
+        1,
+        5,
+      );
       expect(result).toHaveLength(5);
       expect(profileModel.find).toHaveBeenCalledWith({});
     });
@@ -179,7 +183,12 @@ describe('ConnectionsService', () => {
           }),
         }),
       });
-      const result = await service.searchUsers(1, 5, 'testing');
+      const result = await service.searchUsers(
+        mockProfiles[1]._id.toString(),
+        1,
+        5,
+        'testing',
+      );
       expect(result).toHaveLength(2);
       expect(
         result.map((profile) => profile.firstName + ' ' + profile.lastName),
@@ -210,7 +219,13 @@ describe('ConnectionsService', () => {
           }),
         }),
       });
-      const result = await service.searchUsers(1, 5, undefined, 'company');
+      const result = await service.searchUsers(
+        mockProfiles[1]._id.toString(),
+        1,
+        5,
+        undefined,
+        'company',
+      );
       expect(result).toHaveLength(1);
       expect(
         result.map((profile) => profile.firstName + ' ' + profile.lastName),
@@ -228,7 +243,7 @@ describe('ConnectionsService', () => {
         throw new Error('Unexpected Error.');
       });
       try {
-        await service.searchUsers(1, 5, 'user');
+        await service.searchUsers(mockProfiles[1]._id.toString(), 1, 5, 'user');
       } catch (_) {}
       expect(handleError).toHaveBeenCalledWith(
         expect.any(Error),

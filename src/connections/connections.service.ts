@@ -39,6 +39,7 @@ import { UpdateRequestDto } from './dtos/update-request.dto';
 import { AddEndoresementDto } from './dtos/add-endorsement.dto';
 import {
   getBlocked,
+  getBlockedList,
   getConnection,
   getFollow,
   getIgnored,
@@ -88,6 +89,7 @@ export class ConnectionsService {
    * 6. map the results to GetUserDto and return array of GetUserDtos.
    */
   async searchUsers(
+    userId: string,
     page: number,
     limit: number,
     name?: string,
@@ -117,7 +119,16 @@ export class ConnectionsService {
         .skip(skip)
         .limit(limit)
         .lean();
-      return users.map(toGetUserDto);
+      const excludeObjectIds = await getBlockedList(
+        this.userConnectionModel,
+        userId,
+      );
+      const excludeIds = excludeObjectIds.map((id) => id.toString());
+      const filteredUsers = excludeIds.length
+        ? users.filter((user) => !excludeIds.includes(user._id.toString()))
+        : users;
+
+      return filteredUsers.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of users.');
     }
@@ -335,7 +346,10 @@ export class ConnectionsService {
       }
       const { isAccept } = updateRequestDto;
       if (isAccept) {
-        if (!receivingUser!.is_premium && receivingUser!.connection_count >= 50) {
+        if (
+          !receivingUser!.is_premium &&
+          receivingUser!.connection_count >= 50
+        ) {
           throw new ForbiddenException(
             'User has exceeded his limit on connections.',
           );
