@@ -44,6 +44,7 @@ export class ConnectionsController {
     if (!request.user) {
       throw new UnauthorizedException('User not authenticated');
     }
+    const userId = request.user['sub'];
     if (!name && !company) {
       throw new BadRequestException(
         'At least one filter (name or company) must be provided.',
@@ -52,6 +53,7 @@ export class ConnectionsController {
     name = name?.trim();
     company = company?.trim();
     return await this.connectionsService.searchUsers(
+      userId,
       page,
       limit,
       name,
@@ -276,6 +278,15 @@ export class ConnectionsController {
     }
     const userId = request.user['sub'];
     return await this.connectionsService.getFollowingCount(userId);
+  }
+
+  @Get('/pending/count')
+  async getPendingCount(@Req() request: Request) {
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    const userId = request.user['sub'];
+    return await this.connectionsService.getPendingCount(userId);
   }
 
   @Post('/:userId/endorse-skill')

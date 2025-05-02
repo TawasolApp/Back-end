@@ -311,6 +311,7 @@ export class AdminService {
       {
         $project: {
           id: '$_id',
+          postId: '$post._id',
           status: 1,
           postContent: '$post.text',
           postMedia: { $arrayElemAt: ['$post.media', 0] },
@@ -358,6 +359,7 @@ export class AdminService {
 
     return reportedPosts.map((report) => ({
       id: report.id,
+      postId: report.postId,
       status: report.status,
       postContent: report.postContent,
       postMedia: report.postMedia,
@@ -540,6 +542,38 @@ export class AdminService {
 
     if (updateResult.modifiedCount === 0) {
       throw new InternalServerErrorException('Failed to update report status.');
+    }
+  }
+
+  async resolveReport(reportId: string, action: string): Promise<void> {
+    if (!Types.ObjectId.isValid(reportId)) {
+      throw new BadRequestException('Invalid report ID format.');
+    }
+
+    const report = await this.reportModel
+      .findById(new Types.ObjectId(reportId))
+      .lean(); // Ensure proper ObjectId conversion
+    if (!report) {
+      throw new NotFoundException('Report not found.');
+    }
+
+    if (action === 'delete_post') {
+      const post = await this.postModel.findById(report.reported_id).lean();
+      if (!post) {
+        throw new NotFoundException('Post not found.');
+      }
+
+      await this.postModel.deleteOne({ _id: post._id });
+      await this.reportModel.updateOne(
+        { _id: new Types.ObjectId(reportId) },
+        { $set: { status: 'Actioned' } },
+      );
+    } else if (action === 'suspend_user') {
+      await this.suspendUser(reportId);
+    } else if (action === 'ignore') {
+      await this.ignoreReport(reportId);
+    } else {
+      throw new BadRequestException('Invalid action.');
     }
   }
 }

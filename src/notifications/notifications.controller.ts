@@ -69,6 +69,19 @@ export class NotificationsController {
     const userId = req.user['sub']; // Extract user ID from JWT payload
     return await this.notificationsService.getUnseenCount(userId, companyId);
   }
+  @Get('unseen-messages')
+  @HttpCode(HttpStatus.OK)
+  async getUnseenMessagesCount(
+    @Req() req: Request,
+    @Param('companyId') companyId: string,
+  ) {
+    if (!req.user) throw new UnauthorizedException('User not authenticated');
+    const userId = req.user['sub']; // Extract user ID from JWT payload
+    return await this.notificationsService.getUnseenMessagesCount(
+      userId,
+      companyId,
+    );
+  }
 
   @Patch(':notificationId/read')
   @HttpCode(HttpStatus.OK)

@@ -306,6 +306,7 @@ components:
       type: object
       properties:
         id: { type: string }
+        postId: { type: string }
         status:
           type: string
           enum: [Pending, Actioned, Dismissed]
@@ -346,7 +347,7 @@ components:
       properties:
         action:
           type: string
-          enum: [suspend_user, ignore]
+          enum: [suspend_user, ignore, delete_post]
         comment:
           type: string
 

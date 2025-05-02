@@ -1,5 +1,5 @@
 import { Types, Model } from 'mongoose';
-import { PlanDetailDocument } from '../../payments/infrastructure/database/schema/plan-detail.schema';
+import { PlanDetailDocument } from '../../payments/infrastructure/database/schemas/plan-detail.schema';
 import { PlanType } from '../../payments/enums/plan-type.enum';
 
 export async function isPremium(

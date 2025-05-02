@@ -15,6 +15,21 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { getConversations, getMessages } from './dto/messages.mapper';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import { addNotification } from '../notifications/helpers/notification.helper';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -24,6 +39,15 @@ export class MessagesService {
     private readonly conversationModel: Model<ConversationDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
+    private readonly notificationGateway: NotificationGateway,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>, // Replace 'any' with the actual type of your Company model
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<any>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   async createMessage(
@@ -36,7 +60,7 @@ export class MessagesService {
     let conversation = await this.conversationModel.findOne({
       participants: { $all: [senderId, receiverId] },
     });
-    console.log('Conversation:', conversation);
+    //console.log('Conversation:', conversation);
 
     if (!conversation) {
       conversation = await this.conversationModel.create({
@@ -55,7 +79,7 @@ export class MessagesService {
       status: MessageStatus.Sent,
       sent_at: messageDate,
     });
-    console.log('Conversation Id:', conversation._id);
+    //console.log('Conversation Id:', conversation._id);
 
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
@@ -64,6 +88,21 @@ export class MessagesService {
     await this.markMessagesAsRead(
       conversation._id,
       new Types.ObjectId(senderId),
+    );
+    addNotification(
+      this.notificationModel,
+      new Types.ObjectId(senderId),
+      new Types.ObjectId(receiverId),
+      new Types.ObjectId(newMessage._id),
+      new Types.ObjectId(conversation._id),
+      'Message',
+      'Sent you a message',
+      new Date(),
+      this.notificationGateway,
+      this.profileModel,
+      this.companyModel,
+      this.userModel,
+      this.companyManagerModel,
     );
     // await newMessage.save();
     await this.updateUnseenCount(conversation._id);
@@ -81,7 +120,7 @@ export class MessagesService {
         ],
       },
     });
-    console.log('update unseen count: ' + unseenCount);
+    //console.log('update unseen count: ' + unseenCount);
 
     // Update the unseen_count field in the conversation
     await this.conversationModel.updateOne(
@@ -113,9 +152,9 @@ export class MessagesService {
         receiver_id: userId,
         status: {
           $in: [MessageStatus.Sent, MessageStatus.Delivered],
-        }, // ✅ Find both
+        },
       },
-      { $set: { status: MessageStatus.Read } }, // ✅ No .toString() needed
+      { $set: { status: MessageStatus.Read } },
     );
 
     console.log('after service read message');

@@ -181,6 +181,7 @@ export function toUpdateProfileSchema(
     connectionCount: profile.connection_count ?? 0,
     connectStatus: ProfileStatus.ME,
     followStatus: ProfileStatus.ME,
+    isPremium: profile.is_premium,
   };
 }
 

@@ -1,26 +1,23 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import {
   Notification,
   NotificationDocument,
 } from './infrastructure/database/schemas/notification.schema';
 import { GetNotificationsDto } from './dto/get-notifications.dto';
-import { addNotification } from './helpers/notification.helper';
 import { mapToGetNotificationsDto } from './mappers/notification.mapper';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import { Types } from 'mongoose';
 import { getUserAccessed } from '../posts/helpers/posts.helpers';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import {
   User,
   UserDocument,
 } from '../users/infrastructure/database/schemas/user.schema';
-import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
 
 @Injectable()
 export class NotificationsService {
@@ -32,12 +29,14 @@ export class NotificationsService {
     @InjectModel(CompanyManager.name)
     private readonly companyManagerModel: Model<any>,
     @InjectModel(User.name)
-    private readonly userModel: Model<UserDocument>, // Inject User model
+    private readonly userModel: Model<UserDocument>,
     @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>, // Inject Company model
-    //
+    private readonly companyModel: Model<CompanyDocument>,
   ) {}
 
+  /**
+   * Retrieve notifications for a user with pagination.
+   */
   async getNotifications(
     userId: string,
     companyId: string,
@@ -56,9 +55,9 @@ export class NotificationsService {
       const notifications = await this.notificationModel
         .find({
           receiver_id: new Types.ObjectId(authorId),
-          type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+          type: { $ne: 'Message' },
         })
-        .sort({ timestamp: -1, _id: -1 }) // Sort by timestamp and then by ID to ensure consistent ordering
+        .sort({ timestamp: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -73,13 +72,6 @@ export class NotificationsService {
         ),
       );
 
-      // const sortedNotifications = mappedNotifications.sort((a, b) => {
-      //   if (!a || !a.timestamp || !b || !b.timestamp) return 0;
-      //   return (
-      //     new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      //   );
-      // });
-
       return mappedNotifications.filter(
         (notification) => notification !== null,
       ) as GetNotificationsDto[];
@@ -88,6 +80,9 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * Retrieve unread notifications for a user with pagination.
+   */
   async getUnreadNotifications(
     userId: string,
     companyId: string,
@@ -106,10 +101,10 @@ export class NotificationsService {
       const notifications = await this.notificationModel
         .find({
           receiver_id: new Types.ObjectId(authorId),
-          seen: false, // Only include unseen notifications
-          type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+          seen: false,
+          type: { $ne: 'Message' },
         })
-        .sort({ timestamp: -1, _id: -1 }) // Sort by timestamp and then by ID to ensure consistent ordering
+        .sort({ timestamp: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean();
@@ -132,6 +127,9 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * Mark a notification as read for a user.
+   */
   async markAsRead(notificationId: string, userId: string, companyId: string) {
     try {
       const authorId = await getUserAccessed(
@@ -162,6 +160,9 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * Get the count of unseen notifications count for a user.
+   */
   async getUnseenCount(
     userId: string,
     companyId: string,
@@ -176,7 +177,7 @@ export class NotificationsService {
       const unseenCount = await this.notificationModel.countDocuments({
         receiver_id: new Types.ObjectId(authorId),
         seen: false,
-        type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+        type: { $ne: 'Message' },
       });
       return { unseenCount };
     } catch (error) {
@@ -186,10 +187,40 @@ export class NotificationsService {
     }
   }
 
+  /**
+   * Get the count of unseen Messages count for a user.
+   */
+  async getUnseenMessagesCount(
+    userId: string,
+    companyId: string,
+  ): Promise<{ unseenCount: number }> {
+    try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+
+      const unseenCount = await this.notificationModel.countDocuments({
+        receiver_id: new Types.ObjectId(authorId),
+        seen: false,
+        type: 'Message',
+      });
+      return { unseenCount };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to fetch unseen notification count',
+      );
+    }
+  }
+
+  /**
+   * Subscribe a user to an FCM token for notifications.
+   */
   async subscribeFcmToken(userId: string, fcmToken: string): Promise<void> {
     await this.userModel.updateOne(
       { _id: new Types.ObjectId(userId) },
-      { $addToSet: { fcm_tokens: fcmToken } }, // Ensures no duplicate tokens
+      { $addToSet: { fcm_tokens: fcmToken } },
     );
   }
 }
