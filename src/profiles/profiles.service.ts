@@ -45,7 +45,7 @@ import {
   PlanDetail,
   PlanDetailDocument,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
-import { getBlocked } from 'src/connections/helpers/connection-helpers';
+import { getBlocked } from '../connections/helpers/connection-helpers';
 
 @Injectable()
 export class ProfilesService {
