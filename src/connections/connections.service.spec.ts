@@ -25,6 +25,7 @@ import {
   getPending,
   getBlocked,
   getIgnored,
+  getBlockedList,
 } from './helpers/connection-helpers';
 
 jest.mock('../common/utils/exception-handler', () => ({
@@ -37,6 +38,7 @@ jest.mock('./helpers/connection-helpers', () => ({
   getConnection: jest.fn(),
   getIgnored: jest.fn(),
   getFollow: jest.fn(),
+  getBlockedList: jest.fn(),
 }));
 
 describe('ConnectionsService', () => {
@@ -149,7 +151,7 @@ describe('ConnectionsService', () => {
   });
 
   describe('searchUsers', () => {
-    it('should return all 5 profiles when page = 1 and limit = 5', async () => {
+    it('should return 4 profiles (exclude profile5) when page = 1 and limit = 5', async () => {
       profileModel.find.mockReturnValueOnce({
         select: jest.fn().mockReturnValueOnce({
           skip: jest.fn().mockReturnValueOnce({
@@ -159,12 +161,13 @@ describe('ConnectionsService', () => {
           }),
         }),
       });
+      (getBlockedList as jest.Mock).mockResolvedValue([mockProfiles[4]._id]);
       const result = await service.searchUsers(
         mockProfiles[1]._id.toString(),
         1,
         5,
       );
-      expect(result).toHaveLength(5);
+      expect(result).toHaveLength(4);
       expect(profileModel.find).toHaveBeenCalledWith({});
     });
 
@@ -220,7 +223,7 @@ describe('ConnectionsService', () => {
         }),
       });
       const result = await service.searchUsers(
-        mockProfiles[1]._id.toString(),
+        mockProfiles[0]._id.toString(),
         1,
         5,
         undefined,
