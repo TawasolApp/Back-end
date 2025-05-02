@@ -35,9 +35,9 @@ export class SecurityService {
     console.log('Report Request:', reportRequest);
     await this.reportModel.create({
       _id: new Types.ObjectId(),
-      user_id: loggedInUserId,
-      reported_id: reportRequest.reportedId,
-      reported_type: reportRequest.reportedType,
+      user_id: new Types.ObjectId(loggedInUserId),
+      reported_id: new Types.ObjectId(reportRequest.reported_id),
+      reported_type: reportRequest.reported_type,
       reason: reportRequest.reason,
       status: 'Pending',
       reported_at: new Date(),
