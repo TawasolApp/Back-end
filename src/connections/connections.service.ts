@@ -15,6 +15,22 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
@@ -23,6 +39,7 @@ import { UpdateRequestDto } from './dtos/update-request.dto';
 import { AddEndoresementDto } from './dtos/add-endorsement.dto';
 import {
   getBlocked,
+  getBlockedList,
   getConnection,
   getFollow,
   getIgnored,
@@ -35,27 +52,6 @@ import {
   addNotification,
   deleteNotification,
 } from '../notifications/helpers/notification.helper';
-import {
-  Notification,
-  NotificationDocument,
-} from '../notifications/infrastructure/database/schemas/notification.schema';
-import {
-  Company,
-  CompanyDocument,
-} from '../companies/infrastructure/database/schemas/company.schema';
-import {
-  User,
-  UserDocument,
-} from '../users/infrastructure/database/schemas/user.schema';
-import {
-  CompanyManager,
-  CompanyManagerDocument,
-} from '../companies/infrastructure/database/schemas/company-manager.schema';
-import {
-  PlanDetail,
-  PlanDetailDocument,
-} from '../payments/infrastructure/database/schemas/plan-detail.schema';
-import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
 export class ConnectionsService {
@@ -70,8 +66,6 @@ export class ConnectionsService {
     private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
     private readonly companyManagerModel: Model<CompanyManagerDocument>,
-    @InjectModel(PlanDetail.name)
-    private readonly planDetailModel: Model<PlanDetailDocument>,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     private readonly notificationGateway: NotificationGateway,
@@ -95,6 +89,7 @@ export class ConnectionsService {
    * 6. map the results to GetUserDto and return array of GetUserDtos.
    */
   async searchUsers(
+    userId: string,
     page: number,
     limit: number,
     name?: string,
@@ -124,7 +119,16 @@ export class ConnectionsService {
         .skip(skip)
         .limit(limit)
         .lean();
-      return users.map(toGetUserDto);
+      const excludeObjectIds = await getBlockedList(
+        this.userConnectionModel,
+        userId,
+      );
+      const excludeIds = excludeObjectIds.map((id) => id.toString());
+      const filteredUsers = excludeIds.length
+        ? users.filter((user) => !excludeIds.includes(user._id.toString()))
+        : users;
+
+      return filteredUsers.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of users.');
     }
@@ -143,8 +147,9 @@ export class ConnectionsService {
    * function flow:
    * 1. extracts receiving user ID and checks its availability in the database.
    * 2. checks that both IDs are distinct.
-   * 3. checks for any other exisiting instances between both users (pending or ignored requests, connection, block) to ensure no conflict.
-   * 4. if no conflict, creates a new pending connection request between both users and saves it to the database.
+   * 3. if user is not on a premium plan, checks that user did not exceed connection limit.
+   * 4. checks for any other exisiting instances between both users (pending or ignored requests, connection, block) to ensure no conflict.
+   * 5. if no conflict, creates a new pending connection request between both users and saves it to the database.
    */
   async requestConnection(
     sendingParty: string,
@@ -341,7 +346,10 @@ export class ConnectionsService {
       }
       const { isAccept } = updateRequestDto;
       if (isAccept) {
-        if (!existingUser.is_premium && receivingUser!.connection_count >= 50) {
+        if (
+          !receivingUser!.is_premium &&
+          receivingUser!.connection_count >= 50
+        ) {
           throw new ForbiddenException(
             'User has exceeded his limit on connections.',
           );
@@ -357,6 +365,7 @@ export class ConnectionsService {
           { new: true },
         );
       if (status === ConnectionStatus.Connected) {
+        // send request acceptance notification
         addNotification(
           this.notificationModel,
           new Types.ObjectId(receivingParty),
@@ -395,6 +404,7 @@ export class ConnectionsService {
             status: ConnectionStatus.Following,
           });
           await newFollow.save();
+          // send follow notification
           addNotification(
             this.notificationModel,
             new Types.ObjectId(sendingParty),
@@ -823,7 +833,7 @@ export class ConnectionsService {
   }
 
   /**
-   * adds a follow instances between logged in user and another specified user.
+   * adds a follow instance between logged in user and another specified user.
    *
    * @param sendingParty - string ID of the logged in user.
    * @param createRequestDto - contains receivingParty; the string ID of the other user.
@@ -931,6 +941,7 @@ export class ConnectionsService {
         throw new NotFoundException('Follow instance not found.');
       }
       await this.userConnectionModel.findByIdAndDelete(existingFollow._id);
+      // remove follow notification
       deleteNotification(this.notificationModel, existingFollow._id);
     } catch (error) {
       handleError(error, 'Failed to unfollow user.');
@@ -1255,6 +1266,22 @@ export class ConnectionsService {
     }
   }
 
+  /**
+   * adds a block instance between logged in user and another specified user.
+   *
+   * @param sendingParty - string ID of the logged in user.
+   * @param receivingParty - string ID of the other user.
+   * @throws NotFoundException - if the receiving party user ID is not a valid one.
+   * @throws BadRequestException - if sending and receving user ID are the same.
+   * @throws ConflictException - if block instance already exists in the specified direction.
+   *
+   * function flow:
+   * 1. checks availablity of other user in the database.
+   * 2. checks that both IDs are distinct.
+   * 3. checks for any other exisiting block instances between both users to ensure no conflict
+   * 4. if no conflict, creates a new block instance between both users and saves it to the database.
+   * 5. deletes any other instances between the 2 users (connection request/follow/connection)
+   */
   async block(sendingParty: string, receivingParty: string) {
     try {
       const exisitngUser = await this.profileModel
@@ -1277,7 +1304,7 @@ export class ConnectionsService {
         sendingParty,
       );
       if (blocked1 || blocked2) {
-        throw new ConflictException('Users are already blocked.');
+        throw new ConflictException('Block instance already exists.');
       }
       await this.userConnectionModel.deleteMany({
         $or: [
@@ -1303,6 +1330,20 @@ export class ConnectionsService {
     }
   }
 
+  /**
+   * allows logged in user to unblock a previously blocked user.
+   *
+   * @param sendingParty - string ID of the logged in user.
+   * @param receivingParty - string ID of the other user.
+   * @throws NotFoundException - if the receiving party user ID is not a valid one / if no block instance exists.
+   * @throws BadRequestException - if sending and receving user ID are the same.
+   * @throws ConflictException - if block instance already exists in the specified direction.
+   *
+   * function flow:
+   * 1. checks availablity of other user in the database.
+   * 2. ensures a block instance already exists.
+   * 3. if it does, removes the block instance.
+   */
   async unblock(sendingParty: string, receivingParty: string) {
     try {
       const exisitngUser = await this.profileModel
@@ -1325,6 +1366,20 @@ export class ConnectionsService {
     }
   }
 
+  /**
+   * retrieve list of users blocked by the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @param page - the page number for pagination.
+   * @param limit - the maximum number of users to return per page.
+   * @returns GetUserDto[] - an array of user DTOs containing essential profile details.
+   *
+   * function flow:
+   * 1. calculate pagination skip value using page and limit.
+   * 2. join the 'profileModel' and 'userConnectionModel'.
+   * 3. query the joined model, searching for block instances where sending party is logged in user and applying skip and limit values.
+   * 4. map the results to GetUserDto and return array of GetUserDtos.
+   */
   async getBlocked(
     userId: string,
     page: number,
