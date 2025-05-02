@@ -348,6 +348,15 @@ export class JobsService {
         jobDto.companyDescription = company?.description || null;
         jobDto.isSaved =
           job.saved_by?.some((id) => id.toString() === userId) || false;
+
+        const application = await this.applicationModel
+          .findOne({
+            job_id: job._id,
+            user_id: new Types.ObjectId(userId),
+          })
+          .lean();
+        jobDto.status = application?.status || null;
+
         jobDtos.push(jobDto);
       }
 
@@ -496,29 +505,29 @@ export class JobsService {
         throw new NotFoundException('User profile not found.');
       }
 
-      const premiumStatus = userProfile?.is_premium
+      const premiumStatus = userProfile?.is_premium;
 
       if (!premiumStatus) {
-       
         if (userProfile.plan_statistics.application_count <= 0) {
           throw new ForbiddenException(
             'You have reached your application limit. Upgrade to premium to apply for more jobs.',
           );
         }
 
-      
         await this.profileModel.updateOne(
           { _id: new Types.ObjectId(userId) },
           { $inc: { 'plan_statistics.application_count': -1 } },
         );
       }
 
+      const encodedResumeURL = encodeURIComponent(resumeURL ?? '');
+
       const newApplication = new this.applicationModel({
         _id: new Types.ObjectId(),
         user_id: new Types.ObjectId(userId),
         job_id: new Types.ObjectId(jobId),
         phone_number: phoneNumber,
-        resume_url: resumeURL,
+        resume_url: encodedResumeURL, 
         status: 'Pending',
         applied_at: new Date().toISOString(),
       });
