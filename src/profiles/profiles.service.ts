@@ -112,7 +112,7 @@ export class ProfilesService {
       loggedInUser,
       id.toString(),
     );
-    profileDto.isPremium = await isPremium(id.toString(), this.planDetailModel);
+    // profileDto.isPremium = await isPremium(id.toString(), this.planDetailModel);
     return profileDto;
   }
   /**
