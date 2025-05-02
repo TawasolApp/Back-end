@@ -69,6 +69,11 @@ import {
   UserDocument,
   User,
 } from '../users/infrastructure/database/schemas/user.schema';
+import { timeStamp } from 'console';
+import {
+  getBlocked,
+  getBlockedList,
+} from '../connections/helpers/connection-helpers';
 
 @Injectable()
 export class PostsService {
@@ -316,7 +321,8 @@ export class PostsService {
       );
 
       const objectId = new Types.ObjectId(authorId);
-
+      // Step 0: Get Blocked Users
+      const blocked = await getBlockedList(this.userConnectionModel, authorId);
       // Step 1: Get connected users (both directions)
       const connected = await this.userConnectionModel
         .find({
@@ -347,10 +353,10 @@ export class PostsService {
       const candidatePosts = await this.postModel
         .find({
           visibility: { $ne: 'Private' },
+          author_id: { $nin: blocked }, // Exclude posts by blocked users
         })
         .sort({ posted_at: -1 })
         .exec();
-
       // Step 4: Filter posts based on the new logic
       const filteredPosts = candidatePosts.filter((post) => {
         const authorIdStr = post.author_id.toString();
@@ -487,6 +493,7 @@ export class PostsService {
       const skip = (page - 1) * limit;
       const posts = await this.postModel
         .find({ author_id: new Types.ObjectId(searchedUserId) })
+        .sort({ timeStamp: -1 })
         .skip(skip)
         .limit(limit)
         .exec();

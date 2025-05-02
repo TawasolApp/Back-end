@@ -30,6 +30,9 @@ import { Application } from '../jobs/infrastructure/database/schemas/application
 import { CompanyEmployer } from '../jobs/infrastructure/database/schemas/company-employer.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Job } from '../jobs/infrastructure/database/schemas/job.schema';
+import { Report } from '../admin/infrastructure/database/schemas/report.schema';
+import { Message } from '../messages/infrastructure/database/schemas/message.schema';
+import { Conversation } from '../messages/infrastructure/database/schemas/conversation.schema';
 
 @Injectable()
 export class UsersService {
@@ -52,6 +55,10 @@ export class UsersService {
     @InjectModel(Application.name)
     private applicationModel: Model<Application>,
     @InjectModel(Job.name) private jobModel: Model<Job>,
+    @InjectModel(Report.name) private reportModel: Model<Report>,
+    @InjectModel(Message.name) private messageModel: Model<Message>,
+    @InjectModel(Conversation.name)
+    private conversationModel: Model<Conversation>,
     private readonly jwtService: JwtService,
     private readonly mailerService: MailerService,
   ) {}
@@ -77,6 +84,14 @@ export class UsersService {
         { userId, newEmail },
         { expiresIn: '1h' },
       );
+
+      if (process.env.TEST === 'ON') {
+        return {
+          message: 'Test mode: Email update token generated.',
+          verifyToken: token,
+        };
+      }
+
       await this.mailerService.sendEmailChangeConfirmation(newEmail, token);
 
       return { message: 'Please check your new email to confirm the change.' };
@@ -259,6 +274,21 @@ export class UsersService {
         );
       }
       await this.applicationModel.deleteMany({ user_id: objectId });
+
+      console.log(`Deleting reports for user: ${userId}`);
+      await this.reportModel.deleteMany({
+        $or: [{ reporter_id: objectId }, { reported_id: objectId }],
+      });
+
+      console.log(`Deleting messages for user: ${userId}`);
+      await this.messageModel.deleteMany({
+        $or: [{ sender_id: objectId }, { receiver_id: objectId }],
+      });
+
+      console.log(`Deleting conversations for user: ${userId}`);
+      await this.conversationModel.deleteMany({
+        participants: objectId,
+      });
 
       console.log(`Deleting user record for user: ${userId}`);
       await this.userModel.deleteOne({ _id: objectId });
