@@ -262,6 +262,28 @@ describe('ConnectionsService', () => {
       expect(saveMock).toHaveBeenCalled();
     });
 
+    it('should throw ForbiddenException if user is not premium and has exceeded connection limit (id1 → id2)', async () => {
+      const nonPremiumUser = {
+        ...mockProfiles[0],
+        is_premium: false,
+        connection_count: 51,
+      };
+      profileModel.findById
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(nonPremiumUser),
+        })
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
+        });
+      await service.requestConnection(mockProfiles[0]._id.toString(), {
+        userId: mockProfiles[1]._id.toString(),
+      });
+      expect(handleError).toHaveBeenCalledWith(
+        new ForbiddenException('User has exceeded his limit on connections.'),
+        'Failed to request connection.',
+      );
+    });
+
     it('should throw NotFoundException if user is not found', async () => {
       profileModel.findById
         .mockReturnValueOnce({
@@ -488,10 +510,10 @@ describe('ConnectionsService', () => {
     it('should throw NotFoundException when user is not found', async () => {
       profileModel.findById
         .mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce(null),
+          lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
         })
         .mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
+          lean: jest.fn().mockResolvedValueOnce(null),
         });
       await service.updateConnection(
         new Types.ObjectId().toString(),
@@ -521,6 +543,34 @@ describe('ConnectionsService', () => {
       );
       expect(handleError).toHaveBeenCalledWith(
         new NotFoundException('Connection request was not found.'),
+        'Failed to update connection request status.',
+      );
+    });
+
+    it('should throw ForbiddenException if receiving user is not premium and has exceeded connection limit (id1 → id2)', async () => {
+      const sender = {
+        ...mockProfiles[0],
+      };
+      const receiver = {
+        ...mockProfiles[1],
+        is_premium: false,
+        connection_count: 50,
+      };
+      profileModel.findById
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(receiver),
+        })
+        .mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(sender),
+        });
+      (getPending as jest.Mock).mockResolvedValueOnce(mockConnections[0]);
+      await service.updateConnection(
+        sender._id.toString(),
+        receiver._id.toString(),
+        { isAccept: true },
+      );
+      expect(handleError).toHaveBeenCalledWith(
+        new ForbiddenException('User has exceeded his limit on connections.'),
         'Failed to update connection request status.',
       );
     });
@@ -1319,6 +1369,178 @@ describe('ConnectionsService', () => {
         new BadRequestException('Logged in user has not endorsed this skill.'),
         'Failed to remove endorsement.',
       );
+    });
+  });
+
+  describe('block', () => {
+    it('should successfully block user (id1 → id2) and delete any existing connection', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
+      });
+      (getBlocked as jest.Mock).mockResolvedValueOnce(null);
+      (getBlocked as jest.Mock).mockResolvedValueOnce(null);
+      const deleteManyMock = jest.fn().mockResolvedValueOnce({});
+      const saveMock = jest.fn();
+      const blockInstance = { save: saveMock };
+      const blockConstructorMock = jest
+        .fn()
+        .mockImplementation(() => blockInstance);
+      (service as any).userConnectionModel = Object.assign(
+        blockConstructorMock,
+        {
+          deleteMany: deleteManyMock,
+        },
+      );
+      await service.block(
+        mockProfiles[0]._id.toString(),
+        mockProfiles[1]._id.toString(),
+      );
+      expect(profileModel.findById).toHaveBeenCalled();
+      expect(getBlocked).toHaveBeenCalledTimes(2);
+      expect(deleteManyMock).toHaveBeenCalledWith({
+        $or: [
+          {
+            sending_party: mockProfiles[0]._id,
+            receiving_party: mockProfiles[1]._id,
+          },
+          {
+            sending_party: mockProfiles[1]._id,
+            receiving_party: mockProfiles[0]._id,
+          },
+        ],
+      });
+      expect(saveMock).toHaveBeenCalled();
+    });
+
+    it('should throw NotFoundException if receiving user not found', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(null),
+      });
+      await service.block(
+        mockProfiles[0]._id.toString(),
+        new Types.ObjectId().toString(),
+      );
+      expect(handleError).toHaveBeenCalledWith(
+        new NotFoundException('User not found.'),
+        'Failed to block user.',
+      );
+    });
+
+    it('should throw BadRequestException if trying to block yourself', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockProfiles[0]),
+      });
+      await service.block(
+        mockProfiles[0]._id.toString(),
+        mockProfiles[0]._id.toString(),
+      );
+      expect(handleError).toHaveBeenCalledWith(
+        new BadRequestException('Cannot block yourself.'),
+        'Failed to block user.',
+      );
+    });
+
+    it('should throw ConflictException if a block already exists (id2 → id5)', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
+      });
+      (getBlocked as jest.Mock).mockResolvedValueOnce(mockConnections[8]);
+      (getBlocked as jest.Mock).mockResolvedValueOnce(null);
+      await service.block(
+        mockProfiles[1]._id.toString(),
+        mockProfiles[4]._id.toString(),
+      );
+      expect(handleError).toHaveBeenCalledWith(
+        new ConflictException('Block instance already exists.'),
+        'Failed to block user.',
+      );
+    });
+  });
+
+  describe('unblock', () => {
+    it('should successfully unblock user (id2 → id5)', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockProfiles[4]),
+      });
+      const mockBlock = mockConnections[8];
+      (getBlocked as jest.Mock).mockResolvedValueOnce(mockBlock);
+      const findByIdAndDeleteMock = jest.fn().mockResolvedValueOnce(mockBlock);
+      userConnectionModel.findByIdAndDelete = findByIdAndDeleteMock;
+      await service.unblock(
+        mockProfiles[1]._id.toString(),
+        mockProfiles[4]._id.toString(),
+      );
+      expect(profileModel.findById).toHaveBeenCalled();
+      expect(getBlocked).toHaveBeenCalledWith(
+        userConnectionModel,
+        mockProfiles[1]._id.toString(),
+        mockProfiles[4]._id.toString(),
+      );
+      expect(findByIdAndDeleteMock).toHaveBeenCalledWith(mockBlock._id);
+    });
+
+    it('should throw NotFoundException if no block instance exists (id1 → id2)', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockProfiles[1]),
+      });
+      (getBlocked as jest.Mock).mockResolvedValueOnce(null);
+      await service.unblock(
+        mockProfiles[0]._id.toString(),
+        mockProfiles[1]._id.toString(),
+      );
+      expect(handleError).toHaveBeenCalledWith(
+        new NotFoundException('Block instance not found.'),
+        'Failed to unblock user.',
+      );
+    });
+
+    it('should throw NotFoundException if receiving user does not exist', async () => {
+      profileModel.findById.mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(null),
+      });
+      await service.unblock(
+        mockProfiles[0]._id.toString(),
+        new Types.ObjectId().toString(),
+      );
+      expect(handleError).toHaveBeenCalledWith(
+        new NotFoundException('User not found.'),
+        'Failed to unblock user.',
+      );
+    });
+  });
+
+  describe('getBlocked', () => {
+    it('should call handleError if getBlocked throws an error', async () => {
+      profileModel.find.mockImplementationOnce(() => {
+        throw new Error('Unexpected Error.');
+      });
+      try {
+        await service.getBlocked(mockProfiles[0]._id.toString(), 1, 5);
+      } catch (_) {}
+      expect(handleError).toHaveBeenCalledWith(
+        expect.any(Error),
+        'Failed to retrieve list of blocked users.',
+      );
+    });
+
+    it('should return profile5 as a blocked user (id2 → id5)', async () => {
+      const userId = mockProfiles[1]._id.toString();
+      userConnectionModel.aggregate.mockResolvedValueOnce([
+        {
+          _id: mockProfiles[4]._id,
+          first_name: mockProfiles[4].first_name,
+          last_name: mockProfiles[4].last_name,
+          profile_picture: mockProfiles[4].profile_picture,
+          headline: mockProfiles[4].headline,
+          created_at: mockConnections[8].created_at,
+        },
+      ]);
+      const result = await service.getBlocked(userId, 1, 5);
+      expect(result).toHaveLength(1);
+      expect(result[0].userId).toBe(mockProfiles[4]._id.toString());
+      expect(result[0].firstName).toBe('Test');
+      expect(result[0].lastName).toBe('User5');
+      expect(result[0].createdAt).toBe(mockConnections[8].created_at);
     });
   });
 });

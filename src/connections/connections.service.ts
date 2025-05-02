@@ -335,7 +335,7 @@ export class ConnectionsService {
       }
       const { isAccept } = updateRequestDto;
       if (isAccept) {
-        if (!existingUser.is_premium && receivingUser!.connection_count >= 50) {
+        if (!receivingUser!.is_premium && receivingUser!.connection_count >= 50) {
           throw new ForbiddenException(
             'User has exceeded his limit on connections.',
           );
@@ -1290,7 +1290,7 @@ export class ConnectionsService {
         sendingParty,
       );
       if (blocked1 || blocked2) {
-        throw new ConflictException('Users are already blocked.');
+        throw new ConflictException('Block instance already exists.');
       }
       await this.userConnectionModel.deleteMany({
         $or: [
