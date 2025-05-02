@@ -1387,7 +1387,7 @@ export class ConnectionsService {
   ): Promise<GetUserDto[]> {
     try {
       const skip = (page - 1) * limit;
-      const followers = await this.userConnectionModel.aggregate([
+      const blocked = await this.userConnectionModel.aggregate([
         {
           $match: {
             sending_party: new Types.ObjectId(userId),
@@ -1408,15 +1408,17 @@ export class ConnectionsService {
         { $limit: limit },
         {
           $project: {
-            userId: '$profile._id',
+            _id: '$profile._id',
             first_name: '$profile.first_name',
             last_name: '$profile.last_name',
             profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
           },
         },
       ]);
-      // return followers.map(toGetUserDto);
-      return followers.map((profile: any) => {
+      // return blocked.map(toGetUserDto);
+      return blocked.map((profile: any) => {
         const dto = toGetUserDto(profile);
         dto.createdAt = profile.created_at;
         return dto;
