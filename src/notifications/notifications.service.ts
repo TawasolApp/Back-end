@@ -161,7 +161,7 @@ export class NotificationsService {
   }
 
   /**
-   * Get the count of unseen notifications for a user.
+   * Get the count of unseen notifications count for a user.
    */
   async getUnseenCount(
     userId: string,
@@ -178,6 +178,33 @@ export class NotificationsService {
         receiver_id: new Types.ObjectId(authorId),
         seen: false,
         type: { $ne: 'Message' },
+      });
+      return { unseenCount };
+    } catch (error) {
+      throw new InternalServerErrorException(
+        'Failed to fetch unseen notification count',
+      );
+    }
+  }
+
+  /**
+   * Get the count of unseen Messages count for a user.
+   */
+  async getUnseenMessagesCount(
+    userId: string,
+    companyId: string,
+  ): Promise<{ unseenCount: number }> {
+    try {
+      const authorId = await getUserAccessed(
+        userId,
+        companyId,
+        this.companyManagerModel,
+      );
+
+      const unseenCount = await this.notificationModel.countDocuments({
+        receiver_id: new Types.ObjectId(authorId),
+        seen: false,
+        type: 'Message',
       });
       return { unseenCount };
     } catch (error) {
