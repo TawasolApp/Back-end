@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -44,6 +45,7 @@ import {
   PlanDetail,
   PlanDetailDocument,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
+import { getBlocked } from 'src/connections/helpers/connection-helpers';
 
 @Injectable()
 export class ProfilesService {
@@ -100,6 +102,21 @@ export class ProfilesService {
 
     if (!profile) {
       throw new NotFoundException('Profile not found');
+    }
+    const block1 = await getBlocked(
+      this.userConnectionModel,
+      id.toString(),
+      loggedInUser,
+    );
+    const block2 = await getBlocked(
+      this.userConnectionModel,
+      loggedInUser,
+      id.toString(),
+    );
+    if (block1 || block2) {
+      throw new ForbiddenException(
+        'Cannot access a profile with a shared block instance.',
+      );
     }
     const profileDto = toGetProfileDto(profile);
     profileDto.connectStatus = await setConnectionStatus(
