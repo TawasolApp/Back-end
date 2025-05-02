@@ -158,6 +158,7 @@ components:
             - Comment
             - UserConnection
             - Message
+            - JobOffer
           description: Type of notification
         content:
           type: string

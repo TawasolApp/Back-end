@@ -9,6 +9,8 @@ import {
   Patch,
   Param,
   Query,
+  Body,
+  BadRequestException,
 } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -88,5 +90,27 @@ export class AdminController {
     }
     checkAdmin(request.user);
     return await this.adminService.getReportedUsers(status);
+  }
+
+  @Patch('/reports/:reportId/resolve')
+  @HttpCode(HttpStatus.OK)
+  async resolveReport(
+    @Param('reportId') reportId: string,
+    @Req() request: Request,
+    @Body('action') action: 'suspend_user' | 'ignore',
+  ) {
+    validateId(reportId, 'report');
+    if (!request.user) {
+      throw new UnauthorizedException('User not authenticated.');
+    }
+    checkAdmin(request.user);
+
+    if (action === 'suspend_user') {
+      return await this.adminService.suspendUser(reportId);
+    } else if (action === 'ignore') {
+      return await this.adminService.ignoreReport(reportId);
+    } else {
+      throw new BadRequestException('Invalid action.');
+    }
   }
 }
