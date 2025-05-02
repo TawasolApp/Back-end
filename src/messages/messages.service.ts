@@ -117,6 +117,7 @@ export class MessagesService {
       },
       { $set: { status: MessageStatus.Read } }, // ✅ No .toString() needed
     );
+    await this.updateUnseenCount(conversationId);
 
     console.log('after service read message');
   }
