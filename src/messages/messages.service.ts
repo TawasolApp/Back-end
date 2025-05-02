@@ -15,6 +15,21 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { getConversations, getMessages } from './dto/messages.mapper';
+import { NotificationGateway } from '../gateway/notification.gateway';
+import { addNotification } from '../notifications/helpers/notification.helper';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
 @Injectable()
 export class MessagesService {
   constructor(
@@ -23,7 +38,16 @@ export class MessagesService {
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
     @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>,
+    private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
+    private readonly notificationGateway: NotificationGateway,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>, // Replace 'any' with the actual type of your Company model
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<any>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
   ) {}
 
   async createMessage(
@@ -64,6 +88,21 @@ export class MessagesService {
     await this.markMessagesAsRead(
       conversation._id,
       new Types.ObjectId(senderId),
+    );
+    addNotification(
+      this.notificationModel,
+      new Types.ObjectId(senderId),
+      new Types.ObjectId(receiverId),
+      new Types.ObjectId(newMessage._id),
+      new Types.ObjectId(conversation._id),
+      'Message',
+      'Sent you a message',
+      new Date(),
+      this.notificationGateway,
+      this.profileModel,
+      this.companyModel,
+      this.userModel,
+      this.companyManagerModel,
     );
     // await newMessage.save();
     await this.updateUnseenCount(conversation._id);
