@@ -366,6 +366,27 @@ describe('NotificationsService', () => {
     });
   });
 
+  it('[5-b] should get unseen notification count for a user', async () => {
+    const mockUserId = new Types.ObjectId().toString();
+    const mockCount = 5;
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
+
+    notificationModelMock.countDocuments.mockResolvedValue(mockCount);
+
+    const result = await service.getUnseenMessagesCount(
+      mockUserId,
+      mockCompanyId,
+    );
+
+    expect(result).toEqual({ unseenCount: mockCount });
+    expect(notificationModelMock.countDocuments).toHaveBeenCalledWith({
+      receiver_id: new Types.ObjectId(mockUserId),
+      seen: false,
+      type: 'Message',
+    });
+  });
+
   it('[6] should handle errors in getNotifications gracefully', async () => {
     const mockUserId = new Types.ObjectId().toString();
     const mockCompanyId = new Types.ObjectId().toString();
@@ -406,6 +427,20 @@ describe('NotificationsService', () => {
 
     await expect(
       service.getUnseenCount(mockUserId, mockCompanyId),
+    ).rejects.toThrow('Failed to fetch unseen notification count');
+  });
+
+  it('[8-b] should handle errors in getUnseenCount gracefully', async () => {
+    const mockUserId = new Types.ObjectId().toString();
+    const mockCompanyId = new Types.ObjectId().toString();
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
+
+    notificationModelMock.countDocuments.mockImplementation(() => {
+      throw new Error('Database error');
+    });
+
+    await expect(
+      service.getUnseenMessagesCount(mockUserId, mockCompanyId),
     ).rejects.toThrow('Failed to fetch unseen notification count');
   });
 
