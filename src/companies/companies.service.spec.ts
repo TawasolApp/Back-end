@@ -11,7 +11,6 @@ import {
   mockProfiles,
   mockCompanies,
   mockCompanyConnections,
-  mockCompanyEmployers,
   mockCompanyManagers,
   mockJobs,
   mockUserConnections,
@@ -24,7 +23,6 @@ import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { CompanyManager } from './infrastructure/database/schemas/company-manager.schema';
-import { CompanyEmployer } from '../jobs/infrastructure/database/schemas/company-employer.schema';
 import { Job } from '../jobs/infrastructure/database/schemas/job.schema';
 import { Application } from '../jobs/infrastructure/database/schemas/application.schema';
 import { handleError } from '../common/utils/exception-handler';
@@ -33,6 +31,7 @@ import { CompanyType } from './enums/company-type.enum';
 import { toGetCompanyDto } from './mappers/company.mapper';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
 import { ApplicationStatus } from '../jobs/enums/application-status.enum';
+import { mock } from 'node:test';
 
 jest.mock('../common/utils/exception-handler', () => ({
   handleError: jest.fn(),
@@ -43,7 +42,6 @@ describe('CompaniesService', () => {
   let companyModel: any;
   let companyConnectionModel: any;
   let companyManagerModel: any;
-  let companyEmployerModel: any;
   let userModel: any;
   let profileModel: any;
   let userConnectionModel: any;
@@ -69,15 +67,6 @@ describe('CompaniesService', () => {
   };
 
   const mockCompanyManagerModel = {
-    findOne: jest.fn(),
-    find: jest.fn(),
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-    save: jest.fn(),
-  };
-
-  const mockCompanyEmployerModel = {
     findOne: jest.fn(),
     find: jest.fn(),
     findById: jest.fn(),
@@ -139,10 +128,6 @@ describe('CompaniesService', () => {
           useValue: mockCompanyManagerModel,
         },
         {
-          provide: getModelToken(CompanyEmployer.name),
-          useValue: mockCompanyEmployerModel,
-        },
-        {
           provide: getModelToken(User.name),
           useValue: mockUserModel,
         },
@@ -170,7 +155,6 @@ describe('CompaniesService', () => {
     companyModel = module.get(getModelToken(Company.name));
     companyConnectionModel = module.get(getModelToken(CompanyConnection.name));
     companyManagerModel = module.get(getModelToken(CompanyManager.name));
-    companyEmployerModel = module.get(getModelToken(CompanyEmployer.name));
     userModel = module.get(getModelToken(User.name));
     profileModel = module.get(getModelToken(Profile.name));
     userConnectionModel = module.get(getModelToken(UserConnection.name));
@@ -380,7 +364,6 @@ describe('CompaniesService', () => {
       });
       companyConnectionModel.deleteMany = jest.fn().mockResolvedValueOnce({});
       companyManagerModel.deleteMany = jest.fn().mockResolvedValueOnce({});
-      companyEmployerModel.deleteMany = jest.fn().mockResolvedValueOnce({});
       jobModel.find.mockResolvedValueOnce([mockJobs[0]]);
       jobModel.deleteMany = jest.fn().mockResolvedValueOnce({});
       applicationModel.deleteMany = jest.fn().mockResolvedValueOnce({});
@@ -800,47 +783,6 @@ describe('CompaniesService', () => {
   });
 
   describe('getSuggestedCompanies', () => {
-    // it('should return suggested companies based on industry and size (from companyId1)', async () => {
-    //   const userId = mockProfiles[0]._id.toString();
-    //   const companyId = mockCompanies[0]._id.toString();
-    //   const page = 1;
-    //   const limit = 5;
-    //   companyModel.findById.mockReturnValueOnce({
-    //     select: jest.fn().mockReturnValueOnce({
-    //       lean: jest.fn().mockResolvedValueOnce({
-    //         industry: mockCompanies[0].industry,
-    //         company_size: mockCompanies[0].company_size,
-    //       }),
-    //     }),
-    //   });
-    //   const suggestedCompanies = [mockCompanies[1]];
-    //   companyModel.find.mockReturnValueOnce({
-    //     select: jest.fn().mockReturnValueOnce({
-    //       sort: jest.fn().mockReturnValueOnce({
-    //         skip: jest.fn().mockReturnValueOnce({
-    //           limit: jest.fn().mockReturnValueOnce({
-    //             lean: jest.fn().mockResolvedValueOnce(suggestedCompanies),
-    //           }),
-    //         }),
-    //       }),
-    //     }),
-    //   });
-    //   companyConnectionModel.find.mockReturnValueOnce({
-    //     lean: jest.fn().mockResolvedValueOnce([]),
-    //   });
-    //   const result = await service.getSuggestedCompanies(
-    //     userId,
-    //     companyId,
-    //     page,
-    //     limit,
-    //   );
-    //   expect(result).toHaveLength(1);
-    //   expect(result[0].companyId.toString()).toBe(
-    //     mockCompanies[1]._id.toString(),
-    //   );
-    //   expect(result[0].industry).toBe(mockCompanies[1].industry);
-    //   expect(result[0].isFollowing).toBe(false);
-    // });
     it('should return suggested companies based on industry and size (from companyId1)', async () => {
       const userId = mockProfiles[0]._id.toString();
       const companyId = mockCompanies[0]._id.toString();
@@ -986,43 +928,6 @@ describe('CompaniesService', () => {
       expect(companyConnectionModel.find).toHaveBeenCalled();
       expect(profileModel.find).toHaveBeenCalled();
     });
-
-    // it('should return profileId2 as a common follower of profileId1 and companyId1', async () => {
-    //   const userId = mockProfiles[0]._id.toString();
-    //   const companyId = mockCompanies[0]._id.toString();
-    //   companyModel.findById.mockReturnValueOnce({
-    //     lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-    //   });
-    //   userConnectionModel.find.mockReturnValueOnce({
-    //     select: jest.fn().mockReturnValueOnce({
-    //       lean: jest.fn().mockResolvedValueOnce([
-    //         {
-    //           sending_party: mockProfiles[0]._id,
-    //           receiving_party: mockProfiles[1]._id,
-    //           status: ConnectionStatus.Connected,
-    //         },
-    //       ]),
-    //     }),
-    //   });
-    //   companyConnectionModel.find.mockReturnValueOnce({
-    //     sort: jest.fn().mockReturnValueOnce({
-    //       select: jest.fn().mockReturnValueOnce({
-    //         lean: jest
-    //           .fn()
-    //           .mockResolvedValueOnce([{ user_id: mockProfiles[1]._id }]),
-    //       }),
-    //     }),
-    //   });
-    //   profileModel.find.mockReturnValueOnce({
-    //     select: jest.fn().mockReturnValueOnce({
-    //       lean: jest.fn().mockResolvedValueOnce([mockProfiles[1]]),
-    //     }),
-    //   });
-    //   const result = await service.getCommonFollowers(userId, companyId);
-    //   expect(result).toBeDefined();
-    //   expect(result).toHaveLength(1);
-    //   expect(result[0].userId.toString()).toBe(mockProfiles[1]._id.toString());
-    // });
   });
 
   describe('getFollowedCompanies', () => {
@@ -1201,90 +1106,6 @@ describe('CompaniesService', () => {
       expect(jobModel.find).toHaveBeenCalled();
       expect(applicationModel.find).toHaveBeenCalled();
     });
-
-    //   it('should return jobs "Designer" and "Engineer" for companyId1', async () => {
-    //     const companyId = mockCompanies[0]._id.toString();
-    //     const userId = mockProfiles[0]._id.toString();
-    //     const page = 1;
-    //     const limit = 10;
-    //     companyModel.findById.mockReturnValueOnce({
-    //       lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-    //     });
-    //     const expectedJobs = mockJobs
-    //       .filter((job) => job.company_id.toString() === companyId)
-    //       .map((job) => ({
-    //         ...job,
-    //         saved_by: [new Types.ObjectId(userId)],
-    //       }));
-    //     jobModel.find.mockReturnValueOnce({
-    //       sort: jest.fn().mockReturnValueOnce({
-    //         skip: jest.fn().mockReturnValueOnce({
-    //           limit: jest.fn().mockReturnValueOnce({
-    //             lean: jest.fn().mockResolvedValueOnce(expectedJobs),
-    //           }),
-    //         }),
-    //       }),
-    //     });
-    //     const applications = expectedJobs.map((job) => ({
-    //       job_id: job._id,
-    //       status: ApplicationStatus.Accepted,
-    //     }));
-
-    //     applicationModel.find.mockReturnValueOnce({
-    //       lean: jest.fn().mockResolvedValueOnce(applications),
-    //     });
-
-    //     const result = await service.getCompanyJobs(
-    //       companyId,
-    //       userId,
-    //       page,
-    //       limit,
-    //     );
-
-    //     expect(result).toHaveLength(2);
-    //     expect(result.map((j) => j.position)).toEqual(
-    //       expect.arrayContaining(['Designer', 'Engineer']),
-    //     );
-    //     result.forEach((jobDto) => {
-    //       expect(jobDto.isSaved).toBe(true);
-    //       expect(jobDto.status).toBe(ApplicationStatus.Accepted);
-    //     });
-    //   });
-    // });
-
-    // it('should return jobs "Designer" and "Engineer" for companyId1', async () => {
-    //   const companyId = mockCompanies[0]._id.toString();
-    //   const page = 1;
-    //   const limit = 10;
-    //   companyModel.findById.mockReturnValueOnce({
-    //     lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-    //   });
-    //   const expectedJobs = mockJobs.filter(
-    //     (job) => job.company_id.toString() === companyId,
-    //   );
-    //   jobModel.find.mockReturnValueOnce({
-    //     sort: jest.fn().mockReturnValueOnce({
-    //       skip: jest.fn().mockReturnValueOnce({
-    //         limit: jest.fn().mockReturnValueOnce({
-    //           lean: jest.fn().mockResolvedValueOnce(expectedJobs),
-    //         }),
-    //       }),
-    //     }),
-    //   });
-    //   applicationModel.find.mockReturnValueOnce({
-    //     lean: jest.fn().mockResolvedValueOnce([]),
-    //   });
-    //   const result = await service.getCompanyJobs(
-    //     companyId,
-    //     mockProfiles[0]._id.toString(),
-    //     page,
-    //     limit,
-    //   );
-    //   expect(result).toHaveLength(2);
-    //   expect(result.map((j) => j.position)).toEqual(
-    //     expect.arrayContaining(['Designer', 'Engineer']),
-    //   );
-    // });
   });
 
   describe('addCompanyManager', () => {
@@ -1313,9 +1134,6 @@ describe('CompaniesService', () => {
         findOne: companyManagerModel.findOne,
       });
       userModel.findByIdAndUpdate.mockResolvedValueOnce({});
-      companyEmployerModel.findOneAndDelete = jest
-        .fn()
-        .mockResolvedValueOnce({});
       await expect(
         service.addCompanyManager(userId, companyId, addAccessDto),
       ).resolves.not.toThrow();
@@ -1336,10 +1154,6 @@ describe('CompaniesService', () => {
         { $set: { role: 'manager' } },
         { upsert: false },
       );
-      expect(companyEmployerModel.findOneAndDelete).toHaveBeenCalledWith({
-        employer_id: new Types.ObjectId(addAccessDto.newUserId),
-        company_id: new Types.ObjectId(companyId),
-      });
     });
 
     it('should throw NotFoundException if the company does not exist', async () => {
@@ -1422,177 +1236,6 @@ describe('CompaniesService', () => {
     });
   });
 
-  describe('addCompanyEmployer', () => {
-    it('should successfully add employer access to a user (profileId4 → companyId1 by profileId1)', async () => {
-      const userId = mockProfiles[0]._id.toString();
-      const companyId = mockCompanies[0]._id.toString();
-      const addAccessDto = {
-        newUserId: mockProfiles[3]._id.toString(),
-      };
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-      });
-      userModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockUsers[3]),
-      });
-      companyManagerModel.findOne
-        .mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce(mockCompanyManagers[0]),
-        })
-        .mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce(null),
-        });
-      companyEmployerModel.findOne.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      });
-      const saveMock = jest.fn().mockResolvedValueOnce({});
-      const constructorMock = jest.fn().mockReturnValue({ save: saveMock });
-      (service as any).companyEmployerModel = Object.assign(constructorMock, {
-        findOne: companyEmployerModel.findOne,
-      });
-      userModel.findByIdAndUpdate.mockResolvedValueOnce({});
-      await expect(
-        service.addCompanyEmployer(userId, companyId, addAccessDto),
-      ).resolves.not.toThrow();
-      expect(companyModel.findById).toHaveBeenCalledWith(
-        new Types.ObjectId(companyId),
-      );
-      expect(userModel.findById).toHaveBeenCalledWith(
-        new Types.ObjectId(addAccessDto.newUserId),
-      );
-      expect(constructorMock).toHaveBeenCalledWith({
-        _id: expect.any(Types.ObjectId),
-        employer_id: new Types.ObjectId(addAccessDto.newUserId),
-        company_id: new Types.ObjectId(companyId),
-      });
-      expect(saveMock).toHaveBeenCalled();
-      expect(userModel.findByIdAndUpdate).toHaveBeenCalledWith(
-        new Types.ObjectId(addAccessDto.newUserId),
-        { $set: { role: 'employer' } },
-        { upsert: false },
-      );
-    });
-
-    it('should throw NotFoundException if the company does not exist', async () => {
-      const userId = mockProfiles[0]._id.toString();
-      const companyId = new Types.ObjectId().toString();
-      const addAccessDto = { newUserId: mockProfiles[1]._id.toString() };
-
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      });
-
-      await service.addCompanyEmployer(userId, companyId, addAccessDto);
-
-      expect(handleError).toHaveBeenCalledWith(
-        new NotFoundException('Company not found.'),
-        'Failed to provide company employer access to user.',
-      );
-    });
-
-    it('should throw NotFoundException if the user does not exist', async () => {
-      const userId = mockProfiles[0]._id.toString();
-      const companyId = mockCompanies[0]._id.toString();
-      const addAccessDto = { newUserId: new Types.ObjectId().toString() };
-
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-      });
-
-      userModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      });
-
-      await service.addCompanyEmployer(userId, companyId, addAccessDto);
-
-      expect(handleError).toHaveBeenCalledWith(
-        new NotFoundException('User not found.'),
-        'Failed to provide company employer access to user.',
-      );
-    });
-
-    it('should throw ForbiddenException if logged-in user is not a manager of the company (profileId2 → companyId1)', async () => {
-      const userId = mockProfiles[1]._id.toString();
-      const companyId = mockCompanies[0]._id.toString();
-      const addAccessDto = { newUserId: mockProfiles[4]._id.toString() };
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-      });
-      userModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockUsers[4]),
-      });
-      companyManagerModel.findOne.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      });
-      await service.addCompanyEmployer(userId, companyId, addAccessDto);
-      expect(handleError).toHaveBeenCalledWith(
-        new ForbiddenException(
-          'Logged in user does not have management access to this company.',
-        ),
-        'Failed to provide company employer access to user.',
-      );
-    });
-
-    it('should throw ConflictException if the new user is already a manager of the company (profileId1 → companyId1)', async () => {
-      const userId = mockProfiles[0]._id.toString();
-      const companyId = mockCompanies[0]._id.toString();
-      const addAccessDto = { newUserId: mockProfiles[0]._id.toString() };
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[0]),
-      });
-      userModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockUsers[0]),
-      });
-      companyManagerModel.findOne = jest
-        .fn()
-        .mockImplementationOnce(() => ({
-          lean: jest.fn().mockResolvedValueOnce(mockCompanyManagers[0]),
-        }))
-        .mockImplementationOnce(() => ({
-          lean: jest.fn().mockResolvedValueOnce(mockCompanyManagers[0]),
-        }));
-      companyEmployerModel.findOne = jest.fn().mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      });
-      await service.addCompanyEmployer(userId, companyId, addAccessDto);
-      expect(handleError).toHaveBeenCalledWith(
-        new ConflictException(
-          'User already has management access to this company.',
-        ),
-        'Failed to provide company employer access to user.',
-      );
-    });
-
-    it('should throw ConflictException if the new user is already an employer of the company (profileId5 → companyId3)', async () => {
-      const userId = mockProfiles[1]._id.toString();
-      const companyId = mockCompanies[2]._id.toString();
-      const addAccessDto = { newUserId: mockProfiles[4]._id.toString() };
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[2]),
-      });
-      userModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockUsers[4]),
-      });
-      companyManagerModel.findOne
-        .mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce(mockCompanyManagers[3]),
-        })
-        .mockReturnValueOnce({
-          lean: jest.fn().mockResolvedValueOnce(null),
-        });
-      companyEmployerModel.findOne.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanyEmployers[0]),
-      });
-      await service.addCompanyEmployer(userId, companyId, addAccessDto);
-      expect(handleError).toHaveBeenCalledWith(
-        new ConflictException(
-          'User already has employer access to this company.',
-        ),
-        'Failed to provide company employer access to user.',
-      );
-    });
-  });
-
   describe('getCompanyManagers', () => {
     it('should return company managers for companyId1 when accessed by profileId1', async () => {
       const companyId = mockCompanies[0]._id.toString();
@@ -1640,54 +1283,42 @@ describe('CompaniesService', () => {
     });
   });
 
-  describe('getCompanyEmployers', () => {
-    it('should return company employers for companyId3 when accessed by profileId2', async () => {
-      const companyId = mockCompanies[2]._id.toString();
-      const userId = mockProfiles[1]._id.toString();
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[2]),
+  describe('getManagedComapnies', () => {
+    it('should return companies managed by profileId1 (companyId1 and companyId2)', async () => {
+      companyManagerModel.find.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest
+            .fn()
+            .mockResolvedValue([
+              { company_id: mockCompanies[0]._id },
+              { company_id: mockCompanies[1]._id },
+            ]),
+        }),
       });
-      jest.spyOn(service, 'checkAccess').mockResolvedValueOnce(true);
-      const mockAggregationResult = [mockProfiles[4]];
-      companyEmployerModel.aggregate = jest
-        .fn()
-        .mockResolvedValueOnce(mockAggregationResult);
-      const result = await service.getCompanyEmployers(
-        companyId,
-        userId,
-        1,
-        10,
+      companyModel.find.mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest
+            .fn()
+            .mockResolvedValue([mockCompanies[0], mockCompanies[1]]),
+        }),
+      });
+      const result = await service.getManagedCompanies(
+        mockProfiles[0]._id.toString(),
       );
-      expect(result).toHaveLength(1);
-      expect(result[0].userId.toString()).toBe(mockProfiles[4]._id.toString());
+      expect(result).toHaveLength(2);
+      expect(result[0].companyId).toEqual(mockCompanies[0]._id.toString());
+      expect(result[1].companyId).toEqual(mockCompanies[1]._id.toString());
     });
 
-    it('should throw NotFoundException if the company does not exist', async () => {
-      const companyId = new Types.ObjectId().toString();
+    it('should catch and handle unexpected errors during getManagedCompanies', async () => {
       const userId = mockProfiles[0]._id.toString();
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(null),
+      companyManagerModel.find.mockImplementation(() => {
+        throw new Error('Unexpected Error');
       });
-      await service.getCompanyEmployers(companyId, userId, 1, 10);
+      await service.getManagedCompanies(userId);
       expect(handleError).toHaveBeenCalledWith(
-        new NotFoundException('Company not found.'),
-        'Failed to retrieve list of employers.',
-      );
-    });
-
-    it('should throw ForbiddenException if the user has no management access', async () => {
-      const companyId = mockCompanies[2]._id.toString();
-      const userId = mockProfiles[3]._id.toString();
-      companyModel.findById.mockReturnValueOnce({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanies[2]),
-      });
-      jest.spyOn(service, 'checkAccess').mockResolvedValueOnce(false);
-      await service.getCompanyEmployers(companyId, userId, 1, 10);
-      expect(handleError).toHaveBeenCalledWith(
-        new ForbiddenException(
-          'Logged in user does not have management access to this company.',
-        ),
-        'Failed to retrieve list of employers.',
+        new Error('Unexpected Error'),
+        'Failed to retrieve list of managed companies.',
       );
     });
   });

@@ -322,29 +322,6 @@ export class CompaniesController {
     );
   }
 
-  @Post('/:companyId/employers')
-  @HttpCode(HttpStatus.CREATED)
-  async addCompanyEmployer(
-    @Param('companyId') companyId: string,
-    @Body() addAccessDto: AddAccessDto,
-    @Req() request: Request,
-  ) {
-    if (!request.user) {
-      throw new UnauthorizedException('User not authenticated.');
-    }
-    validateId(companyId, 'company');
-    const userId = request.user['sub'];
-    const role = request.user['role'];
-    // if (role !== 'manager') {
-    //   throw new ForbiddenException('User cannot access this endpoint.');
-    // }
-    await this.companiesService.addCompanyEmployer(
-      userId,
-      companyId,
-      addAccessDto,
-    );
-  }
-
   @Get('/:companyId/managers')
   @HttpCode(HttpStatus.OK)
   async getCompanyManagers(
@@ -363,31 +340,6 @@ export class CompaniesController {
     //   throw new ForbiddenException('User cannot access this endpoint.');
     // }
     return await this.companiesService.getCompanyManagers(
-      companyId,
-      userId,
-      page,
-      limit,
-    );
-  }
-
-  @Get('/:companyId/employers')
-  @HttpCode(HttpStatus.OK)
-  async getCompanyEmployers(
-    @Param('companyId') companyId: string,
-    @Query('page', ParseIntPipe) page: number,
-    @Query('limit', ParseIntPipe) limit: number,
-    @Req() request: Request,
-  ) {
-    if (!request.user) {
-      throw new UnauthorizedException('User not authenticated.');
-    }
-    validateId(companyId, 'company');
-    const userId = request.user['sub'];
-    const role = request.user['role'];
-    // if (role !== 'manager') {
-    //   throw new ForbiddenException('User cannot access this endpoint.');
-    // }
-    return await this.companiesService.getCompanyEmployers(
       companyId,
       userId,
       page,

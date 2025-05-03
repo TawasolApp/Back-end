@@ -10,7 +10,6 @@ import {
   Delete,
   Param,
   Patch,
-  ForbiddenException,
   UnauthorizedException,
   ParseIntPipe,
   Post,

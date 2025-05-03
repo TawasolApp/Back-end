@@ -11,10 +11,6 @@ import {
   ApplicationDocument,
 } from './infrastructure/database/schemas/application.schema';
 import {
-  CompanyEmployer,
-  CompanyEmployerDocument,
-} from './infrastructure/database/schemas/company-employer.schema';
-import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
@@ -60,8 +56,6 @@ export class JobsService {
     private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
     private readonly companyManagerModel: Model<CompanyManagerDocument>,
-    @InjectModel(CompanyEmployer.name)
-    private readonly companyEmployerModel: Model<CompanyEmployerDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
