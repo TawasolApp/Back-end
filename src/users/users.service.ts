@@ -27,7 +27,6 @@ import { Profile } from '../profiles/infrastructure/database/schemas/profile.sch
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { CompanyConnection } from '../companies/infrastructure/database/schemas/company-connection.schema';
 import { Application } from '../jobs/infrastructure/database/schemas/application.schema';
-import { CompanyEmployer } from '../jobs/infrastructure/database/schemas/company-employer.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Job } from '../jobs/infrastructure/database/schemas/job.schema';
 import { Report } from '../admin/infrastructure/database/schemas/report.schema';
@@ -48,8 +47,6 @@ export class UsersService {
     private userConnectionModel: Model<UserConnection>,
     @InjectModel(CompanyConnection.name)
     private companyConnectionModel: Model<CompanyConnection>,
-    @InjectModel(CompanyEmployer.name)
-    private companyEmployerModel: Model<CompanyEmployer>,
     @InjectModel(CompanyManager.name)
     private companyManagerModel: Model<CompanyManager>,
     @InjectModel(Application.name)
@@ -255,9 +252,6 @@ export class UsersService {
 
       console.log(`Deleting company connections for user: ${userId}`);
       await this.companyConnectionModel.deleteMany({ user_id: objectId });
-
-      console.log(`Deleting company employer records for user: ${userId}`);
-      await this.companyEmployerModel.deleteMany({ employer_id: objectId });
 
       console.log(`Deleting company manager records for user: ${userId}`);
       await this.companyManagerModel.deleteMany({ manager_id: objectId });

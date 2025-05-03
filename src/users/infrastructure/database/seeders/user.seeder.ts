@@ -23,7 +23,6 @@ export class UserSeeder {
         password: hashedPassword,
         role: faker.helpers.arrayElement([
           'customer',
-          'employer',
           'manager',
           'admin',
         ]),

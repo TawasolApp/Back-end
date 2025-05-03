@@ -206,7 +206,8 @@ describe('AuthService', () => {
       expect(result).toEqual({
         token: 'token',
         refreshToken: 'token',
-        is_social_login: false, // Updated to match snake_case
+        is_social_login: false, 
+        role: 'user', 
       });
     });
 
