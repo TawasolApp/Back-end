@@ -78,14 +78,9 @@ export class JobsService {
         company_id: new Types.ObjectId(companyId),
       })
       .lean();
-    const allowedEmployer = await this.companyEmployerModel
-      .findOne({
-        employer_id: new Types.ObjectId(userId),
-        company_id: new Types.ObjectId(companyId),
-      })
-      .lean();
+   
 
-    return !!(allowedManager || allowedEmployer);
+    return !!(allowedManager );
   }
 
   /**

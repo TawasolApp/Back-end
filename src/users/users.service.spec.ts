@@ -28,6 +28,9 @@ describe('UsersService', () => {
   let mockJobModel: any;
   let mockJwtService: any;
   let mockMailerService: any;
+  let mockReportModel: any;
+  let mockMessageModel: any;
+  let mockConversationModel: any;
 
   beforeEach(async () => {
     mockUserModel = {
@@ -67,6 +70,9 @@ describe('UsersService', () => {
     mockMailerService = {
       sendEmailChangeConfirmation: jest.fn(),
     };
+    mockReportModel = { deleteMany: jest.fn() };
+    mockMessageModel = { deleteMany: jest.fn() };
+    mockConversationModel = { deleteMany: jest.fn() };
 
     jest
       .spyOn(bcrypt, 'compare')
@@ -125,6 +131,18 @@ describe('UsersService', () => {
         {
           provide: getModelToken('Job'),
           useValue: mockJobModel,
+        },
+        {
+          provide: getModelToken('Report'),
+          useValue: mockReportModel,
+        },
+        {
+          provide: getModelToken('Message'),
+          useValue: mockMessageModel,
+        },
+        {
+          provide: getModelToken('Conversation'),
+          useValue: mockConversationModel,
         },
         {
           provide: JwtService,

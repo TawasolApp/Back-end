@@ -9,7 +9,6 @@ import {
 import { JobsService } from './jobs.service';
 import { Job } from './infrastructure/database/schemas/job.schema';
 import { Application } from './infrastructure/database/schemas/application.schema';
-import { CompanyEmployer } from './infrastructure/database/schemas/company-employer.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
@@ -19,7 +18,7 @@ import {
   NotificationDocument,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { PlanDetail } from '../payments/infrastructure/database/schemas/plan-detail.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { PostJobDto } from './dtos/post-job.dto';
 import { LocationType } from './enums/location-type.enum';
 import { EmploymentType } from './enums/employment-type.enum';
@@ -165,13 +164,7 @@ describe('JobsService', () => {
             lean: jest.fn(),
           },
         },
-        {
-          provide: getModelToken(CompanyEmployer.name),
-          useValue: {
-            findOne: jest.fn().mockReturnThis(),
-            lean: jest.fn(),
-          },
-        },
+    
         {
           provide: getModelToken(Profile.name),
           useValue: {
@@ -216,7 +209,6 @@ describe('JobsService', () => {
     applicationModel = module.get(getModelToken(Application.name));
     companyModel = module.get(getModelToken(Company.name));
     companyManagerModel = module.get(getModelToken(CompanyManager.name));
-    companyEmployerModel = module.get(getModelToken(CompanyEmployer.name));
     userModel = module.get(getModelToken(User.name));
     profileModel = module.get(getModelToken(Profile.name));
   });
@@ -266,30 +258,7 @@ describe('JobsService', () => {
       });
     });
 
-    it('should return true if the user is an employer of the company', async () => {
-      const userId = mockProfiles[0]._id.toString();
-      const companyId = mockCompanies[0]._id.toString();
 
-      userModel.findById.mockImplementation(() => ({
-        lean: jest.fn().mockResolvedValueOnce({
-          _id: new Types.ObjectId(userId),
-          role: 'user',
-        }),
-      }));
-      companyManagerModel.findOne.mockImplementation(() => ({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      }));
-      companyEmployerModel.findOne.mockImplementation(() => ({
-        lean: jest.fn().mockResolvedValueOnce(mockCompanyEmployers[0]),
-      }));
-
-      const result = await service.checkAccess(userId, companyId);
-      expect(result).toBe(true);
-      expect(companyEmployerModel.findOne).toHaveBeenCalledWith({
-        employer_id: new Types.ObjectId(userId),
-        company_id: new Types.ObjectId(companyId),
-      });
-    });
 
     it('should return false if the user is neither a manager nor an employer of the company', async () => {
       const userId = mockProfiles[0]._id.toString();
@@ -304,9 +273,7 @@ describe('JobsService', () => {
       companyManagerModel.findOne.mockImplementation(() => ({
         lean: jest.fn().mockResolvedValueOnce(null),
       }));
-      companyEmployerModel.findOne.mockImplementation(() => ({
-        lean: jest.fn().mockResolvedValueOnce(null),
-      }));
+
 
       const result = await service.checkAccess(userId, companyId);
       expect(result).toBe(false);
@@ -314,10 +281,7 @@ describe('JobsService', () => {
         manager_id: new Types.ObjectId(userId),
         company_id: new Types.ObjectId(companyId),
       });
-      expect(companyEmployerModel.findOne).toHaveBeenCalledWith({
-        employer_id: new Types.ObjectId(userId),
-        company_id: new Types.ObjectId(companyId),
-      });
+    
     });
   });
 
