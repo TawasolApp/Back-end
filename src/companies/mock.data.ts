@@ -70,7 +70,7 @@ export const mockUsers = [
   },
   {
     _id: profileId5,
-    role: 'employer',
+    role: 'customer',
   },
 ];
 
@@ -162,21 +162,6 @@ export const mockCompanyManagers = [
     _id: new Types.ObjectId(),
     manager_id: profileId2,
     company_id: companyId3,
-    created_at: new Date().toISOString(),
-  },
-];
-
-export const mockCompanyEmployers = [
-  {
-    _id: new Types.ObjectId(),
-    employer_id: profileId5,
-    company_id: companyId3,
-    created_at: new Date().toISOString(),
-  },
-  {
-    _id: new Types.ObjectId(),
-    manager_id: profileId5,
-    company_id: companyId1,
     created_at: new Date().toISOString(),
   },
 ];

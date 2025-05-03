@@ -50,7 +50,7 @@ import {
   Notification,
   NotificationSchema,
 } from '../notifications/infrastructure/database/schemas/notification.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   CompanyManager,
   CompanyManagerSchema,

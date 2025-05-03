@@ -42,10 +42,6 @@ import {
   CompanyConnectionSchema,
 } from '../companies/infrastructure/database/schemas/company-connection.schema';
 import {
-  CompanyEmployer,
-  CompanyEmployerSchema,
-} from '../jobs/infrastructure/database/schemas/company-employer.schema';
-import {
   CompanyManager,
   CompanyManagerSchema,
 } from '../companies/infrastructure/database/schemas/company-manager.schema';
@@ -82,7 +78,6 @@ import {
       { name: Share.name, schema: ShareSchema },
       { name: UserConnection.name, schema: UserConnectionSchema },
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
-      { name: CompanyEmployer.name, schema: CompanyEmployerSchema },
       { name: CompanyManager.name, schema: CompanyManagerSchema },
       { name: Application.name, schema: ApplicationSchema },
       { name: Job.name, schema: JobSchema },

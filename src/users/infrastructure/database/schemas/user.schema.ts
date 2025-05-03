@@ -23,7 +23,7 @@ export class User {
   password: string;
 
   @Prop({
-    enum: ['customer', 'employer', 'manager', 'admin'],
+    enum: ['customer', 'manager', 'admin'],
     default: 'customer',
   })
   role: string;

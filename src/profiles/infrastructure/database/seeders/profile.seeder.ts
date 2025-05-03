@@ -147,10 +147,6 @@ export class ProfileSeeder {
         }),
         visibility: faker.helpers.enumValue(Visibility),
         connection_count: 0,
-        plan_statistics: {
-          message_count: faker.number.int({ min: 0, max: 1000 }),
-          application_count: faker.number.int({ min: 0, max: 100 }),
-        },
       };
     });
 

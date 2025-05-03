@@ -12,10 +12,6 @@ import {
   ApplicationDocument,
 } from './infrastructure/database/schemas/application.schema';
 import {
-  CompanyEmployer,
-  CompanyEmployerDocument,
-} from './infrastructure/database/schemas/company-employer.schema';
-import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
@@ -38,7 +34,7 @@ import { ApplicationDto } from './dtos/application.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
 import { toApplicationDto } from './mappers/application.mapper';
 import { addNotification } from '../notifications/helpers/notification.helper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   Notification,
   NotificationDocument,
@@ -47,7 +43,6 @@ import {
   PlanDetail,
   PlanDetailDocument,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
-import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
 export class JobsService {
@@ -59,8 +54,6 @@ export class JobsService {
     private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
     private readonly companyManagerModel: Model<CompanyManagerDocument>,
-    @InjectModel(CompanyEmployer.name)
-    private readonly companyEmployerModel: Model<CompanyEmployerDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
