@@ -54,7 +54,7 @@
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
-    "stripe": "^18.0.0",
+    "stripe": "^18.1.0",
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
@@ -72,6 +72,7 @@
     "@types/node": "^22.10.7",
     "@types/nodemailer": "^6.4.17",
     "@types/passport-jwt": "^4.0.1",
+    "@types/stripe": "^8.0.416",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",

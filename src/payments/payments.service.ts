@@ -43,9 +43,25 @@ export class PaymentsService {
     private readonly profileModel: Model<ProfileDocument>,
     private readonly messagesGateway: MessagesGateway,
   ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+      apiVersion: '2025-04-30.basil',
+    });
   }
 
+  /**
+   * creates a stripe checkout session for premium plan upgrade.
+   *
+   * @param userId - string ID of the logged in user.
+   * @param upgradePlanDto - contains plan type (monthly/yearly) and auto-renewal preference.
+   * @throws ConflictException - if user is already on a premium plan.
+   * @returns CheckoutSessionDto - contains the URL for the checkout session.
+   *
+   * function flow:
+   * 1. retrieves user profile and checks if the user is already on a premium plan.
+   * 2. calculates the amount based on the plan type and auto-renewal preference.
+   * 3. creates a checkout session with Stripe.
+   * 4. returns the checkout session URL.
+   */
   async createCheckoutSession(
     userId: string,
     upgradePlanDto: UpgradePlanDto,
@@ -97,6 +113,18 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * handles database internals upon successful stripe payment.
+   *
+   * @param session - stripe checkout session object (listened from webhook).
+   *
+   * function flow:
+   * 1. retrieves user ID and plan details from the session metadata.
+   * 2. calculates the start and expiry dates based on the plan type and auto-renewal preference.
+   * 3. creates a new plan detail and payment record in the database.
+   * 4. updates the user's profile to premium status.
+   * 5. notifies the messages gateway to update the premium status.
+   */
   async handlePaymentSuccess(session: Stripe.Checkout.Session) {
     try {
       const userId = session.metadata?.userId;
@@ -139,6 +167,19 @@ export class PaymentsService {
     }
   }
 
+  /**
+   * cancels user's premium plan.
+   *
+   * @param userId - string ID of the logged in user.
+   * @throws BadRequestException - if the user does not have an active premium plan.
+   *
+   * function flow:
+   * 1. retrieves user profile and checks if the user is on a premium plan.
+   * 2. if yes, updates the plan detail to set the cancel date.
+   * 3. if the plan has auto-renewal, cancels the subscription in Stripe.
+   * 4. updates the user's profile to non-premium status.
+   * 5. notifies the messages gateway to update the premium status.
+   */
   async cancelPlan(userId: string) {
     try {
       // const activePlan = await this.planDetailModel.findOne({
