@@ -1,0 +1,221 @@
+openapi: 3.0.0
+info:
+  title: Notifications API
+  version: 1.0.0
+  description: API documentation for Module 6 (Notifications).
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+paths:
+  /notifications/{id}:
+    get:
+      summary: Get notifications
+      description: Retrieves notifications for the authenticated user and company.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the connected user/company.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of items per page.
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+
+  /notifications/{id}/unseen:
+    get:
+      summary: Get unseen notifications count
+      description: Returns the number of unseen notifications for the authenticated user and company.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the company.
+      responses:
+        '200':
+          description: Unseen notifications count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  unseenCount:
+                    type: integer
+                    description: Number of unseen notifications
+
+  /notifications/{id}/{notificationId}/read:
+    patch:
+      summary: Mark a notification as read
+      description: Marks a specific notification as read for the authenticated user and company.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the connected user/company.
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the notification.
+      responses:
+        '200':
+          description: Notification marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Success message
+  /notifications/{id}/subscribe-fcm:
+    post:
+      summary: Subscribe to FCM token
+      description: Subscribes the authenticated user to an FCM token for push notifications.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the connected user/company.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                fcmToken:
+                  type: string
+                  description: The FCM token to subscribe.
+      responses:
+        '200':
+          description: FCM token subscribed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: Success message
+  /notifications/{id}/unread:
+    get:
+      summary: Get unread notifications
+      description: Retrieves a list of unread notifications for the authenticated user and company.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the connected user/company.
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 10
+          description: Number of items per page.
+      responses:
+        '200':
+          description: List of unread notifications
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Notification:
+      type: object
+      properties:
+        notificationId:
+          type: string
+          description: Unique identifier for the notification
+        userName:
+          type: string
+          description: Name of the user receiving the notification
+        profilePicture:
+          type: string
+          description: URL or path to the user's profile picture
+        referenceId:
+          type: string
+          description: User who triggered the notification
+        rootItemId:
+          type: string
+          description: Root item ID associated with the notification
+        senderType:
+          type: string
+          enum:
+            - User
+            - Company
+          description: Type of sender (User or Company)
+        type:
+          type: string
+          enum:
+            - React
+            - Comment
+            - UserConnection
+            - Message
+          description: Type of notification
+        content:
+          type: string
+          description: Notification message
+        isRead:
+          type: boolean
+          description: Indicates if the notification has been read
+        timestamp:
+          type: string
+          format: date-time
+          description: Time when the notification was created

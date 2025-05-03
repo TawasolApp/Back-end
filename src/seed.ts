@@ -13,8 +13,11 @@ import { ShareSeeder } from './posts/infrastructure/database/seeders/share.seede
 import { JobSeeder } from './jobs/infrastructure/database/seeders/job.seeder';
 import { ApplicationSeeder } from './jobs/infrastructure/database/seeders/application.seeder';
 import { CompanyManagerSeeder } from './companies/infrastructure/database/seeders/company-manager.seeder';
-import { CompanyEmployerSeeder } from './jobs/infrastructure/database/seeders/company-employer.seeder';
+import { ReportSeeder } from './admin/infrastructure/database/seeders/report.seeder';
 import { faker } from '@faker-js/faker';
+import { ConversationSeeder } from './messages/infrastructure/database/seeders/conversation.seeder';
+import { MessageSeeder } from './messages/infrastructure/database/seeders/message.seeder';
+import { NotificationSeeder } from './notifications/infrastructure/database/seeders/notification.seeders';
 
 faker.seed(5050);
 async function bootstrap() {
@@ -32,7 +35,10 @@ async function bootstrap() {
   const shareSeeder = app.get(ShareSeeder);
   const jobSeeder = app.get(JobSeeder);
   const applicationSeeder = app.get(ApplicationSeeder);
-  const companyEmployerSeeder = app.get(CompanyEmployerSeeder);
+  const reportSeeder = app.get(ReportSeeder);
+  const conversationSeeder = app.get(ConversationSeeder);
+  const messageSeeder = app.get(MessageSeeder);
+  const notificationSeeder = app.get(NotificationSeeder);
 
   await userSeeder.clearUsers();
   await userSeeder.seedUsers(30);
@@ -55,8 +61,6 @@ async function bootstrap() {
   await applicationSeeder.clearApplications();
   await applicationSeeder.seedApplications(60);
   await jobSeeder.updateApplicantCounts();
-  await companyEmployerSeeder.clearCompanyEmployers();
-  await companyEmployerSeeder.seedCompanyEmployers(10);
 
   await postSeeder.clearPosts();
   await postSeeder.clearPosts();
@@ -77,6 +81,20 @@ async function bootstrap() {
   await postSeeder.updateCommentCounts();
   await commentSeeder.updateCommentReplies();
   await postSeeder.updateShareCounts();
+
+  await reportSeeder.clearReports();
+  await reportSeeder.seedReports(15);
+
+  await conversationSeeder.clearConversations();
+  await conversationSeeder.seedConversations(5);
+
+  await messageSeeder.clearMessages();
+  await messageSeeder.seedMessages(10);
+  await conversationSeeder.updateLastMessage();
+
+  await notificationSeeder.clearNotifications();
+  await notificationSeeder.seedNotifications();
+
   await app.close();
 }
 

@@ -15,6 +15,22 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
+import {
+  Notification,
+  NotificationDocument,
+} from '../notifications/infrastructure/database/schemas/notification.schema';
+import {
+  User,
+  UserDocument,
+} from '../users/infrastructure/database/schemas/user.schema';
+import {
+  Company,
+  CompanyDocument,
+} from '../companies/infrastructure/database/schemas/company.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { toGetUserDto } from '../common/mappers/user.mapper';
 import { GetUserDto } from '../common/dtos/get-user.dto';
@@ -23,6 +39,7 @@ import { UpdateRequestDto } from './dtos/update-request.dto';
 import { AddEndoresementDto } from './dtos/add-endorsement.dto';
 import {
   getBlocked,
+  getBlockedList,
   getConnection,
   getFollow,
   getIgnored,
@@ -30,14 +47,28 @@ import {
 } from './helpers/connection-helpers';
 import { handleError } from '../common/utils/exception-handler';
 import { getSortData } from './helpers/sort-helper';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
+import {
+  addNotification,
+  deleteNotification,
+} from '../notifications/helpers/notification.helper';
 
 @Injectable()
 export class ConnectionsService {
   constructor(
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
+    @InjectModel(User.name)
+    private readonly userModel: Model<UserDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
+    @InjectModel(Company.name)
+    private readonly companyModel: Model<CompanyDocument>,
+    @InjectModel(CompanyManager.name)
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
+    @InjectModel(Notification.name)
+    private readonly notificationModel: Model<NotificationDocument>,
+    private readonly notificationGateway: NotificationGateway,
   ) {}
 
   /**
@@ -58,6 +89,7 @@ export class ConnectionsService {
    * 6. map the results to GetUserDto and return array of GetUserDtos.
    */
   async searchUsers(
+    userId: string,
     page: number,
     limit: number,
     name?: string,
@@ -66,10 +98,13 @@ export class ConnectionsService {
     try {
       const filter: any = {};
       if (name) {
-        filter.$or = [
-          { first_name: { $regex: name, $options: 'i' } },
-          { last_name: { $regex: name, $options: 'i' } },
-        ];
+        filter.$expr = {
+          $regexMatch: {
+            input: { $concat: ['$first_name', ' ', '$last_name'] },
+            regex: name,
+            options: 'i',
+          },
+        };
       }
       if (company) {
         filter['work_experience.company'] = {
@@ -84,7 +119,16 @@ export class ConnectionsService {
         .skip(skip)
         .limit(limit)
         .lean();
-      return users.map(toGetUserDto);
+      const excludeObjectIds = await getBlockedList(
+        this.userConnectionModel,
+        userId,
+      );
+      const excludeIds = excludeObjectIds.map((id) => id.toString());
+      const filteredUsers = excludeIds.length
+        ? users.filter((user) => !excludeIds.includes(user._id.toString()))
+        : users;
+
+      return filteredUsers.map(toGetUserDto);
     } catch (error) {
       handleError(error, 'Failed to retrieve list of users.');
     }
@@ -103,14 +147,18 @@ export class ConnectionsService {
    * function flow:
    * 1. extracts receiving user ID and checks its availability in the database.
    * 2. checks that both IDs are distinct.
-   * 3. checks for any other exisiting instances between both users (pending or ignored requests, connection, block) to ensure no conflict.
-   * 4. if no conflict, creates a new pending connection request between both users and saves it to the database.
+   * 3. if user is not on a premium plan, checks that user did not exceed connection limit.
+   * 4. checks for any other exisiting instances between both users (pending or ignored requests, connection, block) to ensure no conflict.
+   * 5. if no conflict, creates a new pending connection request between both users and saves it to the database.
    */
   async requestConnection(
     sendingParty: string,
     createRequestDto: CreateRequestDto,
   ) {
     try {
+      const sendingUser = await this.profileModel
+        .findById(new Types.ObjectId(sendingParty))
+        .lean();
       const { userId } = createRequestDto;
       const receivingParty = userId;
       const exisitngUser = await this.profileModel
@@ -122,6 +170,11 @@ export class ConnectionsService {
       if (sendingParty === receivingParty) {
         throw new BadRequestException(
           'Cannot request a connection with yourself.',
+        );
+      }
+      if (!sendingUser!.is_premium && sendingUser!.connection_count >= 50) {
+        throw new ForbiddenException(
+          'User has exceeded his limit on connections.',
         );
       }
       const blocked1 = await getBlocked(
@@ -186,6 +239,22 @@ export class ConnectionsService {
         status: ConnectionStatus.Pending,
       });
       await newConnection.save();
+      // send connection request notification
+      addNotification(
+        this.notificationModel,
+        new Types.ObjectId(sendingParty),
+        new Types.ObjectId(receivingParty),
+        newConnection._id,
+        newConnection._id,
+        'UserConnection',
+        'sent you a connection request',
+        new Date(),
+        this.notificationGateway,
+        this.profileModel,
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
     } catch (error) {
       handleError(error, 'Failed to request connection.');
     }
@@ -227,6 +296,8 @@ export class ConnectionsService {
         );
       } else if (existingPending) {
         await this.userConnectionModel.findByIdAndDelete(existingPending._id);
+        // remove pending connection request notification
+        deleteNotification(this.notificationModel, existingPending._id);
       } else if (existingIgnored) {
         await this.userConnectionModel.findByIdAndDelete(existingIgnored._id);
       }
@@ -256,10 +327,13 @@ export class ConnectionsService {
     updateRequestDto: UpdateRequestDto,
   ) {
     try {
-      const exisitngUser = await this.profileModel
+      const receivingUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      const existingUser = await this.profileModel
         .findById(new Types.ObjectId(sendingParty))
         .lean();
-      if (!exisitngUser) {
+      if (!existingUser) {
         throw new NotFoundException('User not found.');
       }
       const existingRequest = await getPending(
@@ -271,6 +345,16 @@ export class ConnectionsService {
         throw new NotFoundException('Connection request was not found.');
       }
       const { isAccept } = updateRequestDto;
+      if (isAccept) {
+        if (
+          !receivingUser!.is_premium &&
+          receivingUser!.connection_count >= 50
+        ) {
+          throw new ForbiddenException(
+            'User has exceeded his limit on connections.',
+          );
+        }
+      }
       const status = isAccept
         ? ConnectionStatus.Connected
         : ConnectionStatus.Ignored;
@@ -281,13 +365,29 @@ export class ConnectionsService {
           { new: true },
         );
       if (status === ConnectionStatus.Connected) {
+        // send request acceptance notification
+        addNotification(
+          this.notificationModel,
+          new Types.ObjectId(receivingParty),
+          new Types.ObjectId(sendingParty),
+          updatedConnection!._id,
+          updatedConnection!._id,
+          'UserConnection',
+          'accepted your connection request',
+          new Date(),
+          this.notificationGateway,
+          this.profileModel,
+          this.companyModel,
+          this.userModel,
+          this.companyManagerModel,
+        );
         await this.profileModel.findByIdAndUpdate(
-          updatedConnection?.sending_party,
+          updatedConnection!.sending_party,
           { $inc: { connection_count: 1 } },
           { new: true },
         );
         await this.profileModel.findByIdAndUpdate(
-          updatedConnection?.receiving_party,
+          updatedConnection!.receiving_party,
           { $inc: { connection_count: 1 } },
           { new: true },
         );
@@ -304,7 +404,26 @@ export class ConnectionsService {
             status: ConnectionStatus.Following,
           });
           await newFollow.save();
+          // send follow notification
+          addNotification(
+            this.notificationModel,
+            new Types.ObjectId(sendingParty),
+            new Types.ObjectId(receivingParty),
+            newFollow._id,
+            newFollow._id,
+            'UserConnection',
+            'followed you',
+            new Date(),
+            this.notificationGateway,
+            this.profileModel,
+            this.companyModel,
+            this.userModel,
+            this.companyManagerModel,
+          );
         }
+      } else {
+        // remove pending connection request notification
+        deleteNotification(this.notificationModel, updatedConnection!._id);
       }
     } catch (error) {
       handleError(error, 'Failed to update connection request status.');
@@ -415,7 +534,7 @@ export class ConnectionsService {
       const field = Object.keys(params)[0];
       const dir = params[field];
 
-      let sort: Record<string, 1 | -1> = {};
+      const sort: Record<string, 1 | -1> = {};
       if (field === 'created_at') {
         sort['created_at'] = dir;
       } else {
@@ -714,7 +833,7 @@ export class ConnectionsService {
   }
 
   /**
-   * adds a follow instances between logged in user and another specified user.
+   * adds a follow instance between logged in user and another specified user.
    *
    * @param sendingParty - string ID of the logged in user.
    * @param createRequestDto - contains receivingParty; the string ID of the other user.
@@ -772,6 +891,22 @@ export class ConnectionsService {
         status: ConnectionStatus.Following,
       });
       await newConnection.save();
+      // send follow notification
+      addNotification(
+        this.notificationModel,
+        new Types.ObjectId(sendingParty),
+        new Types.ObjectId(receivingParty),
+        newConnection._id,
+        newConnection._id,
+        'UserConnection',
+        'followed you',
+        new Date(),
+        this.notificationGateway,
+        this.profileModel,
+        this.companyModel,
+        this.userModel,
+        this.companyManagerModel,
+      );
     } catch (error) {
       handleError(error, 'Failed to follow user.');
     }
@@ -806,6 +941,8 @@ export class ConnectionsService {
         throw new NotFoundException('Follow instance not found.');
       }
       await this.userConnectionModel.findByIdAndDelete(existingFollow._id);
+      // remove follow notification
+      deleteNotification(this.notificationModel, existingFollow._id);
     } catch (error) {
       handleError(error, 'Failed to unfollow user.');
     }
@@ -936,6 +1073,72 @@ export class ConnectionsService {
   }
 
   /**
+   * retrieve count of users following the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where receiving party is userId and status is Following
+   * 2. counts all found documents and returns the count
+   */
+  async getFollowerCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get follower count.');
+    }
+  }
+
+  /**
+   * retrieve count of users followed by the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where sending party is userId and status is Following
+   * 2. counts all found documents and returns the count
+   */
+  async getFollowingCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        sending_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Following,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get following count.');
+    }
+  }
+
+  /**
+   * retrieve count of pending connection requests for logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @returns count
+   *
+   * function flow:
+   * 1. finds all UserConnection documents where receiving party is userId and status is Pending
+   * 2. counts all found documents and returns the count
+   */
+  async getPendingCount(userId: string): Promise<{ count: number }> {
+    try {
+      const count = await this.userConnectionModel.countDocuments({
+        receiving_party: new Types.ObjectId(userId),
+        status: ConnectionStatus.Pending,
+      });
+      return { count };
+    } catch (error) {
+      handleError(error, 'Failed to get pending requests count.');
+    }
+  }
+
+  /**
    * add a new endorsement from logged in user to specified skill on another user's profile.
    *
    * @param endorserId - string ID of the logged in user.
@@ -1060,6 +1263,168 @@ export class ConnectionsService {
       // return endorsersDto;
     } catch (error) {
       handleError(error, 'Failed to remove endorsement.');
+    }
+  }
+
+  /**
+   * adds a block instance between logged in user and another specified user.
+   *
+   * @param sendingParty - string ID of the logged in user.
+   * @param receivingParty - string ID of the other user.
+   * @throws NotFoundException - if the receiving party user ID is not a valid one.
+   * @throws BadRequestException - if sending and receving user ID are the same.
+   * @throws ConflictException - if block instance already exists in the specified direction.
+   *
+   * function flow:
+   * 1. checks availablity of other user in the database.
+   * 2. checks that both IDs are distinct.
+   * 3. checks for any other exisiting block instances between both users to ensure no conflict
+   * 4. if no conflict, creates a new block instance between both users and saves it to the database.
+   * 5. deletes any other instances between the 2 users (connection request/follow/connection)
+   */
+  async block(sendingParty: string, receivingParty: string) {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      if (sendingParty === receivingParty) {
+        throw new BadRequestException('Cannot block yourself.');
+      }
+      const blocked1 = await getBlocked(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      const blocked2 = await getBlocked(
+        this.userConnectionModel,
+        receivingParty,
+        sendingParty,
+      );
+      if (blocked1 || blocked2) {
+        throw new ConflictException('Block instance already exists.');
+      }
+      await this.userConnectionModel.deleteMany({
+        $or: [
+          {
+            sending_party: new Types.ObjectId(sendingParty),
+            receiving_party: new Types.ObjectId(receivingParty),
+          },
+          {
+            sending_party: new Types.ObjectId(receivingParty),
+            receiving_party: new Types.ObjectId(sendingParty),
+          },
+        ],
+      });
+      const newBlock = new this.userConnectionModel({
+        _id: new Types.ObjectId(),
+        sending_party: new Types.ObjectId(sendingParty),
+        receiving_party: new Types.ObjectId(receivingParty),
+        status: ConnectionStatus.Blocked,
+      });
+      await newBlock.save();
+    } catch (error) {
+      handleError(error, 'Failed to block user.');
+    }
+  }
+
+  /**
+   * allows logged in user to unblock a previously blocked user.
+   *
+   * @param sendingParty - string ID of the logged in user.
+   * @param receivingParty - string ID of the other user.
+   * @throws NotFoundException - if the receiving party user ID is not a valid one / if no block instance exists.
+   * @throws BadRequestException - if sending and receving user ID are the same.
+   * @throws ConflictException - if block instance already exists in the specified direction.
+   *
+   * function flow:
+   * 1. checks availablity of other user in the database.
+   * 2. ensures a block instance already exists.
+   * 3. if it does, removes the block instance.
+   */
+  async unblock(sendingParty: string, receivingParty: string) {
+    try {
+      const exisitngUser = await this.profileModel
+        .findById(new Types.ObjectId(receivingParty))
+        .lean();
+      if (!exisitngUser) {
+        throw new NotFoundException('User not found.');
+      }
+      const existingBlock = await getBlocked(
+        this.userConnectionModel,
+        sendingParty,
+        receivingParty,
+      );
+      if (!existingBlock) {
+        throw new NotFoundException('Block instance not found.');
+      }
+      await this.userConnectionModel.findByIdAndDelete(existingBlock._id);
+    } catch (error) {
+      handleError(error, 'Failed to unblock user.');
+    }
+  }
+
+  /**
+   * retrieve list of users blocked by the logged in user.
+   *
+   * @param userId - string ID of the logged in user.
+   * @param page - the page number for pagination.
+   * @param limit - the maximum number of users to return per page.
+   * @returns GetUserDto[] - an array of user DTOs containing essential profile details.
+   *
+   * function flow:
+   * 1. calculate pagination skip value using page and limit.
+   * 2. join the 'profileModel' and 'userConnectionModel'.
+   * 3. query the joined model, searching for block instances where sending party is logged in user and applying skip and limit values.
+   * 4. map the results to GetUserDto and return array of GetUserDtos.
+   */
+  async getBlocked(
+    userId: string,
+    page: number,
+    limit: number,
+  ): Promise<GetUserDto[]> {
+    try {
+      const skip = (page - 1) * limit;
+      const blocked = await this.userConnectionModel.aggregate([
+        {
+          $match: {
+            sending_party: new Types.ObjectId(userId),
+            status: ConnectionStatus.Blocked,
+          },
+        },
+        {
+          $lookup: {
+            from: 'Profiles',
+            localField: 'receiving_party',
+            foreignField: '_id',
+            as: 'profile',
+          },
+        },
+        { $unwind: '$profile' },
+        { $sort: { created_at: -1, _id: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        {
+          $project: {
+            _id: '$profile._id',
+            first_name: '$profile.first_name',
+            last_name: '$profile.last_name',
+            profile_picture: '$profile.profile_picture',
+            headline: '$profile.headline',
+            created_at: '$created_at',
+          },
+        },
+      ]);
+      // return blocked.map(toGetUserDto);
+      return blocked.map((profile: any) => {
+        const dto = toGetUserDto(profile);
+        dto.createdAt = profile.created_at;
+        return dto;
+      });
+    } catch (error) {
+      handleError(error, 'Failed to retrieve list of blocked users.');
     }
   }
 }

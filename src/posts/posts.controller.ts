@@ -6,8 +6,6 @@ import {
   Delete,
   Param,
   HttpCode,
-  HttpException,
-  InternalServerErrorException,
   BadRequestException,
   HttpStatus,
   UseGuards,
@@ -32,32 +30,43 @@ import { EditCommentDto } from './dto/edit-comment.dto';
 
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe())
-@Controller('posts')
+@Controller('posts/:companyId')
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async addPost(@Body() createPostDto: CreatePostDto, @Req() req: Request) {
+  async addPost(
+    @Param('companyId') companyId: string,
+    @Body() createPostDto: CreatePostDto,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
     const userId = req.user['sub'];
-    return await this.postsService.addPost(createPostDto, userId);
+    return await this.postsService.addPost(createPostDto, userId, companyId);
   }
 
   @Get()
   @HttpCode(HttpStatus.OK)
   async getAllPosts(
+    @Param('companyId') companyId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.getAllPosts(page, limit, req.user['sub']);
+    return await this.postsService.getAllPosts(
+      page,
+      limit,
+      req.user['sub'],
+      companyId,
+    );
   }
 
   @Post('react/:postId')
   @HttpCode(HttpStatus.OK)
   async updateReactions(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Body() updateReactionsDto: UpdateReactionsDto,
     @Req() req: Request,
@@ -68,12 +77,14 @@ export class PostsController {
       postId,
       userIdFromToken,
       updateReactionsDto,
+      companyId,
     );
   }
 
   @Get('search')
   @HttpCode(HttpStatus.OK)
   async searchPosts(
+    @Param('companyId') companyId: string,
     @Req() req: Request,
     @Query('q') query: string,
     @Query('network') network?: string,
@@ -94,12 +105,14 @@ export class PostsController {
       timeframe ?? 'all',
       page,
       limit,
+      companyId,
     );
   }
 
   @Get('reactions/:postId')
   @HttpCode(HttpStatus.OK)
   async getReactions(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Query('reactionType') reactionType: string = 'All',
     @Query('page') page: number = 1,
@@ -113,12 +126,14 @@ export class PostsController {
       limit,
       reactionType,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Get('comments/:postId')
   @HttpCode(HttpStatus.OK)
   async getComments(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -130,30 +145,42 @@ export class PostsController {
       page,
       limit,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Post('save/:postId')
   @HttpCode(HttpStatus.OK)
-  async savePost(@Param('postId') postId: string, @Req() req: Request) {
+  async savePost(
+    @Param('companyId') companyId: string,
+    @Param('postId') postId: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.savePost(postId, req.user['sub']);
+    return await this.postsService.savePost(postId, req.user['sub'], companyId);
   }
 
   @Get('saved')
   @HttpCode(HttpStatus.OK)
   async getSavedPosts(
+    @Param('companyId') companyId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
     @Req() req: Request,
   ): Promise<GetPostDto[]> {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.getSavedPosts(req.user['sub'], page, limit);
+    return await this.postsService.getSavedPosts(
+      req.user['sub'],
+      page,
+      limit,
+      companyId,
+    );
   }
 
   @Post('comment/:postId')
   @HttpCode(HttpStatus.CREATED)
   async addComment(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Body() createCommentDto: CreateCommentDto,
     @Req() req: Request,
@@ -163,37 +190,53 @@ export class PostsController {
       postId,
       createCommentDto,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Get(':id')
   @HttpCode(HttpStatus.OK)
-  async getPost(@Param('id') id: string, @Req() req: Request) {
+  async getPost(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.getPost(id, req.user['sub']);
+    return await this.postsService.getPost(id, req.user['sub'], companyId);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async deletePost(@Param('id') id: string, @Req() req: Request) {
+  async deletePost(
+    @Param('companyId') companyId: string,
+    @Param('id') id: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    await this.postsService.deletePost(id, req.user['sub']);
+    await this.postsService.deletePost(id, req.user['sub'], companyId);
   }
 
   @Patch(':id')
   @HttpCode(HttpStatus.OK)
   async editPost(
+    @Param('companyId') companyId: string,
     @Param('id') id: string,
     @Body() editPostDto: EditPostDto,
     @Req() req: Request,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    return await this.postsService.editPost(id, editPostDto, req.user['sub']);
+    return await this.postsService.editPost(
+      id,
+      editPostDto,
+      req.user['sub'],
+      companyId,
+    );
   }
 
   @Get('user/:userId')
   @HttpCode(HttpStatus.OK)
   async getUserPosts(
+    @Param('companyId') companyId: string,
     @Param('userId') searchedUserId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -205,19 +248,25 @@ export class PostsController {
       req.user['sub'],
       page,
       limit,
+      companyId,
     );
   }
 
   @Delete('save/:postId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async unsavePost(@Param('postId') postId: string, @Req() req: Request) {
+  async unsavePost(
+    @Param('companyId') companyId: string,
+    @Param('postId') postId: string,
+    @Req() req: Request,
+  ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    await this.postsService.unsavePost(postId, req.user['sub']);
+    await this.postsService.unsavePost(postId, req.user['sub'], companyId);
   }
 
   @Patch('comment/:commentId')
   @HttpCode(HttpStatus.OK)
   async editComment(
+    @Param('companyId') companyId: string,
     @Param('commentId') commentId: string,
     @Body() editCommentDto: EditCommentDto,
     @Req() req: Request,
@@ -227,21 +276,29 @@ export class PostsController {
       commentId,
       editCommentDto,
       req.user['sub'],
+      companyId,
     );
   }
 
   @Delete('comment/:commentId')
   @HttpCode(HttpStatus.NO_CONTENT)
   async deleteComment(
+    @Param('companyId') companyId: string,
     @Param('commentId') commentId: string,
     @Req() req: Request,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    await this.postsService.deleteComment(commentId, req.user['sub']);
+    await this.postsService.deleteComment(
+      commentId,
+      req.user['sub'],
+      companyId,
+    );
   }
+
   @Get(':postId/reposts')
   @HttpCode(HttpStatus.OK)
   async getReposts(
+    @Param('companyId') companyId: string,
     @Param('postId') postId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -253,12 +310,14 @@ export class PostsController {
       req.user['sub'],
       page,
       limit,
+      companyId,
     );
   }
 
   @Get('reposts/:userId')
   @HttpCode(HttpStatus.OK)
   async getUserReposts(
+    @Param('companyId') companyId: string,
     @Param('userId') userId: string,
     @Query('page') page: number = 1,
     @Query('limit') limit: number = 10,
@@ -270,6 +329,7 @@ export class PostsController {
       page,
       limit,
       req.user['sub'],
+      companyId,
     );
   }
 }

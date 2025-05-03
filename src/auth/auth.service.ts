@@ -43,8 +43,6 @@ export class AuthService {
    * @param dto - Registration data
    * @returns Success message
    */
-  // In auth.service.ts
-
   async register(dto: RegisterDto) {
     const { firstName, lastName, email, password, captchaToken } = dto;
 
@@ -76,6 +74,14 @@ export class AuthService {
     }
 
     const token = this.jwtService.sign({ email }, { expiresIn: '1h' });
+
+    if (process.env.TEST === 'ON') {
+      return {
+        message: 'Test mode: Registration successful.',
+        verifyToken: token,
+      };
+    }
+
     await this.mailerService.sendVerificationEmail(email, token);
 
     return {
@@ -115,8 +121,20 @@ export class AuthService {
     }
 
     if (!user.is_verified) {
-      // Changed from isVerified to is_verified
       throw new ForbiddenException('Email not verified');
+    }
+
+    if (user.is_suspended) {
+      const now = new Date();
+      if (!user.suspension_end_date || user.suspension_end_date > now) {
+        throw new ForbiddenException(
+          'Your account is suspended. Please try again later.',
+        );
+      } else {
+        user.is_suspended = false;
+        user.suspension_end_date = null;
+        await user.save();
+      }
     }
 
     const payload = { sub: user._id, email: user.email, role: user.role };
@@ -126,7 +144,8 @@ export class AuthService {
     return {
       token: accessToken,
       refreshToken,
-      is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
+      role: user.role,
+      is_social_login: user.is_social_login,
     };
   }
 
@@ -144,7 +163,7 @@ export class AuthService {
       return true;
     }
 
-    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY?.trim();
     console.log('Using reCAPTCHA secret key:', secretKey);
 
     try {
@@ -186,9 +205,9 @@ export class AuthService {
 
       if (!user)
         throw new BadRequestException('Invalid token or user does not exist');
-      if (user.is_verified) return { message: 'Email is already verified.' }; // Changed from isVerified to is_verified
+      if (user.is_verified) return { message: 'Email is already verified.' };
 
-      user.is_verified = true; // Changed from isVerified to is_verified
+      user.is_verified = true;
       await user.save();
       return { message: 'Email verified successfully.' };
     } catch (err) {
@@ -271,11 +290,17 @@ export class AuthService {
 
     const user = await this.userModel.findOne({ email });
     if (user?.is_verified) {
-      // Changed from isVerified to is_verified
       const token = this.jwtService.sign(
         { sub: user._id },
         { expiresIn: '15m' },
       );
+
+      if (process.env.TEST === 'ON') {
+        return {
+          message: 'Test mode: Password reset link generated.',
+          verifyToken: token,
+        };
+      }
 
       try {
         await this.mailerService.sendPasswordResetEmail(
@@ -337,7 +362,7 @@ export class AuthService {
       }
 
       user.password = await bcrypt.hash(newPassword, 10);
-      user.is_social_login = false; // Changed from isSocialLogin to is_social_login
+      user.is_social_login = false;
       await user.save();
 
       return { message: 'Password reset successfully' };
@@ -353,16 +378,15 @@ export class AuthService {
   }
 
   async googleLogin(dto: SocialLoginDto) {
-    const { idToken, isAndroid } = dto; // Reverted from is_android to isAndroid
+    const { idToken, isAndroid } = dto;
 
     try {
-      const googleClient = isAndroid // Reverted from is_android to isAndroid
+      const googleClient = isAndroid
         ? this.googleClientAndroid
         : this.googleClientFrontend;
 
       const tokenInfo = await googleClient.getTokenInfo(idToken);
 
-      // Add validation for empty tokenInfo or missing email
       if (!tokenInfo || !tokenInfo.email) {
         throw new BadRequestException('Invalid Google token');
       }
@@ -390,16 +414,11 @@ export class AuthService {
           last_name: profile.family_name || '',
           email: profile.email,
           password: hashedPassword,
-          isVerified: true,
-          isSocialLogin: true,
+          is_verified: true,
+          is_social_login: true,
         });
 
-        try {
-          await user.save();
-        } catch (error) {
-          console.error('Error saving user during Google login:');
-          throw new InternalServerErrorException('Google login failed');
-        }
+        await user.save();
       }
 
       const payload = { sub: user._id, email: user.email, role: user.role };
@@ -407,10 +426,10 @@ export class AuthService {
       const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
 
       return {
-        token: token,
+        token,
         refreshToken,
         email: user.email,
-        is_social_login: user.is_social_login, // Changed from isSocialLogin to is_social_login
+        is_social_login: user.is_social_login,
         isNewUser,
         message: 'Login successful',
       };

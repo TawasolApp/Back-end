@@ -1,5 +1,7 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
+import { Readable } from 'stream';
+import { extname } from 'path';
 
 type CloudinaryType = typeof cloudinary;
 
@@ -12,25 +14,38 @@ export class MediaService {
   async uploadFile(
     file: Express.Multer.File,
   ): Promise<{ url: string; type: string }> {
-    const base64Str = file.buffer.toString('base64');
-    const dataUri = `data:${file.mimetype};base64,${base64Str}`;
-
     const mime = file.mimetype;
-    let resourceType: 'image' | 'video' | 'raw' = 'raw'; 
+    const ext = extname(file.originalname).replace('.', '');
 
+    let resourceType: 'image' | 'video' | 'raw' = 'raw';
     if (mime.startsWith('image/')) resourceType = 'image';
     else if (mime.startsWith('video/')) resourceType = 'video';
+    else if (ext === 'pdf') resourceType = 'raw';
 
-    const uploadResult: UploadApiResponse =
-      await this.cloudinary.uploader.upload(dataUri, {
-        resource_type: resourceType,
-      });
+    const publicId = file.originalname.replace(/\.[^/.]+$/, '');
+
+    const uploadResult: UploadApiResponse = await new Promise(
+      (resolve, reject) => {
+        this.cloudinary.uploader
+          .upload_stream(
+            {
+              resource_type: resourceType,
+              public_id: `uploads/${publicId}`,
+            },
+            (error, result) => {
+              if (error || !result) return reject(error);
+              resolve(result);
+            },
+          )
+          .end(file.buffer);
+      },
+    );
 
     const mediaType = this.detectMediaType(resourceType, uploadResult.format);
     const url = this.buildCloudinaryUrl(uploadResult);
 
     return {
-      url,
+      url: url,
       type: mediaType,
     };
   }
@@ -40,18 +55,17 @@ export class MediaService {
     if (
       format &&
       ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(format.toLowerCase())
-    ) {
+    )
       return 'image';
-    }
-    return 'document';
+    if (format && format.toLowerCase() === 'pdf') return 'document';
+    return 'file';
   }
 
   private buildCloudinaryUrl(uploadResult: UploadApiResponse): string {
     const base = `https://res.cloudinary.com/${process.env.CLOUDINARY_CLOUD_NAME}`;
     const path = `${uploadResult.resource_type}/upload`;
     const version = `v${uploadResult.version}`;
-    const file = `${uploadResult.public_id}.${uploadResult.format}`;
-
+    const file = `${uploadResult.public_id}${uploadResult.format ? '.' + uploadResult.format : '.pdf'}`;
     return `${base}/${path}/${version}/${file}`;
   }
 }

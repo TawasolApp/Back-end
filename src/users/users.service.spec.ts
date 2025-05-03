@@ -23,12 +23,14 @@ describe('UsersService', () => {
   let mockShareModel: any;
   let mockUserConnectionModel: any;
   let mockCompanyConnectionModel: any;
-  let mockCompanyEmployerModel: any;
   let mockCompanyManagerModel: any;
   let mockApplicationModel: any;
   let mockJobModel: any;
   let mockJwtService: any;
   let mockMailerService: any;
+  let mockReportModel: any;
+  let mockMessageModel: any;
+  let mockConversationModel: any;
 
   beforeEach(async () => {
     mockUserModel = {
@@ -55,7 +57,6 @@ describe('UsersService', () => {
     mockShareModel = { deleteMany: jest.fn() };
     mockUserConnectionModel = { deleteMany: jest.fn() };
     mockCompanyConnectionModel = { deleteMany: jest.fn() };
-    mockCompanyEmployerModel = { deleteMany: jest.fn() };
     mockCompanyManagerModel = { deleteMany: jest.fn() };
     mockApplicationModel = {
       find: jest.fn(),
@@ -69,6 +70,9 @@ describe('UsersService', () => {
     mockMailerService = {
       sendEmailChangeConfirmation: jest.fn(),
     };
+    mockReportModel = { deleteMany: jest.fn() };
+    mockMessageModel = { deleteMany: jest.fn() };
+    mockConversationModel = { deleteMany: jest.fn() };
 
     jest
       .spyOn(bcrypt, 'compare')
@@ -117,10 +121,6 @@ describe('UsersService', () => {
           useValue: mockCompanyConnectionModel,
         },
         {
-          provide: getModelToken('CompanyEmployer'),
-          useValue: mockCompanyEmployerModel,
-        },
-        {
           provide: getModelToken('CompanyManager'),
           useValue: mockCompanyManagerModel,
         },
@@ -131,6 +131,18 @@ describe('UsersService', () => {
         {
           provide: getModelToken('Job'),
           useValue: mockJobModel,
+        },
+        {
+          provide: getModelToken('Report'),
+          useValue: mockReportModel,
+        },
+        {
+          provide: getModelToken('Message'),
+          useValue: mockMessageModel,
+        },
+        {
+          provide: getModelToken('Conversation'),
+          useValue: mockConversationModel,
         },
         {
           provide: JwtService,
@@ -401,9 +413,6 @@ describe('UsersService', () => {
       expect(mockCompanyConnectionModel.deleteMany).toHaveBeenCalledWith({
         user_id: objectId,
       });
-      expect(mockCompanyEmployerModel.deleteMany).toHaveBeenCalledWith({
-        employer_id: objectId,
-      });
       expect(mockCompanyManagerModel.deleteMany).toHaveBeenCalledWith({
         manager_id: objectId,
       });
@@ -418,18 +427,19 @@ describe('UsersService', () => {
 
     it('should handle reacts on posts and comments', async () => {
       const mockPostReact = {
-        post_id: new Types.ObjectId(),
-        post_type: 'Post',
+        post_id: '67fac9f9086226b1d9cf22da',
         react_type: 'like',
+        post_type: 'Post',
       };
       const mockCommentReact = {
-        post_id: new Types.ObjectId(),
-        post_type: 'Comment',
+        post_id: '67fac9f9086226b1d9cf22db',
         react_type: 'like',
+        post_type: 'Comment',
       };
+
       mockReactModel.find.mockResolvedValue([mockPostReact, mockCommentReact]);
 
-      await service.deleteAccount(userId);
+      await service.deleteAccount('67fac9f9086226b1d9cf22d8');
 
       expect(mockPostModel.updateOne).toHaveBeenCalledWith(
         { _id: mockPostReact.post_id },
@@ -437,7 +447,7 @@ describe('UsersService', () => {
       );
       expect(mockCommentModel.updateOne).toHaveBeenCalledWith(
         { _id: mockCommentReact.post_id },
-        { $inc: { react_count: -1 } },
+        { $inc: { [`react_count.${mockCommentReact.react_type}`]: -1 } }, // Fixed react_count update
       );
     });
 

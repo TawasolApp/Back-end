@@ -4,12 +4,10 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Post } from './infrastructure/database/schemas/post.schema';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
-import {
-  React,
-  ReactDocument,
-} from './infrastructure/database/schemas/react.schema';
+import { React } from './infrastructure/database/schemas/react.schema';
 import { Save } from './infrastructure/database/schemas/save.schema';
 import { Comment } from './infrastructure/database/schemas/comment.schema';
+import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { Types } from 'mongoose';
 import * as mongoose from 'mongoose';
 import {
@@ -23,15 +21,9 @@ import {
   mockReaction,
   mockSave,
   mockCompany,
-  mockProfiles,
-  mockCompanies,
-  mockComments,
-  mockReacts,
-  mockSaves,
   mockEditPostDto,
   mockCommentDto,
   mockCompanyPost,
-  mockCompanyId,
   mockPostWithMedia,
   mockPostWithTags,
   mockPostWithComments,
@@ -41,16 +33,20 @@ import {
   mockGetPostDto,
   mockCreatePostDto,
 } from './mock.data';
-import { _, T } from '@faker-js/faker/dist/airline-CBNP41sR';
-import { mock } from 'node:test';
+import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
+import {} from 'node:test';
 import {
   BadRequestException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
-import { getPostInfo } from './helpers/posts.helpers';
 import * as postHelpers from '../posts/helpers/posts.helpers';
+import * as notificationHelpers from '../notifications/helpers/notification.helper';
+import * as connectionHelpers from '../connections/helpers/connection-helpers';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
+import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
 describe('PostsService', () => {
   let service: PostsService;
 
@@ -61,6 +57,10 @@ describe('PostsService', () => {
   let saveModelMock: any;
   let commentModelMock: any;
   let userConnectionModelMock: any;
+  let notificationModelMock: any;
+  let notificationGatewayMock;
+  let mockComapnyManager: any;
+  let userModelMock: any;
 
   beforeEach(async () => {
     // Setup post constructor and instance
@@ -138,6 +138,20 @@ describe('PostsService', () => {
     userConnectionModelMock = jest.fn(() => mockUserConnectionInstance);
     userConnectionModelMock.find = jest.fn();
 
+    notificationModelMock = {
+      find: jest.fn(),
+      findById: jest.fn(),
+      create: jest.fn(),
+      deleteOne: jest.fn(),
+      deleteMany: jest.fn(),
+      countDocuments: jest.fn(),
+    };
+
+    notificationGatewayMock = {
+      sendNotification: jest.fn(),
+      broadcast: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PostsService,
@@ -151,16 +165,47 @@ describe('PostsService', () => {
           provide: getModelToken(UserConnection.name),
           useValue: userConnectionModelMock,
         },
+        {
+          provide: getModelToken(Notification.name),
+          useValue: notificationModelMock,
+        }, // Add this mock
+        {
+          provide: NotificationGateway,
+          useValue: notificationGatewayMock,
+        },
+        {
+          provide: getModelToken(CompanyManager.name),
+          useValue: mockComapnyManager,
+        },
+        {
+          provide: getModelToken(User.name),
+          useValue: userModelMock,
+        }, // Add this mock
       ],
     }).compile();
 
     service = module.get<PostsService>(PostsService);
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(mockUserId);
+    jest.spyOn(notificationHelpers, 'addNotification').mockResolvedValue(null);
+    jest
+      .spyOn(notificationHelpers, 'deleteNotification')
+      .mockResolvedValue(null);
+    jest.spyOn(connectionHelpers, 'getBlockedList').mockResolvedValue([]);
   });
 
   it('[1] should be defined', () => {
     expect(service).toBeDefined();
   });
+  it('should rethrow HttpException if caught', async () => {
+    const httpException = new NotFoundException('Custom error');
+    saveModelMock.find.mockImplementation(() => {
+      throw httpException;
+    });
 
+    await expect(
+      service.getSavedPosts(mockUserId, 1, 10, mockUserId),
+    ).rejects.toThrow(httpException);
+  });
   it('[2] should add a post', async () => {
     profileModelMock.find.mockReturnValue({
       exec: jest.fn().mockResolvedValue([mockProfile]),
@@ -186,7 +231,7 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDto, mockUserId);
+    const result = await service.addPost(mockPostDto, mockUserId, mockUserId);
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -244,7 +289,11 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDtoNoMedia, mockUserId);
+    const result = await service.addPost(
+      mockPostDtoNoMedia,
+      mockUserId,
+      mockUserId,
+    );
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -302,7 +351,11 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDtoPrivate, mockUserId);
+    const result = await service.addPost(
+      mockPostDtoPrivate,
+      mockUserId,
+      mockUserId,
+    );
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -342,9 +395,9 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(service.addPost(mockPostDto, mockUserId)).rejects.toThrow(
-      'Failed to add post',
-    );
+    await expect(
+      service.addPost(mockPostDto, mockUserId, mockUserId),
+    ).rejects.toThrow('Failed to add post');
   });
 
   it('[6] should throw an error if post save fails', async () => {
@@ -371,9 +424,9 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    await expect(service.addPost(mockPostDto, mockUserId)).rejects.toThrow(
-      'Failed to add post',
-    );
+    await expect(
+      service.addPost(mockPostDto, mockUserId, mockUserId),
+    ).rejects.toThrow('Failed to add post');
   });
 
   // Test for editPost
@@ -402,6 +455,7 @@ describe('PostsService', () => {
     const result = await service.editPost(
       mockPostId,
       mockEditPostDto,
+      mockUserId,
       mockUserId,
     );
 
@@ -454,19 +508,49 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
     });
 
-    await service.deletePost(mockPost.id.toString(), mockUserId);
+    reactModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    commentModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    saveModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    reactModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockReaction._id.toString() }]), // Mock reactions
+    });
+
+    commentModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockComment._id.toString() }]), // Mock comments
+    });
+
+    saveModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockSave._id.toString() }]), // Mock saves
+    });
+
+    await service.deletePost(mockPost.id.toString(), mockUserId, mockUserId);
 
     expect(postModelMock.deleteOne).toHaveBeenCalledWith({
-      _id: mockPost.id.toString(),
+      _id: new Types.ObjectId(mockPost.id.toString()),
     });
     expect(reactModelMock.deleteMany).toHaveBeenCalledWith({
-      post_id: mockPost.id.toString(),
+      post_id: new Types.ObjectId(mockPost.id.toString()),
     });
     expect(commentModelMock.deleteMany).toHaveBeenCalledWith({
-      post_id: mockPost.id.toString(),
+      post_id: new Types.ObjectId(mockPost.id.toString()),
     });
     expect(saveModelMock.deleteMany).toHaveBeenCalledWith({
-      post_id: mockPost.id.toString(),
+      post_id: new Types.ObjectId(mockPost.id.toString()),
     });
   });
 
@@ -520,8 +604,104 @@ describe('PostsService', () => {
         ]),
       }));
 
-    const result = await service.getAllPosts(1, 10, mockUserId);
+    // Mock `.some` functions
+    const followingUserIds = [new Types.ObjectId(mockUserId)];
+    const connectedUserIds = [new Types.ObjectId(mockUserId)];
 
+    const mockFollowingSome = jest
+      .spyOn(followingUserIds, 'some')
+      .mockImplementation((callback: (id: Types.ObjectId) => boolean) =>
+        followingUserIds.some((id) => callback(id)),
+      );
+
+    const mockConnectedSome = jest
+      .spyOn(connectedUserIds, 'some')
+      .mockImplementation((callback: (id: Types.ObjectId) => boolean) =>
+        connectedUserIds.some((id) => callback(id)),
+      );
+    const result = await service.getAllPosts(1, 10, mockUserId, mockUserId);
+
+    // Assertions
+
+    expect(result).toEqual([
+      {
+        id: mockPost.id.toString(),
+        authorId: mockPost.author_id.toString(),
+        authorName: mockProfile.first_name + ' ' + mockProfile.last_name,
+        authorPicture: mockProfile.profile_picture,
+        authorBio: mockProfile.bio,
+        content: mockPost.text,
+        media: mockPost.media,
+        reactCounts: mockPost.react_count,
+        comments: mockPost.comment_count,
+        shares: mockPost.share_count,
+        taggedUsers: mockPost.tags.map((tag: any) => tag.toString()),
+        visibility: mockPost.visibility,
+        authorType: mockPost.author_type,
+        reactType: mockReaction.react_type,
+        timestamp: mockPost.posted_at,
+        isSaved: true,
+        isConnected: true,
+        isFollowing: true,
+        isEdited: false,
+        isSilentRepost: false,
+        parentPostId: undefined,
+      },
+    ]);
+  });
+
+  it('[9-b] should get all posts when sending_party is not equal to objectId', async () => {
+    // Mock postModel
+    postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([mockPost]),
+    });
+
+    // Mock profileModel
+    profileModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockProfile),
+    });
+
+    // Mock companyModel
+    companyModelMock.findById.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockCompany),
+    });
+
+    // Mock reactModel
+    reactModelMock.findOne.mockReturnValue({
+      exec: jest.fn().mockResolvedValue(mockReaction),
+    });
+
+    // Mock saveModel
+    saveModelMock.exists.mockResolvedValue(true);
+
+    // 🧩 Mock userConnectionModel for connections
+    userConnectionModelMock.find
+      .mockImplementationOnce(() => ({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([
+          {
+            sending_party: new Types.ObjectId('507f1f77bcf86cd799439011'), // Not equal to objectId
+            receiving_party: new Types.ObjectId(mockUserId),
+          },
+        ]),
+      }))
+      // 🧩 Mock userConnectionModel for following
+      .mockImplementationOnce(() => ({
+        select: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([
+          {
+            sending_party: new Types.ObjectId(mockUserId),
+            receiving_party: new Types.ObjectId(), // following
+          },
+        ]),
+      }));
+
+    const result = await service.getAllPosts(1, 10, mockUserId, mockUserId);
+
+    // Assertions
     expect(result).toEqual([
       {
         id: mockPost.id.toString(),
@@ -589,7 +769,7 @@ describe('PostsService', () => {
         lean: jest.fn().mockResolvedValue([]), // No following
       }));
 
-    const result = await service.getAllPosts(1, 10, mockUserId);
+    const result = await service.getAllPosts(1, 10, mockUserId, mockUserId);
 
     expect(result).toEqual([
       {
@@ -621,6 +801,9 @@ describe('PostsService', () => {
   // Test for getUserPosts
   it('[11] should get user posts', async () => {
     postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([mockPost]),
     });
 
@@ -642,7 +825,13 @@ describe('PostsService', () => {
 
     saveModelMock.exists.mockResolvedValue(true);
 
-    const result = await service.getUserPosts(mockUserId, mockUserId, 1, 10);
+    const result = await service.getUserPosts(
+      mockUserId,
+      mockUserId,
+      1,
+      10,
+      mockUserId,
+    );
 
     expect(result).toEqual([
       {
@@ -684,7 +873,11 @@ describe('PostsService', () => {
     };
     saveModelMock.mockImplementation(() => saveInstance);
 
-    const result = await service.savePost(mockPost.id.toString(), mockUserId);
+    const result = await service.savePost(
+      mockPost.id.toString(),
+      mockUserId,
+      mockUserId,
+    );
 
     expect(result).toEqual({ message: 'Post saved successfully' });
     expect(saveInstance.save).toHaveBeenCalled();
@@ -700,7 +893,11 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(mockSave),
     });
 
-    const result = await service.unsavePost(mockPost.id.toString(), mockUserId);
+    const result = await service.unsavePost(
+      mockPost.id.toString(),
+      mockUserId,
+      mockUserId,
+    );
 
     expect(result).toEqual({ message: 'Post unsaved successfully' });
   });
@@ -740,6 +937,7 @@ describe('PostsService', () => {
     const result = await service.addComment(
       mockPost.id.toString(),
       mockCommentDto,
+      mockUserId,
       mockUserId,
     );
 
@@ -795,10 +993,10 @@ describe('PostsService', () => {
 
     const result = await service.getReactions(
       mockPost.id.toString(),
-
       1,
       10,
       'All',
+      mockUserId,
       mockUserId,
     );
 
@@ -855,6 +1053,7 @@ describe('PostsService', () => {
       10,
       'All',
       mockUserId,
+      mockUserId,
     );
 
     expect(result).toEqual([
@@ -899,7 +1098,7 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(mockReaction),
     });
     saveModelMock.exists.mockResolvedValue(true);
-    const result = await service.getSavedPosts(mockUserId, 1, 20);
+    const result = await service.getSavedPosts(mockUserId, 1, 20, mockUserId);
     expect(result).toEqual([
       {
         id: mockPost.id.toString(),
@@ -953,7 +1152,7 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDto, mockUserId);
+    const result = await service.addPost(mockPostDto, mockUserId, mockUserId);
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -1006,7 +1205,7 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDto, mockUserId);
+    const result = await service.addPost(mockPostDto, mockUserId, mockUserId);
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -1059,7 +1258,7 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDto, mockUserId);
+    const result = await service.addPost(mockPostDto, mockUserId, mockUserId);
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -1112,7 +1311,7 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDto, mockUserId);
+    const result = await service.addPost(mockPostDto, mockUserId, mockUserId);
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -1172,7 +1371,7 @@ describe('PostsService', () => {
     };
     postModelMock.mockImplementation(() => postInstance);
 
-    const result = await service.addPost(mockPostDto, mockUserId);
+    const result = await service.addPost(mockPostDto, mockUserId, mockUserId);
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -1229,7 +1428,11 @@ describe('PostsService', () => {
 
     saveModelMock.exists.mockResolvedValue(false);
 
-    const result = await service.getPost(mockPost.id.toString(), mockUserId);
+    const result = await service.getPost(
+      mockPost.id.toString(),
+      mockUserId,
+      mockUserId,
+    );
 
     expect(result).toEqual({
       id: mockPost.id.toString(),
@@ -1261,19 +1464,22 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(service.getPost('invalidId', mockUserId)).rejects.toThrow(
-      'Invalid post ID format',
-    );
+    await expect(
+      service.getPost('invalidId', mockUserId, mockUserId),
+    ).rejects.toThrow('Invalid post ID format');
   });
 
   it('[37] should throw an error if no posts are found for the user', async () => {
     postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([]),
     });
 
-    await expect(service.getUserPosts(mockUserId, mockUserId, 1, 10)).toEqual(
-      Promise.resolve({}),
-    );
+    await expect(
+      service.getUserPosts(mockUserId, mockUserId, 1, 10, mockUserId),
+    ).toEqual(Promise.resolve({}));
   });
 
   it('[38] should throw an error if post is already saved', async () => {
@@ -1284,7 +1490,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(true);
 
     await expect(
-      service.savePost(mockPost.id.toString(), mockUserId),
+      service.savePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Post already saved');
   });
 
@@ -1298,7 +1504,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.unsavePost(mockPost.id.toString(), mockUserId),
+      service.unsavePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Saved post not found');
   });
 
@@ -1316,7 +1522,12 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.addComment(mockPost.id.toString(), mockCommentDto, mockUserId),
+      service.addComment(
+        mockPost.id.toString(),
+        mockCommentDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Author not found');
   });
 
@@ -1332,29 +1543,39 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.editComment(mockCommentId, mockCommentDto, mockUserId),
+      service.editComment(
+        mockCommentId,
+        mockCommentDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
   it('[43] should throw an error if post ID is invalid in updateReactions', async () => {
     await expect(
-      service.updateReactions('invalidId', mockUserId, {
-        postType: 'Post',
-        reactions: {
-          Like: true,
-          Love: false,
-          Funny: false,
-          Celebrate: false,
-          Insightful: false,
-          Support: false,
+      service.updateReactions(
+        'invalidId',
+        mockUserId,
+        {
+          postType: 'Post',
+          reactions: {
+            Like: true,
+            Love: false,
+            Funny: false,
+            Celebrate: false,
+            Insightful: false,
+            Support: false,
+          },
         },
-      }),
+        mockUserId,
+      ),
     ).rejects.toThrow('Invalid post ID format');
   });
 
   it('[44] should throw an error if post ID is invalid in getReactions', async () => {
     await expect(
-      service.getReactions('1', 1, 10, 'all', mockUserId),
+      service.getReactions('1', 1, 10, 'all', mockUserId, mockUserId),
     ).rejects.toThrow('Invalid post ID format');
   });
 
@@ -1367,7 +1588,13 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getComments(mockPost.id.toString(), 1, 10, mockUserId),
+      service.getComments(
+        mockPost.id.toString(),
+        1,
+        10,
+        mockUserId,
+        mockUserId,
+      ),
     ).toEqual(Promise.resolve({}));
   });
 
@@ -1379,14 +1606,14 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(service.addPost(mockPostDto, mockUserId)).rejects.toThrow(
-      'Author not found',
-    );
+    await expect(
+      service.addPost(mockPostDto, mockUserId, mockUserId),
+    ).rejects.toThrow('Author not found');
   });
 
   it('[47] should throw an error if post ID is invalid in editPost', async () => {
     await expect(
-      service.editPost('invalidId', mockEditPostDto, mockUserId),
+      service.editPost('invalidId', mockEditPostDto, mockUserId, mockUserId),
     ).rejects.toThrow('Invalid post ID format');
   });
 
@@ -1397,7 +1624,12 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
+      service.editPost(
+        mockPost.id.toString(),
+        mockEditPostDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('User not authorized to edit this post');
   });
 
@@ -1407,7 +1639,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.deletePost(mockPost.id.toString(), mockUserId),
+      service.deletePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Post not found');
   });
 
@@ -1418,7 +1650,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.deletePost(mockPost.id.toString(), mockUserId),
+      service.deletePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('User not authorized to delete this post');
   });
 
@@ -1444,15 +1676,15 @@ describe('PostsService', () => {
     });
 
     // 🧪 Expect a NotFoundException to be thrown
-    await expect(service.getAllPosts(1, 10, mockUserId)).toEqual(
+    await expect(service.getAllPosts(1, 10, mockUserId, mockUserId)).toEqual(
       Promise.resolve({}),
     );
   });
 
   it('[52] should throw an error if post ID is invalid in getPost', async () => {
-    await expect(service.getPost('invalidId', mockUserId)).rejects.toThrow(
-      'Invalid post ID format',
-    );
+    await expect(
+      service.getPost('invalidId', mockUserId, mockUserId),
+    ).rejects.toThrow('Invalid post ID format');
   });
 
   it('[53] should throw an error if post is not found in getPost', async () => {
@@ -1461,7 +1693,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getPost(mockPost.id.toString(), mockUserId),
+      service.getPost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Post not found');
   });
 
@@ -1473,7 +1705,7 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue([]),
     });
 
-    await expect(service.getSavedPosts(mockUserId, 1, 10)).toEqual(
+    await expect(service.getSavedPosts(mockUserId, 1, 10, mockUserId)).toEqual(
       Promise.resolve({}),
     );
   });
@@ -1485,7 +1717,7 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(true);
 
     await expect(
-      service.savePost(mockPost.id.toString(), mockUserId),
+      service.savePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Post already saved');
   });
 
@@ -1498,7 +1730,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.unsavePost(mockPost.id.toString(), mockUserId),
+      service.unsavePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Saved post not found');
   });
 
@@ -1508,7 +1740,12 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.addComment(mockPost.id.toString(), mockCommentDto, mockUserId),
+      service.addComment(
+        mockPost.id.toString(),
+        mockCommentDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Post not found');
   });
 
@@ -1524,7 +1761,12 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.addComment(mockPost.id.toString(), mockCommentDto, mockUserId),
+      service.addComment(
+        mockPost.id.toString(),
+        mockCommentDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Author not found');
   });
 
@@ -1537,7 +1779,13 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getComments(mockPost.id.toString(), 1, 10, mockUserId),
+      service.getComments(
+        mockPost.id.toString(),
+        1,
+        10,
+        mockUserId,
+        mockUserId,
+      ),
     ).toEqual(Promise.resolve({}));
   });
 
@@ -1550,6 +1798,7 @@ describe('PostsService', () => {
       service.editComment(
         mockComment._id.toString(),
         mockEditCommentDto,
+        mockUserId,
         mockUserId,
       ),
     ).rejects.toThrow('Comment not found');
@@ -1566,13 +1815,19 @@ describe('PostsService', () => {
         mockComment._id.toString(),
         mockEditCommentDto,
         mockUserId,
+        mockUserId,
       ),
     ).rejects.toThrow('User not authorized to edit this comment');
   });
 
   it('[64] should throw error for invalid user ID format in editPost', async () => {
     await expect(
-      service.editPost(mockPost.id.toString(), mockEditPostDto, '123'),
+      service.editPost(
+        mockPost.id.toString(),
+        mockEditPostDto,
+        '123',
+        mockUserId,
+      ),
     ).rejects.toThrow('Invalid user ID format');
   });
 
@@ -1589,23 +1844,33 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
+      service.editPost(
+        mockPost.id.toString(),
+        mockEditPostDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Author not found');
   });
 
   it('[66] should throw error if multiple reactions are set to true', async () => {
     await expect(
-      service.updateReactions(mockPost.id.toString(), mockUserId, {
-        postType: 'Post',
-        reactions: {
-          Like: true,
-          Love: true,
-          Funny: false,
-          Celebrate: false,
-          Insightful: false,
-          Support: false,
+      service.updateReactions(
+        mockPost.id.toString(),
+        mockUserId,
+        {
+          postType: 'Post',
+          reactions: {
+            Like: true,
+            Love: true,
+            Funny: false,
+            Celebrate: false,
+            Insightful: false,
+            Support: false,
+          },
         },
-      }),
+        mockUserId,
+      ),
     ).rejects.toThrow('Only one reaction is allowed');
   });
 
@@ -1617,7 +1882,14 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getReactions(mockPost.id.toString(), 1, 10, 'all', mockUserId),
+      service.getReactions(
+        mockPost.id.toString(),
+        1,
+        10,
+        'all',
+        mockUserId,
+        mockUserId,
+      ),
     ).toEqual(Promise.resolve({}));
   });
 
@@ -1629,8 +1901,38 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue({ deletedCount: 0 }),
     });
 
+    reactModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    commentModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    saveModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    reactModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockReaction._id }]), // Mock reactions
+    });
+
+    commentModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockComment._id }]), // Mock comments
+    });
+
+    saveModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockSave._id }]), // Mock saves
+    });
+
     await expect(
-      service.deletePost(mockPost.id.toString(), mockUserId),
+      service.deletePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Post not found');
   });
 
@@ -1638,18 +1940,18 @@ describe('PostsService', () => {
     profileModelMock.findById.mockImplementation(() => {
       throw new Error('Unknown error');
     });
-    await expect(service.addPost(mockPostDto, mockUserId)).rejects.toThrow(
-      'Failed to add post',
-    );
+    await expect(
+      service.addPost(mockPostDto, mockUserId, mockUserId),
+    ).rejects.toThrow('Failed to add post');
   });
 
   it('[70] should throw when getAllPosts catches unknown error', async () => {
     postModelMock.find.mockImplementation(() => {
       throw new Error('Unexpected');
     });
-    await expect(service.getAllPosts(1, 10, mockUserId)).rejects.toThrow(
-      'Failed to fetch posts',
-    );
+    await expect(
+      service.getAllPosts(1, 10, mockUserId, mockUserId),
+    ).rejects.toThrow('Failed to fetch posts');
   });
 
   it('[71] should throw generic error in getPost with unknown error', async () => {
@@ -1657,7 +1959,7 @@ describe('PostsService', () => {
       throw new Error('Random error');
     });
     await expect(
-      service.getPost(mockPost.id.toString(), mockUserId),
+      service.getPost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Failed to fetch post');
   });
 
@@ -1670,33 +1972,17 @@ describe('PostsService', () => {
       save: jest.fn().mockResolvedValue(mockSave),
     };
     saveModelMock.mockImplementation(() => saveInstance);
-    const result = await service.savePost(mockPost.id.toString(), mockUserId);
+    const result = await service.savePost(
+      mockPost.id.toString(),
+      mockUserId,
+      mockUserId,
+    );
     expect(result).toEqual({ message: 'Post saved successfully' });
   });
 
-  // it('[73] should deleteComment and call all delete methods', async () => {
-  //   const commentInstance = {
-  //     ...mockComment,
-  //     author_id: new Types.ObjectId(mockUserId),
-  //   };
-  //   commentModelMock.findById.mockReturnValue(commentInstance);
-  //   commentModelMock.deleteOne.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
-  //   });
-  //   reactModelMock.deleteMany.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
-  //   });
-  //   commentModelMock.deleteMany.mockReturnValue({
-  //     exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
-  //   });
-  //   await service.deleteComment(mockComment._id.toString(), mockUserId);
-  //   expect(commentModelMock.deleteOne).toHaveBeenCalled();
-  //   expect(reactModelMock.deleteMany).toHaveBeenCalled();
-  // });
-
   it('[74] should throw BadRequestException for invalid postId format in editPost', async () => {
     await expect(
-      service.editPost('invalid-id', mockEditPostDto, mockUserId),
+      service.editPost('invalid-id', mockEditPostDto, mockUserId, mockUserId),
     ).rejects.toThrow('Invalid post ID format');
   });
 
@@ -1706,6 +1992,7 @@ describe('PostsService', () => {
         mockPost.id.toString(),
         mockEditPostDto,
         'invalid-user-id',
+        mockUserId,
       ),
     ).rejects.toThrow('Invalid user ID format');
   });
@@ -1716,7 +2003,12 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(post),
     });
     await expect(
-      service.editPost(post.id.toString(), mockEditPostDto, mockUserId),
+      service.editPost(
+        post.id.toString(),
+        mockEditPostDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('User not authorized to edit this post');
   });
 
@@ -1727,7 +2019,11 @@ describe('PostsService', () => {
     saveModelMock.exists.mockResolvedValue(false);
     const saveInstance = { save: jest.fn().mockResolvedValue(mockSave) };
     saveModelMock.mockImplementation(() => saveInstance);
-    const result = await service.savePost(mockPost.id.toString(), mockUserId);
+    const result = await service.savePost(
+      mockPost.id.toString(),
+      mockUserId,
+      mockUserId,
+    );
     expect(result).toEqual({ message: 'Post saved successfully' });
   });
 
@@ -1738,7 +2034,7 @@ describe('PostsService', () => {
       limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockResolvedValue([]),
     });
-    await expect(service.getSavedPosts(mockUserId, 1, 10)).toEqual(
+    await expect(service.getSavedPosts(mockUserId, 1, 10, mockUserId)).toEqual(
       Promise.resolve({}),
     );
   });
@@ -1747,7 +2043,7 @@ describe('PostsService', () => {
     // editPost - Invalid post ID format
     it('[80] should throw BadRequestException for invalid post ID in editPost', async () => {
       await expect(
-        service.editPost('invalid-id', mockEditPostDto, mockUserId),
+        service.editPost('invalid-id', mockEditPostDto, mockUserId, mockUserId),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -1757,6 +2053,7 @@ describe('PostsService', () => {
           mockPost.id.toString(),
           mockEditPostDto,
           'invalid-user-id',
+          mockUserId,
         ),
       ).rejects.toThrow(BadRequestException);
     });
@@ -1776,7 +2073,12 @@ describe('PostsService', () => {
       });
 
       await expect(
-        service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
+        service.editPost(
+          mockPost.id.toString(),
+          mockEditPostDto,
+          mockUserId,
+          mockUserId,
+        ),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -1786,7 +2088,7 @@ describe('PostsService', () => {
       });
 
       await expect(
-        service.savePost(mockPost.id.toString(), mockUserId),
+        service.savePost(mockPost.id.toString(), mockUserId, mockUserId),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -1797,7 +2099,7 @@ describe('PostsService', () => {
       saveModelMock.exists.mockResolvedValue(true);
 
       await expect(
-        service.savePost(mockPost.id.toString(), mockUserId),
+        service.savePost(mockPost.id.toString(), mockUserId, mockUserId),
       ).rejects.toThrow(BadRequestException);
     });
 
@@ -1807,7 +2109,7 @@ describe('PostsService', () => {
       });
 
       await expect(
-        service.unsavePost(mockPost.id.toString(), mockUserId),
+        service.unsavePost(mockPost.id.toString(), mockUserId, mockUserId),
       ).rejects.toThrow(NotFoundException);
     });
 
@@ -1833,7 +2135,7 @@ describe('PostsService', () => {
       });
 
       // Expect NotFoundException
-      await expect(service.getAllPosts(2, 10, mockUserId)).toEqual(
+      await expect(service.getAllPosts(2, 10, mockUserId, mockUserId)).toEqual(
         Promise.resolve({}),
       );
     });
@@ -1846,46 +2148,56 @@ describe('PostsService', () => {
         exec: jest.fn().mockResolvedValue([]),
       });
 
-      await expect(service.getSavedPosts(mockUserId, 1, 10)).toEqual(
-        Promise.resolve({}),
-      );
+      await expect(
+        service.getSavedPosts(mockUserId, 1, 10, mockUserId),
+      ).toEqual(Promise.resolve({}));
     });
 
     it('[88] should throw BadRequestException for invalid ObjectId format in getPost', async () => {
-      await expect(service.getPost('invalid-id', mockUserId)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.getPost('invalid-id', mockUserId, mockUserId),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('[89] should throw BadRequestException when more than one reaction is true', async () => {
       await expect(
-        service.updateReactions(mockPost.id.toString(), mockUserId, {
-          postType: 'Post',
-          reactions: {
-            Like: true,
-            Love: true,
-            Funny: false,
-            Celebrate: false,
-            Insightful: false,
-            Support: false,
+        service.updateReactions(
+          mockPost.id.toString(),
+          mockUserId,
+          {
+            postType: 'Post',
+            reactions: {
+              Like: true,
+              Love: true,
+              Funny: false,
+              Celebrate: false,
+              Insightful: false,
+              Support: false,
+            },
           },
-        }),
+          mockUserId,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
 
     it('[90] should throw BadRequestException for invalid user ID in updateReactions', async () => {
       await expect(
-        service.updateReactions(mockPost.id.toString(), 'invalid-user-id', {
-          postType: 'Post',
-          reactions: {
-            Like: true,
-            Love: false,
-            Funny: false,
-            Celebrate: false,
-            Insightful: false,
-            Support: false,
+        service.updateReactions(
+          mockPost.id.toString(),
+          'invalid-user-id',
+          {
+            postType: 'Post',
+            reactions: {
+              Like: true,
+              Love: false,
+              Funny: false,
+              Celebrate: false,
+              Insightful: false,
+              Support: false,
+            },
           },
-        }),
+          mockUserId,
+        ),
       ).rejects.toThrow(BadRequestException);
     });
   });
@@ -1898,17 +2210,22 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.updateReactions(mockPost.id.toString(), mockUserId, {
-        postType: 'Post',
-        reactions: {
-          Like: true,
-          Love: false,
-          Funny: false,
-          Celebrate: false,
-          Insightful: false,
-          Support: false,
+      service.updateReactions(
+        mockPost.id.toString(),
+        mockUserId,
+        {
+          postType: 'Post',
+          reactions: {
+            Like: true,
+            Love: false,
+            Funny: false,
+            Celebrate: false,
+            Insightful: false,
+            Support: false,
+          },
         },
-      }),
+        mockUserId,
+      ),
     ).rejects.toThrow(`Post with id ${mockPost.id.toString()} not found`);
   });
   it('[92] should throw NotFoundException when comment is not found and check comment existence', async () => {
@@ -1925,17 +2242,22 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.updateReactions(mockComment._id.toString(), mockUserId, {
-        postType: 'Comment',
-        reactions: {
-          Like: true,
-          Love: false,
-          Funny: false,
-          Celebrate: false,
-          Insightful: false,
-          Support: false,
+      service.updateReactions(
+        mockComment._id.toString(),
+        mockUserId,
+        {
+          postType: 'Comment',
+          reactions: {
+            Like: true,
+            Love: false,
+            Funny: false,
+            Celebrate: false,
+            Insightful: false,
+            Support: false,
+          },
         },
-      }),
+        mockUserId,
+      ),
     ).rejects.toThrow(
       `Comment with id ${mockComment._id.toString()} not found`,
     );
@@ -1955,7 +2277,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.deleteComment(mockComment._id.toString(), mockUserId),
+      service.deleteComment(mockComment._id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Failed to delete comment');
   });
 
@@ -1969,7 +2291,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.deletePost(mockPost.id.toString(), mockUserId),
+      service.deletePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Failed to delete post');
   });
 
@@ -1988,6 +2310,7 @@ describe('PostsService', () => {
         mockComment._id.toString(),
         mockCommentDto,
         mockUserId,
+        mockUserId,
       ),
     ).rejects.toThrow('Failed to edit comment');
   });
@@ -2001,7 +2324,13 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getComments(mockPost.id.toString(), 1, 10, mockUserId),
+      service.getComments(
+        mockPost.id.toString(),
+        1,
+        10,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Failed to fetch comments');
   });
 
@@ -2011,7 +2340,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getPost(mockPost.id.toString(), mockUserId),
+      service.getPost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Failed to fetch post');
   });
 
@@ -2022,9 +2351,9 @@ describe('PostsService', () => {
       exec: jest.fn().mockRejectedValue(new Error('Get posts failed')),
     });
 
-    await expect(service.getAllPosts(1, 10, mockUserId)).rejects.toThrow(
-      'Failed to fetch posts',
-    );
+    await expect(
+      service.getAllPosts(1, 10, mockUserId, mockUserId),
+    ).rejects.toThrow('Failed to fetch posts');
   });
 
   it('[99] should throw InternalServerErrorException when getReactions fails', async () => {
@@ -2035,7 +2364,14 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.getReactions(mockPost.id.toString(), 1, 10, 'All', mockUserId),
+      service.getReactions(
+        mockPost.id.toString(),
+        1,
+        10,
+        'All',
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Failed to fetch reactions');
   });
 
@@ -2047,18 +2383,21 @@ describe('PostsService', () => {
       exec: jest.fn().mockRejectedValue(new Error('Fetch saved failed')),
     });
 
-    await expect(service.getSavedPosts(mockUserId, 1, 10)).rejects.toThrow(
-      'Failed to fetch saved posts',
-    );
+    await expect(
+      service.getSavedPosts(mockUserId, 1, 10, mockUserId),
+    ).rejects.toThrow('Failed to fetch saved posts');
   });
 
   it('[101] should throw InternalServerErrorException when getUserPosts fails', async () => {
     postModelMock.find.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      skip: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
       exec: jest.fn().mockRejectedValue(new Error('Get user posts failed')),
     });
 
     await expect(
-      service.getUserPosts(mockUserId, mockUserId, 1, 10),
+      service.getUserPosts(mockUserId, mockUserId, 1, 10, mockUserId),
     ).rejects.toThrow('Failed to fetch user posts');
   });
 
@@ -2068,7 +2407,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.unsavePost(mockPost.id.toString(), mockUserId),
+      service.unsavePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Failed to unsave post');
   });
 
@@ -2078,17 +2417,22 @@ describe('PostsService', () => {
     }));
 
     await expect(
-      service.updateReactions(mockPost.id.toString(), mockUserId, {
-        postType: 'Post',
-        reactions: {
-          Like: true,
-          Love: false,
-          Funny: false,
-          Celebrate: false,
-          Insightful: false,
-          Support: false,
+      service.updateReactions(
+        mockPost.id.toString(),
+        mockUserId,
+        {
+          postType: 'Post',
+          reactions: {
+            Like: true,
+            Love: false,
+            Funny: false,
+            Celebrate: false,
+            Insightful: false,
+            Support: false,
+          },
         },
-      }),
+        mockUserId,
+      ),
     ).rejects.toThrow('Failed to update reaction');
   });
 
@@ -2098,7 +2442,7 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.savePost(mockPost.id.toString(), mockUserId),
+      service.savePost(mockPost.id.toString(), mockUserId, mockUserId),
     ).rejects.toThrow('Failed to save post');
   });
 
@@ -2108,7 +2452,12 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.editPost(mockPost.id.toString(), mockEditPostDto, mockUserId),
+      service.editPost(
+        mockPost.id.toString(),
+        mockEditPostDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Failed to edit post');
   });
 
@@ -2118,14 +2467,19 @@ describe('PostsService', () => {
     });
 
     await expect(
-      service.addComment(mockPost.id.toString(), mockCommentDto, mockUserId),
+      service.addComment(
+        mockPost.id.toString(),
+        mockCommentDto,
+        mockUserId,
+        mockUserId,
+      ),
     ).rejects.toThrow('Failed to add comment');
   });
 
   it('should throw BadRequestException if author_id is invalid', async () => {
-    await expect(service.addPost(mockPostDto, 'invalid_id')).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      service.addPost(mockPostDto, 'invalid_id', mockUserId),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('should throw NotFoundException if author not found in both User and Company models', async () => {
@@ -2136,15 +2490,15 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue(null),
     });
 
-    await expect(service.addPost(mockPostDto, mockUserId)).rejects.toThrow(
-      NotFoundException,
-    );
+    await expect(
+      service.addPost(mockPostDto, mockUserId, mockUserId),
+    ).rejects.toThrow(NotFoundException);
   });
   it('should throw BadRequestException if author_id is invalid', async () => {
     const badAuthorId = 'invalid_id';
 
     await expect(
-      service.addPost(mockCreatePostDto, badAuthorId),
+      service.addPost(mockCreatePostDto, badAuthorId, mockUserId),
     ).rejects.toThrow(BadRequestException);
   });
   it('should set authorType to Company if author is a company', async () => {
@@ -2180,8 +2534,13 @@ describe('PostsService', () => {
     jest
       .spyOn(postHelpers, 'getPostInfo')
       .mockResolvedValue({ ...mockGetPostDto, authorType: 'Company' });
+    jest.spyOn(postHelpers, 'getUserAccessed').mockResolvedValue(validAuthorId);
 
-    const result = await service.addPost(mockCreatePostDto, validAuthorId);
+    const result = await service.addPost(
+      mockCreatePostDto,
+      validAuthorId,
+      mockUserId,
+    );
 
     expect(result.authorType).toBe('Company');
     expect(companyModelMock.findById).toHaveBeenCalled();
@@ -2205,9 +2564,9 @@ describe('PostsService', () => {
       .spyOn(mongoose.Types.ObjectId, 'isValid')
       .mockImplementation((id) => id !== 'invalid_id');
 
-    await expect(service.addPost(badDto, mockUserId)).rejects.toThrow(
-      BadRequestException,
-    );
+    await expect(
+      service.addPost(badDto, mockUserId, mockUserId),
+    ).rejects.toThrow(BadRequestException);
   });
 
   it('should increment share_count if parentPost exists', async () => {
@@ -2252,7 +2611,7 @@ describe('PostsService', () => {
 
     jest.spyOn(postHelpers, 'getPostInfo').mockResolvedValue(mockGetPost);
 
-    await service.addPost(dtoWithParent, mockUserId);
+    await service.addPost(dtoWithParent, mockUserId, mockUserId);
 
     expect(parentPost.share_count).toBe(1);
     expect(parentPost.save).toHaveBeenCalled();
@@ -2288,7 +2647,11 @@ describe('PostsService', () => {
     // Step 5: Mock getPostInfo returning expected DTO
     jest.spyOn(postHelpers, 'getPostInfo').mockResolvedValue(mockGetPostDto);
 
-    const result = await service.addPost(mockCreatePostDto, validAuthorId);
+    const result = await service.addPost(
+      mockCreatePostDto,
+      validAuthorId,
+      mockUserId,
+    );
 
     expect(result).toEqual(mockGetPostDto);
   });
@@ -2316,6 +2679,9 @@ describe('PostsService', () => {
       .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(postToDelete) }) // find post
       .mockReturnValueOnce({ exec: jest.fn().mockResolvedValue(parentPost) }); // find parent
 
+    jest
+      .spyOn(postHelpers, 'getUserAccessed')
+      .mockResolvedValue(postToDelete.author_id.toString());
     // 4. postModel.deleteOne
     postModelMock.deleteOne.mockReturnValue({
       exec: jest.fn().mockResolvedValue({ deletedCount: 1 }),
@@ -2334,19 +2700,55 @@ describe('PostsService', () => {
       exec: jest.fn().mockResolvedValue({}),
     });
 
-    await service.deletePost(postId, userId);
+    reactModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    commentModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    saveModelMock.deleteMany.mockReturnValue({
+      exec: jest
+        .fn()
+        .mockResolvedValue({ acknowledged: true, deletedCount: 1 }), // Mock deleteMany
+    });
+    reactModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockReaction._id }]), // Mock reactions
+    });
+
+    commentModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockComment._id }]), // Mock comments
+    });
+
+    saveModelMock.find.mockReturnValue({
+      select: jest.fn().mockReturnThis(),
+      exec: jest.fn().mockResolvedValue([{ _id: mockSave._id }]), // Mock saves
+    });
+
+    await service.deletePost(postId, userId, mockUserId);
 
     // Assert share count decremented and saved
     expect(parentPost.share_count).toBe(1);
     expect(parentPost.save).toHaveBeenCalled();
 
     // Assert deletion functions were called
-    expect(postModelMock.deleteOne).toHaveBeenCalledWith({ _id: postId });
-    expect(reactModelMock.deleteMany).toHaveBeenCalledWith({ post_id: postId });
-    expect(commentModelMock.deleteMany).toHaveBeenCalledWith({
-      post_id: postId,
+    expect(postModelMock.deleteOne).toHaveBeenCalledWith({
+      _id: new Types.ObjectId(postId),
     });
-    expect(saveModelMock.deleteMany).toHaveBeenCalledWith({ post_id: postId });
+    expect(reactModelMock.deleteMany).toHaveBeenCalledWith({
+      post_id: new Types.ObjectId(postId),
+    });
+    expect(commentModelMock.deleteMany).toHaveBeenCalledWith({
+      post_id: new Types.ObjectId(postId),
+    });
+    expect(saveModelMock.deleteMany).toHaveBeenCalledWith({
+      post_id: new Types.ObjectId(postId),
+    });
   });
   it('should create a new reaction on a comment and increment count', async () => {
     const commentId = mockComment._id.toString();
@@ -2400,6 +2802,7 @@ describe('PostsService', () => {
       commentId,
       userId,
       updateReactionsDto,
+      mockUserId,
     );
 
     expect(commentInstance.react_count['Like']).toBe(1);
@@ -2478,6 +2881,7 @@ describe('PostsService', () => {
       commentId,
       userId,
       updateReactionsDto,
+      mockUserId,
     );
 
     console.log('result:', result);
@@ -2545,6 +2949,7 @@ describe('PostsService', () => {
       postId,
       userId,
       updateReactionsDto,
+      mockUserId,
     );
 
     expect(postInstance.react_count['Like']).toBe(0);
@@ -2599,7 +3004,12 @@ describe('PostsService', () => {
       },
       postType: 'Comment',
     };
-    const result = await service.updateReactions(commentId, userId, update);
+    const result = await service.updateReactions(
+      commentId,
+      userId,
+      update,
+      mockUserId,
+    );
 
     expect(commentInstance.react_count['Like']).toBe(0);
     expect(commentInstance.markModified).toHaveBeenCalledWith('react_count');
@@ -2610,4 +3020,3 @@ describe('PostsService', () => {
     expect(result).toEqual(commentInstance);
   });
 });
-

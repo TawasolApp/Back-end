@@ -23,7 +23,7 @@ export class User {
   password: string;
 
   @Prop({
-    enum: ['customer', 'employer', 'manager', 'admin'],
+    enum: ['customer', 'manager', 'admin'],
     default: 'customer',
   })
   role: string;
@@ -34,8 +34,17 @@ export class User {
   @Prop({ default: false })
   is_social_login: boolean;
 
+  @Prop({ type: [String], default: [] })
+  fcm_tokens: string[];
+
   @Prop()
   created_at: Date;
+
+  @Prop({ default: false })
+  is_suspended: boolean;
+
+  @Prop({ type: Date, default: null })
+  suspension_end_date: Date | null;
 }
 
 export const UserSchema = SchemaFactory.createForClass(User);

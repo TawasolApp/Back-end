@@ -42,10 +42,6 @@ import {
   CompanyConnectionSchema,
 } from '../companies/infrastructure/database/schemas/company-connection.schema';
 import {
-  CompanyEmployer,
-  CompanyEmployerSchema,
-} from '../jobs/infrastructure/database/schemas/company-employer.schema';
-import {
   CompanyManager,
   CompanyManagerSchema,
 } from '../companies/infrastructure/database/schemas/company-manager.schema';
@@ -57,6 +53,18 @@ import {
   Job,
   JobSchema,
 } from '../jobs/infrastructure/database/schemas/job.schema';
+import {
+  Report,
+  ReportSchema,
+} from '../admin/infrastructure/database/schemas/report.schema';
+import {
+  Message,
+  MessageSchema,
+} from '../messages/infrastructure/database/schemas/message.schema';
+import {
+  Conversation,
+  ConversationSchema,
+} from '../messages/infrastructure/database/schemas/conversation.schema';
 
 @Module({
   imports: [
@@ -70,10 +78,12 @@ import {
       { name: Share.name, schema: ShareSchema },
       { name: UserConnection.name, schema: UserConnectionSchema },
       { name: CompanyConnection.name, schema: CompanyConnectionSchema },
-      { name: CompanyEmployer.name, schema: CompanyEmployerSchema },
       { name: CompanyManager.name, schema: CompanyManagerSchema },
       { name: Application.name, schema: ApplicationSchema },
       { name: Job.name, schema: JobSchema },
+      { name: Report.name, schema: ReportSchema },
+      { name: Message.name, schema: MessageSchema },
+      { name: Conversation.name, schema: ConversationSchema },
     ]),
     JwtModule.register({
       secret:
@@ -85,6 +95,6 @@ import {
   ],
   providers: [UsersService, UserSeeder],
   controllers: [UsersController],
-  exports: [UsersService, MongooseModule],
+  exports: [UsersService, MongooseModule, JwtModule],
 })
 export class UsersModule {}

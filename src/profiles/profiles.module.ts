@@ -16,14 +16,17 @@ import {
   UserSchema,
 } from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesModule } from '../companies/companies.module';
-import { PostsService } from '../posts/posts.service';
-import { PostsModule } from '../posts/posts.module';
+import {
+  PlanDetail,
+  PlanDetailSchema,
+} from '../payments/infrastructure/database/schemas/plan-detail.schema';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: Profile.name, schema: ProfileSchema },
       { name: User.name, schema: UserSchema },
+      { name: PlanDetail.name, schema: PlanDetailSchema },
     ]),
     AuthModule,
     UsersModule,

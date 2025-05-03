@@ -20,6 +20,7 @@ export function toGetJobDto(job: Partial<Job>): GetJobDto {
 
   if (job._id) dto.jobId = job._id.toString();
   if (job.company_id) dto.companyId = job.company_id.toString();
+  // Do not map companyLocation here; it will be set in the service
   if (job.position) dto.position = job.position;
   if (job.description) dto.description = job.description;
   if (job.experience_level) dto.experienceLevel = job.experience_level;
@@ -30,6 +31,7 @@ export function toGetJobDto(job: Partial<Job>): GetJobDto {
   if (job.applicants != undefined) dto.applicants = job.applicants;
   if (job.open !== undefined) dto.isOpen = job.open;
   if (job.posted_at) dto.postedAt = job.posted_at;
+  if (job.is_flagged !== undefined) dto.isFlagged = job.is_flagged; // Map isFlagged
 
   return dto as GetJobDto;
 }

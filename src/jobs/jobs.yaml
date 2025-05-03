@@ -1,0 +1,447 @@
+openapi: 3.0.0
+info:
+  title: Jobs & Hiring API
+  description: API documentation for Module 7 (Jobs & Hiring).
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+    description: Local Development Server
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    GetJobDto:
+      type: object
+      properties:
+        jobId:
+          type: string
+        companyId:
+          type: string
+        companyName:
+          type: string
+        companyLogo:
+          type: string
+        companyAddress:
+          type: string
+          description: The address of the company.
+        companyLocation:
+          type: string
+          description: The address of the company.
+        companyDescription:
+          type: string
+          description: A brief description of the company.
+        position:
+          type: string
+        description:
+          type: string
+        location:
+          type: string
+        experienceLevel:
+          type: string
+          enum: [Entry, Mid, Senior]
+        employmentType:
+          type: string
+          enum: [Full-time, Part-time, Internship, Apprenticeship, Contract]
+        locationType:
+          type: string
+          enum: [On-site, Remote, Hybrid]
+        applicationLink:
+          type: string
+          format: uri
+        applicants:
+          type: number
+        isOpen:
+          type: boolean
+        isSaved:
+          type: boolean
+        postedAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [Pending, Viewed, Rejected, Accepted]
+
+    ApplyJobDto:
+      type: object
+      properties:
+        jobId:
+          type: string
+        phoneNumber:
+          type: string
+        resumeURL:
+          type: string
+          description: "Optional field for the applicant's resume URL"
+
+    ApplicationDto:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          description: The unique ID of the application.
+        applicantId:
+          type: string
+        applicantName:
+          type: string
+        applicantEmail:
+          type: string
+        applicantPicture:
+          type: string
+        applicantHeadline:
+          type: string
+        applicantPhoneNumber:
+          type: string
+        resumeURL:
+          type: string
+          description: "Optional field for the applicant's resume URL"
+        status:
+          type: string
+          enum: [Pending, Viewed, Rejected, Accepted]
+        appliedDate:
+          type: string
+          format: date-time
+
+security:
+  - BearerAuth: []
+
+paths:
+  /jobs:
+    get:
+      summary: Get a list of job postings
+      description: Retrieve a paginated list of job postings with optional filters.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
+        - name: keyword
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by keyword in the position title.
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by location.
+        - name: industry
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by industry.
+        - name: experienceLevel
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by experience level.
+        - name: company
+          in: query
+          schema:
+            type: string
+          description: Filter jobs by company name.
+        - name: minSalary
+          in: query
+          schema:
+            type: number
+          description: Filter jobs with a minimum salary.
+        - name: maxSalary
+          in: query
+          schema:
+            type: number
+          description: Filter jobs with a maximum salary.
+      responses:
+        '200':
+          description: Successfully retrieved paginated jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of jobs matching the filters.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
+        '400':
+          description: Invalid query parameters
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/{jobId}:
+    get:
+      summary: Get job details
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Job found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetJobDto'
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
+
+    delete:
+      summary: Delete a job (only manager)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '204':
+          description: Deleted successfully
+        '403':
+          description: Forbidden (non-manager access)
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/apply:
+    post:
+      summary: Apply for a job
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyJobDto'
+      responses:
+        '201':
+          description: Applied successfully
+        '400':
+          description: Missing required fields
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/{jobId}/save:
+    patch:
+      summary: Save a job (user is inferred from token)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Job saved successfully
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/{jobId}/unsave:
+    delete:
+      summary: Unsave a job
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Job unsaved successfully
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /companies/jobs/{jobId}/applicants:
+    get:
+      summary: Get applications for a job (manager only)
+      parameters:
+        - name: jobId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
+      responses:
+        '200':
+          description: Applications retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ApplicationDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of applications.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
+        '403':
+          description: Forbidden (non-manager access)
+        '404':
+          description: Job not found
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/saved:
+    get:
+      summary: Get all jobs saved by the user
+      description: Retrieve a paginated list of jobs that the authenticated user has saved.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
+      responses:
+        '200':
+          description: Successfully retrieved saved jobs
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  jobs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of saved jobs.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
+        '401':
+          description: Unauthorized (user not logged in)
+
+  jobs/applications/applied:
+    get:
+      summary: Get all applications made by the user
+      description: Retrieve a paginated list of all job applications submitted by the authenticated user.
+      parameters:
+        - name: page
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The page number to retrieve.
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+          description: The number of items per page.
+      responses:
+        '200':
+          description: Successfully retrieved applications
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  applications:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GetJobDto'
+                  totalItems:
+                    type: integer
+                    description: Total number of applications.
+                  totalPages:
+                    type: integer
+                    description: Total number of pages.
+                  currentPage:
+                    type: integer
+                    description: The current page number.
+        '401':
+          description: Unauthorized (user not logged in)
+
+  /jobs/applications/{applicationId}/status:
+    patch:
+      summary: Update the status of an application
+      description: Accept or reject an application by updating its status.
+      parameters:
+        - name: applicationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The ID of the application.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status:
+                  type: string
+                  enum: [Accepted, Rejected]
+                  description: The new status of the application.
+      responses:
+        '200':
+          description: Application status updated successfully
+        '400':
+          description: Invalid input or missing required fields
+        '403':
+          description: Forbidden (non-manager access)
+        '404':
+          description: Application not found
+        '401':
+          description: Unauthorized (user not logged in)

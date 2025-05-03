@@ -23,7 +23,6 @@ export class UserSeeder {
         password: hashedPassword,
         role: faker.helpers.arrayElement([
           'customer',
-          'employer',
           'manager',
           'admin',
         ]),
@@ -33,6 +32,8 @@ export class UserSeeder {
           years: 2,
           refDate: new Date('2025-04-05'),
         }),
+        is_suspended: false,
+        suspension_end_date: null,
       });
     }
 

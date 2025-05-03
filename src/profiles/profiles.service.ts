@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -39,6 +40,7 @@ import {
   setConnectionStatus,
   setFollowStatus,
 } from './helpers/set-status.utils';
+import { getBlocked } from '../connections/helpers/connection-helpers';
 
 @Injectable()
 export class ProfilesService {
@@ -47,7 +49,8 @@ export class ProfilesService {
     private readonly profileModel: Model<ProfileDocument>,
     @InjectModel(UserConnection.name)
     private readonly userConnectionModel: Model<UserConnectionDocument>,
-    @InjectModel(User.name) private userModel: Model<UserDocument>,
+    @InjectModel(User.name)
+    private userModel: Model<UserDocument>,
   ) {}
   /**
    * Creates a new profile for a user.
@@ -93,6 +96,21 @@ export class ProfilesService {
     if (!profile) {
       throw new NotFoundException('Profile not found');
     }
+    const block1 = await getBlocked(
+      this.userConnectionModel,
+      id.toString(),
+      loggedInUser,
+    );
+    const block2 = await getBlocked(
+      this.userConnectionModel,
+      loggedInUser,
+      id.toString(),
+    );
+    if (block1 || block2) {
+      throw new ForbiddenException(
+        'Cannot access a profile with a shared block instance.',
+      );
+    }
     const profileDto = toGetProfileDto(profile);
     profileDto.connectStatus = await setConnectionStatus(
       this.userConnectionModel,
@@ -104,6 +122,7 @@ export class ProfilesService {
       loggedInUser,
       id.toString(),
     );
+    // profileDto.isPremium = await isPremium(id.toString(), this.planDetailModel);
     return profileDto;
   }
   /**
@@ -245,7 +264,12 @@ export class ProfilesService {
     }
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Edits an existing skill in a user's profile.
+   * @param skill - DTO containing updated skill information.
+   * @param id - The profile ID.
+   * @param skillId - The skill ID.
+   */
   async editSkillPosition(
     skillName: string,
     position: string,
@@ -255,12 +279,11 @@ export class ProfilesService {
       throw new BadRequestException('Invalid profile ID format');
     }
     console.log('editSkillPosition service profileId: ' + position);
-    // Find the profile by profileId and update the specific skill's position
     const updatedProfile = await this.profileModel.findOneAndUpdate(
-      { _id: new Types.ObjectId(profileId), 'skills.skill_name': skillName }, // Match profileId and skillId in skills array
+      { _id: new Types.ObjectId(profileId), 'skills.skill_name': skillName },
       {
         $set: {
-          'skills.$.position': position, // Update the position of the skill
+          'skills.$.position': position,
         },
       },
       { new: true, runValidators: true },
@@ -293,6 +316,12 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
+  /**
+   * Adds an education entry to a user's profile.
+   * @param education - DTO containing education information.
+   * @param id - The profile ID.
+   */
+
   async addEducation(education: EducationDto, id: Types.ObjectId) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
@@ -317,6 +346,12 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
+  /**
+   * Edits an existing education entry in a user's profile.
+   * @param education - DTO containing updated education information.
+   * @param id - The profile ID.
+   * @param educationId - The education entry ID.
+   */
   async editEducation(
     education: Partial<EducationDto>,
     id: Types.ObjectId,
@@ -345,7 +380,7 @@ export class ProfilesService {
       {
         _id: new Types.ObjectId(id),
         'education._id': new Types.ObjectId(educationId),
-      }, // Find profile and specific education entry
+      },
       {
         $set: {
           'education.$.school': education.school,
@@ -370,6 +405,11 @@ export class ProfilesService {
     return toGetProfileDto(updatedProfile);
   }
 
+  /**
+   * Deletes an education entry from a user's profile.
+   * @param educationId - The education entry ID.
+   * @param id - The profile ID.
+   */
   async deleteEducation(educationId: Types.ObjectId, id: Types.ObjectId) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
@@ -388,7 +428,11 @@ export class ProfilesService {
     }
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Adds a certification entry to a user's profile.
+   * @param certification - DTO containing certification information.
+   * @param id - The profile ID.
+   */
   async addCertification(certification: CertificationDto, id: Types.ObjectId) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
@@ -422,7 +466,12 @@ export class ProfilesService {
     }
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Edits an existing certification entry in a user's profile.
+   * @param certification - DTO containing updated certification information.
+   * @param id - The profile ID.
+   * @param certificationId - The certification entry ID.
+   */
   async editCertification(
     certification: Partial<CertificationDto>,
     id: Types.ObjectId,
@@ -474,7 +523,11 @@ export class ProfilesService {
 
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Deletes a certification entry from a user's profile.
+   * @param certificationId - The certification entry ID.
+   * @param id - The profile ID.
+   */
   async deleteCertification(
     certificationId: Types.ObjectId,
     id: Types.ObjectId,
@@ -492,7 +545,11 @@ export class ProfilesService {
     }
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Adds a work experience entry to a user's profile.
+   * @param workExperience - DTO containing work experience information.
+   * @param id - The profile ID.
+   */
   async addWorkExperience(
     workExperience: WorkExperienceDto,
     id: Types.ObjectId,
@@ -523,7 +580,12 @@ export class ProfilesService {
 
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Edits an existing work experience entry in a user's profile.
+   * @param workExperience - DTO containing updated work experience information.
+   * @param id - The profile ID.
+   * @param workExperienceId - The work experience entry ID.
+   */
   async editWorkExperience(
     workExperience: Partial<WorkExperienceDto>,
     id: Types.ObjectId,
@@ -551,7 +613,6 @@ export class ProfilesService {
     console.log(
       'editWorkExperience service title: ' + workExperience.companyLogo,
     );
-    // const updateData = toUpdateWorkExperienceSchema(workExperience);
 
     const updatedProfile = await this.profileModel.findOneAndUpdate(
       {
@@ -582,7 +643,11 @@ export class ProfilesService {
 
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Deletes a work experience entry from a user's profile.
+   * @param workExperienceId - The work experience entry ID.
+   * @param id - The profile ID.
+   */
   async deleteWorkExperience(
     workExperienceId: Types.ObjectId,
     id: Types.ObjectId,
@@ -603,7 +668,10 @@ export class ProfilesService {
 
     return toGetProfileDto(updatedProfile);
   }
-
+  /**
+   * Retrieves the first and last name of a user by ID.
+   * @param id - The user ID.
+   */
   async getUserFirstLastName(id: Types.ObjectId) {
     try {
       const user = await this.userModel
@@ -614,21 +682,20 @@ export class ProfilesService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
-      console.log('user first name:', user.first_name);
-      console.log('user last name:', user.last_name);
 
       return {
         firstName: user.first_name,
         lastName: user.last_name,
       };
     } catch (error) {
-      if (error instanceof NotFoundException) {
-        throw error;
-      }
-      throw new BadRequestException('Failed to retrieve user name');
+      handleError(error, 'Failed to get user first and last name');
     }
   }
-
+  /**
+   * Updates the first name of a user by ID.
+   * @param firstName - The new first name.
+   * @param id - The user ID.
+   */
   async updateUserFirstName(firstName: string, id: Types.ObjectId) {
     try {
       const user = await this.userModel
@@ -646,7 +713,11 @@ export class ProfilesService {
       handleError(error, 'Failed to update user first name');
     }
   }
-
+  /**
+   * Updates the last name of a user by ID.
+   * @param lastName - The new last name.
+   * @param id - The user ID.
+   */
   async updateUserLastName(lastName: string, id: Types.ObjectId) {
     try {
       const user = await this.userModel
@@ -664,7 +735,11 @@ export class ProfilesService {
       handleError(error, 'Failed to update user last name');
     }
   }
-
+  /**
+   * Retrieves the endorsements for a specific skill in a user's profile.
+   * @param skillName - The skill name.
+   * @param id - The profile ID.
+   */
   async getSkillEndorsements(skillName: string, id: Types.ObjectId) {
     if (!isValidObjectId(id)) {
       throw new BadRequestException('Invalid profile ID format');
@@ -683,7 +758,6 @@ export class ProfilesService {
     }
     console.log('skill endorsements: ' + skill.endorsements);
 
-    // Now fetch users from the endorsements list
     const endorsers = await this.profileModel
       .find({ _id: { $in: skill.endorsements } })
       .select('_id profile_picture first_name last_name');

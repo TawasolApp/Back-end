@@ -1,7 +1,6 @@
 import { Types } from 'mongoose';
 import {
   Certification,
-  Education,
   Profile,
 } from '../infrastructure/database/schemas/profile.schema';
 import { CreateProfileDto } from './create-profile.dto';
@@ -15,10 +14,8 @@ import {
   Visibility,
   EmploymentType,
   LocationType,
-  PlanType,
   ProfileStatus,
 } from '../enums/profile-enums';
-import { Company } from 'src/companies/infrastructure/database/schemas/company.schema';
 
 /**
  * Maps CreateProfileDto to the Profile schema.
@@ -67,7 +64,7 @@ export function toCreateProfileSchema(
         company_id: cert?.companyId ?? null,
         expiry_date: cert?.expiryDate ?? null,
         company_logo: cert?.companyLogo ?? null,
-        issue_date: cert?.issueDate ? new Date(cert.issueDate) : new Date(),
+        issue_date: cert?.issueDate ? new Date(cert.issueDate) : null,
       })) ?? [],
 
     work_experience:
@@ -77,8 +74,8 @@ export function toCreateProfileSchema(
         company_id: work.companyId ?? null,
         company_logo: work.companyLogo ?? null,
         employment_type: work.employmentType as EmploymentType,
-        start_date: work.startDate ? new Date(work.startDate) : new Date(),
-        end_date: work.endDate ? new Date(work.endDate) : new Date(),
+        start_date: work.startDate ? new Date(work.startDate) : null,
+        end_date: work.endDate ? new Date(work.endDate) : null,
         location: work.location,
         location_type: work.locationType as LocationType,
         description: work.description ?? null,
@@ -172,18 +169,19 @@ export function toUpdateProfileSchema(
         companyId: work?.company_id ?? null,
         companyLogo: work?.company_logo ?? null,
         company: work?.company ?? null,
-        employmentType: work?.employment_type as EmploymentType,
+        employmentType: work?.employment_type,
         startDate: work?.start_date?.toISOString() ?? null,
         endDate: work?.end_date?.toISOString() ?? null,
         location: work?.location ?? null,
-        locationType: work?.location_type as LocationType,
+        locationType: work?.location_type,
         description: work?.description ?? null,
       })) ?? [],
 
-    visibility: profile.visibility as Visibility,
+    visibility: profile.visibility,
     connectionCount: profile.connection_count ?? 0,
     connectStatus: ProfileStatus.ME,
     followStatus: ProfileStatus.ME,
+    isPremium: profile.is_premium,
   };
 }
 

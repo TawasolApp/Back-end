@@ -46,9 +46,7 @@ export function toUpdateCompanySchema(
   };
 }
 
-export function toGetCompanyDto(
-  company: Partial<Company>,
-): GetCompanyDto {
+export function toGetCompanyDto(company: Partial<Company>): GetCompanyDto {
   const dto: Partial<GetCompanyDto> = {};
 
   if (company._id) dto.companyId = company._id.toString();
