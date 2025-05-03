@@ -107,6 +107,20 @@ describe('SecurityService', () => {
         service.createReport(mockUserId, mockReportRequest),
       ).rejects.toThrow(InternalServerErrorException);
     });
+    it('should throw InternalServerErrorException when create returns null', async () => {
+      const mockUserId = new Types.ObjectId();
+      const mockReportRequest: ReportRequestDto = {
+        reportedId: '5f8d0a3e7f4f3b2e1c9d8e7f',
+        reportedType: ReportedType.User,
+        reason: 'Inappropriate behavior',
+      };
+
+      jest.spyOn(reportModel, 'create').mockResolvedValueOnce(null as any);
+
+      await expect(
+        service.createReport(mockUserId, mockReportRequest),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
   });
 
   describe('reportJob', () => {
@@ -129,6 +143,15 @@ describe('SecurityService', () => {
       jest
         .spyOn(jobModel, 'findByIdAndUpdate')
         .mockRejectedValueOnce(new InternalServerErrorException('DB Error'));
+
+      await expect(service.reportJob(mockJobId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+    it('should throw InternalServerErrorException when findByIdAndUpdate returns null', async () => {
+      const mockJobId = new Types.ObjectId();
+
+      jest.spyOn(jobModel, 'findByIdAndUpdate').mockResolvedValueOnce(null);
 
       await expect(service.reportJob(mockJobId)).rejects.toThrow(
         InternalServerErrorException,

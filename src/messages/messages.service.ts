@@ -53,6 +53,15 @@ export class MessagesService {
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {}
+  /**
+   * Creates a new message and handles conversation management
+   * @param senderId - ID of the message sender
+   * @param receiverId - ID of the message recipient
+   * @param messageText - Content of the message
+   * @param media - Array of media URLs attached to the message
+   * @param messageDate - Timestamp of when the message was sent
+   * @returns {Object} Contains the created conversation and message
+   */
 
   async createMessage(
     senderId: string,
@@ -110,6 +119,11 @@ export class MessagesService {
 
     return { conversation, message: newMessage };
   }
+  /**
+   * Updates the unseen message count for a conversation
+   * @param conversationId - ID of the conversation to update
+   * @returns {Promise<void>}
+   */
   async updateUnseenCount(conversationId: Types.ObjectId): Promise<void> {
     // Count messages with status 'Sent' or 'Delivered' for the given conversationId
     const unseenCount = await this.messageModel.countDocuments({
@@ -128,7 +142,11 @@ export class MessagesService {
       { $set: { unseen_count: unseenCount } },
     );
   }
-
+  /**
+   * Marks all sent messages for a user as delivered
+   * @param userId - ID of the message recipient
+   * @returns {Promise<void>}
+   */
   async markMessagesAsDelivered(userId: string) {
 
     await this.messageModel.updateMany(
@@ -136,7 +154,12 @@ export class MessagesService {
       { $set: { status: MessageStatus.Delivered.toString() } },
     );
   }
-
+  /**
+   * Marks all messages in a conversation as read for a specific user
+   * @param conversationId - ID of the conversation
+   * @param userId - ID of the user marking messages as read
+   * @returns {Promise<void>}
+   */
   async markMessagesAsRead(
     conversationId: Types.ObjectId,
     userId: Types.ObjectId,
@@ -153,7 +176,13 @@ export class MessagesService {
     );
     await this.updateUnseenCount(new Types.ObjectId(conversationId));
   }
-
+  /**
+   * Retrieves paginated conversations for a user
+   * @param userId - ID of the user to get conversations for
+   * @param page - Page number for pagination (default: 1)
+   * @param limit - Number of items per page (default: 10)
+   * @returns {Object} Paginated conversation data with participant info
+   */
   async getConversations(
     userId: Types.ObjectId,
     page: number = 1,
@@ -253,7 +282,13 @@ export class MessagesService {
       },
     };
   }
-
+  /**
+   * Retrieves paginated messages for a conversation
+   * @param conversationId - ID of the conversation
+   * @param page - Page number for pagination (default: 1)
+   * @param limit - Number of items per page (default: 10)
+   * @returns {Object} Paginated message data
+   */
   async getConversationMessages(
     conversationId: string,
     page: number = 1,
@@ -281,6 +316,14 @@ export class MessagesService {
       },
     };
   }
+  /**
+   * Marks a conversation as unread for a specific user
+   * @param userId - ID of the user marking the conversation
+   * @param conversationId - ID of the conversation to mark
+   * @returns {Object} Updated conversation details
+   * @throws {NotFoundException} If conversation not found
+   * @throws {InternalServerErrorException} If update fails
+   */
   async setConversationAsUnread(
     userId: Types.ObjectId,
     conversationId: Types.ObjectId,
@@ -347,7 +390,14 @@ export class MessagesService {
       },
     };
   }
-
+  /**
+   * Marks a conversation as read for a specific user
+   * @param userId - ID of the user marking the conversation
+   * @param conversationId - ID of the conversation to mark
+   * @returns {Object} Updated conversation details
+   * @throws {NotFoundException} If conversation not found
+   * @throws {InternalServerErrorException} If update fails
+   */
   async setConversationAsRead(
     userId: Types.ObjectId,
     conversationId: Types.ObjectId,
