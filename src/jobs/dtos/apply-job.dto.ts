@@ -11,6 +11,5 @@ export class ApplyJobDto {
 
   @IsString()
   @IsOptional()
-  @IsUrl()
-  resumeURL?: string | '';
+  resumeURL?: string | ''; 
 }
