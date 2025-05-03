@@ -11,13 +11,11 @@ import {
   ValidationPipe,
   Query,
 } from '@nestjs/common';
-
 import { SecurityService } from './security.service';
 import { ReportRequestDto } from './dto/report-request.dto';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConnectionsService } from '../connections/connections.service';
-import { handleError } from '../common/utils/exception-handler';
 
 @UseGuards(JwtAuthGuard)
 @Controller('security')
@@ -33,7 +31,6 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
     return this.securityService.createReport(req.user.sub, reportRequest);
   }
 
@@ -42,7 +39,6 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
     return this.securityService.reportJob(new Types.ObjectId(jobId));
   }
 
@@ -55,7 +51,6 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
     return await this.connectionService.getBlocked(
       req.user.sub,
       Number(page),
@@ -68,7 +63,6 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
     return this.connectionService.block(req.user.sub.toString(), userId);
   }
 
@@ -77,7 +71,6 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
     return this.connectionService.unblock(req.user.sub.toString(), userId);
   }
 }
