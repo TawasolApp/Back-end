@@ -13,7 +13,7 @@ import {
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Types } from 'mongoose';
-import { handleError } from 'src/common/utils/exception-handler';
+import { handleError } from '../common/utils/exception-handler';
 
 @Controller('messages')
 export class MessagesController {

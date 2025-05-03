@@ -17,7 +17,7 @@ import { ReportRequestDto } from './dto/report-request.dto';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConnectionsService } from '../connections/connections.service';
-import { handleError } from 'src/common/utils/exception-handler';
+import { handleError } from '../common/utils/exception-handler';
 
 @UseGuards(JwtAuthGuard)
 @Controller('security')

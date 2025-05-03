@@ -180,8 +180,8 @@ export class MessagesService {
         const isFirstParticipant =
           conversation.participants[0].toString() === userId.toString();
         const markedAsUnread = isFirstParticipant
-          ? conversation.markedAsUnread[0]
-          : conversation.markedAsUnread[1];
+          ? conversation.marked_as_unread[0]
+          : conversation.marked_as_unread[1];
 
         return {
           _id: conversation._id,
@@ -272,8 +272,8 @@ export class MessagesService {
     }
     const isFirstParticipant = conversation.participants[0] == userId;
     const update = isFirstParticipant
-      ? { $set: { 'markedAsUnread.0': true } }
-      : { $set: { 'markedAsUnread.1': true } };
+      ? { $set: { 'marked_as_unread.0': true } }
+      : { $set: { 'marked_as_unread.1': true } };
     const updatedConversation = await this.conversationModel
       .findByIdAndUpdate(conversationId, update, { new: true })
       .lean();
@@ -296,8 +296,8 @@ export class MessagesService {
       .findById(updatedConversation.last_message_id)
       .lean();
     const markedAsUnread = isFirstParticipant
-      ? updatedConversation.markedAsUnread[0]
-      : updatedConversation.markedAsUnread[1];
+      ? updatedConversation.marked_as_unread[0]
+      : updatedConversation.marked_as_unread[1];
 
     return {
       _id: updatedConversation._id,
@@ -324,8 +324,8 @@ export class MessagesService {
     }
     const isFirstParticipant = conversation.participants[0] == userId;
     const update = isFirstParticipant
-      ? { $set: { 'markedAsUnread.0': false } }
-      : { $set: { 'markedAsUnread.1': false } };
+      ? { $set: { 'marked_as_unread.0': false } }
+      : { $set: { 'marked_as_unread.1': false } };
     const updatedConversation = await this.conversationModel
       .findByIdAndUpdate(conversationId, update, { new: true })
       .lean();
@@ -348,8 +348,8 @@ export class MessagesService {
       .findById(updatedConversation.last_message_id)
       .lean();
     const markedAsUnread = isFirstParticipant
-      ? updatedConversation.markedAsUnread[0]
-      : updatedConversation.markedAsUnread[1];
+      ? updatedConversation.marked_as_unread[0]
+      : updatedConversation.marked_as_unread[1];
 
     return {
       _id: updatedConversation._id,
