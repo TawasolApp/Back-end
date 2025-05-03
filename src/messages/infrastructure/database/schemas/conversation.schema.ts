@@ -29,7 +29,7 @@ export class Conversation {
     required: true,
     default: [false, false],
   })
-  markedAsUnread: Boolean[];
+  markedAsUnread: boolean[];
 }
 
 export const ConversationSchema = SchemaFactory.createForClass(Conversation);

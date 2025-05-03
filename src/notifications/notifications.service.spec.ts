@@ -131,7 +131,7 @@ describe('NotificationsService', () => {
     expect(result).toEqual(sortedNotifications);
     expect(notificationModelMock.find).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
-      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+      reference_type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
     expect(notificationModelMock.find().skip).toHaveBeenCalledWith(
       (page - 1) * limit,
@@ -199,7 +199,7 @@ describe('NotificationsService', () => {
     expect(result).toEqual(sortedNotifications);
     expect(notificationModelMock.find).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
-      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+      reference_type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
     expect(notificationModelMock.find().skip).toHaveBeenCalledWith(
       (page - 1) * limit,
@@ -248,7 +248,7 @@ describe('NotificationsService', () => {
     expect(notificationModelMock.find).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
       seen: false, // Only include unseen notifications
-      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+      reference_type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
     expect(notificationModelMock.find().skip).toHaveBeenCalledWith(
       (page - 1) * limit,
@@ -297,7 +297,7 @@ describe('NotificationsService', () => {
     expect(notificationModelMock.find).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
       seen: false, // Only include unseen notifications
-      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+      reference_type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
     expect(notificationModelMock.find().skip).toHaveBeenCalledWith(
       (page - 1) * limit,
@@ -361,7 +361,7 @@ describe('NotificationsService', () => {
     expect(notificationModelMock.countDocuments).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
       seen: false,
-      type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
+      reference_type: { $ne: 'Message' }, // Exclude notifications of type 'Message'
     });
   });
 
@@ -382,7 +382,7 @@ describe('NotificationsService', () => {
     expect(notificationModelMock.countDocuments).toHaveBeenCalledWith({
       receiver_id: new Types.ObjectId(mockUserId),
       seen: false,
-      type: 'Message',
+      reference_type: 'Message',
     });
   });
 

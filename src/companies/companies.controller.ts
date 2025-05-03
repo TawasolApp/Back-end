@@ -299,8 +299,6 @@ export class CompaniesController {
     return jobsDto;
   }
 
-  
-
   @Post('/:companyId/managers')
   @HttpCode(HttpStatus.CREATED)
   async addCompanyManager(

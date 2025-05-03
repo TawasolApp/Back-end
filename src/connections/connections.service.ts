@@ -534,7 +534,7 @@ export class ConnectionsService {
       const field = Object.keys(params)[0];
       const dir = params[field];
 
-      let sort: Record<string, 1 | -1> = {};
+      const sort: Record<string, 1 | -1> = {};
       if (field === 'created_at') {
         sort['created_at'] = dir;
       } else {

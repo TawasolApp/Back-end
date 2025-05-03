@@ -297,7 +297,7 @@ export const mockGetPostDto = {
   isConnected: false,
   isFollowing: false,
   isEdited: false,
-  parentPost: undefined, // Change from null to undefined for type compatibility
+  parentPost: undefined,
 };
 
 export const mockPostWithReaction = {

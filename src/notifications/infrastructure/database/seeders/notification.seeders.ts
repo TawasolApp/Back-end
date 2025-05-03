@@ -108,6 +108,8 @@ export class NotificationSeeder {
         rootItemId = post._id;
       }
 
+      if (react.user_id.toString() === receiver.toString()) continue;
+
       notifications.push({
         sender_id: react.user_id,
         receiver_id: receiver,
@@ -130,6 +132,9 @@ export class NotificationSeeder {
           console.log(`Post not found for comment: ${comment._id}`);
           continue;
         }
+        if (comment.author_id.toString() === commented.author_id.toString())
+          continue;
+
         notifications.push({
           sender_id: comment.author_id,
           receiver_id: commented.author_id,
@@ -143,6 +148,8 @@ export class NotificationSeeder {
         commentCount++;
         continue;
       }
+
+      if (comment.author_id.toString() === post.author_id.toString()) continue;
 
       notifications.push({
         sender_id: comment.author_id,
@@ -170,7 +177,8 @@ export class NotificationSeeder {
       const receiverId = conversation.participants.find(
         (p) => p.toString() !== message.sender_id.toString(),
       );
-      if (!receiverId) continue;
+      if (!receiverId || message.sender_id.toString() === receiverId.toString())
+        continue;
 
       notifications.push({
         sender_id: message.sender_id,
@@ -187,6 +195,12 @@ export class NotificationSeeder {
 
     // Process UserConnection notifications
     for (const connection of connections) {
+      if (
+        connection.sending_party.toString() ===
+        connection.receiving_party.toString()
+      )
+        continue;
+
       const content =
         connection.status === ConnectionStatus.Pending
           ? `sent you a connection request`

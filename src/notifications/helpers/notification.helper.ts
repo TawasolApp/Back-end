@@ -50,12 +50,7 @@ export async function addNotification(
     sender_id: senderId,
     receiver_id: receiverId,
     item_id: referenceId,
-    reference_type: referenceType as
-      | 'React'
-      | 'Comment'
-      | 'UserConnection'
-      | 'Message'
-      | 'JobOffer',
+    reference_type: referenceType,
     content,
     seen: false,
     sent_at: sentAt,

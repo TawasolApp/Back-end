@@ -66,8 +66,8 @@ export class ApplicationSeeder {
         job_id: randomJob._id,
         status: faker.helpers.arrayElement(Object.values(ApplicationStatus)),
         applied_at: applicationCreatedAt.toISOString(),
-        phone_number: faker.phone.number(), 
-        resume_url: faker.internet.url(), 
+        phone_number: faker.phone.number(),
+        resume_url: faker.internet.url(),
       });
 
       existingSet.add(key);

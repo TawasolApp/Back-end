@@ -69,7 +69,7 @@ describe('UsersController', () => {
     });
 
     it('should throw UnauthorizedException if no user in request', async () => {
-      const req = mockRequest(undefined); 
+      const req = mockRequest(undefined);
       await expect(controller.requestEmailUpdate(req, dto)).rejects.toThrow(
         UnauthorizedException,
       );
@@ -85,7 +85,7 @@ describe('UsersController', () => {
     });
 
     it('should handle service errors', async () => {
-      const req = mockRequest({ sub: 'user-id' }); 
+      const req = mockRequest({ sub: 'user-id' });
       const error = new Error('Service error');
       jest.spyOn(usersService, 'requestEmailUpdate').mockRejectedValue(error);
 
@@ -130,7 +130,7 @@ describe('UsersController', () => {
     });
 
     it('should throw UnauthorizedException if no user in request', async () => {
-      const req = mockRequest(undefined); 
+      const req = mockRequest(undefined);
       await expect(controller.updatePassword(req, dto)).rejects.toThrow(
         UnauthorizedException,
       );
@@ -138,13 +138,13 @@ describe('UsersController', () => {
     });
 
     it('should return service response', async () => {
-      const req = mockRequest({ sub: 'user-id' }); 
+      const req = mockRequest({ sub: 'user-id' });
       const result = await controller.updatePassword(req, dto);
       expect(result).toEqual({ message: 'password updated' });
     });
 
     it('should handle service errors', async () => {
-      const req = mockRequest({ sub: 'user-id' }); 
+      const req = mockRequest({ sub: 'user-id' });
       const error = new Error('Service error');
       jest.spyOn(usersService, 'updatePassword').mockRejectedValue(error);
 
@@ -176,13 +176,13 @@ describe('UsersController', () => {
     });
 
     it('should return service response', async () => {
-      const req = mockRequest({ sub: 'user-id' }); 
+      const req = mockRequest({ sub: 'user-id' });
       const result = await controller.deleteAccount(req);
       expect(result).toEqual({ message: 'account deleted' });
     });
 
     it('should handle service errors', async () => {
-      const req = mockRequest({ sub: 'user-id' }); 
+      const req = mockRequest({ sub: 'user-id' });
       const error = new Error('Service error');
       jest.spyOn(usersService, 'deleteAccount').mockRejectedValue(error);
 

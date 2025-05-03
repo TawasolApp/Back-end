@@ -1,8 +1,4 @@
-import {
-  IsNotEmpty,
-  IsEnum,
-  IsBoolean,
-} from 'class-validator';
+import { IsNotEmpty, IsEnum, IsBoolean } from 'class-validator';
 import { PlanType } from '../enums/plan-type.enum';
 
 export class UpgradePlanDto {

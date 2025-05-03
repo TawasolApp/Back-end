@@ -8,7 +8,7 @@ import {
   HttpException,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Connection, Model, Types, isValidObjectId } from 'mongoose';
+import { Model, Types, isValidObjectId } from 'mongoose';
 import {
   Post,
   PostDocument,
@@ -235,7 +235,6 @@ export class PostsService {
           .findById({ _id: createPostDto.parentPostId })
           .exec();
         if (!parentPost) {
-          // console.log();
         } else {
           parentPost.share_count++;
           await parentPost.save();
@@ -256,8 +255,6 @@ export class PostsService {
         is_silent_repost: createPostDto.isSilentRepost,
       });
 
-      console.log('createdPost:', createdPost);
-
       await createdPost.save();
       return getPostInfo(
         createdPost,
@@ -271,7 +268,7 @@ export class PostsService {
       );
     } catch (err) {
       if (err instanceof HttpException) throw err;
-      // console.log(error);
+
       throw new InternalServerErrorException('Failed to add post');
     }
   }
@@ -346,7 +343,7 @@ export class PostsService {
       const candidatePosts = await this.postModel
         .find({
           visibility: { $ne: 'Private' },
-          author_id: { $nin: blocked }, // Exclude posts by blocked users
+          author_id: { $nin: blocked },
         })
         .sort({ posted_at: -1 })
         .exec();
@@ -354,8 +351,7 @@ export class PostsService {
       const filteredPosts = candidatePosts.filter((post) => {
         const authorIdStr = post.author_id.toString();
 
-        if (authorIdStr === authorId) return true; // Always include own posts
-
+        if (authorIdStr === authorId) return true;
         if (connectedUserIds.some((id) => id.toString() === authorIdStr)) {
           return true; // All posts of connected users
         }
@@ -455,7 +451,7 @@ export class PostsService {
         this.reactModel,
         this.saveModel,
         this.userConnectionModel,
-      ); // Use mapToGetPostDto method
+      );
     } catch (err) {
       if (err instanceof HttpException) throw err;
     }
@@ -574,10 +570,6 @@ export class PostsService {
         .find({ post_id: new Types.ObjectId(postId) })
         .select('_id')
         .exec();
-      const saves = await this.saveModel
-        .find({ post_id: new Types.ObjectId(postId) })
-        .select('_id')
-        .exec();
 
       // Delete notifications for reactions, comments, saves, and the post itself
       for (const reaction of reactions) {
@@ -637,7 +629,6 @@ export class PostsService {
     companyId: string,
   ): Promise<Post | Comment> {
     try {
-      //console.log('updateReactionsDto:', updateReactionsDto);
       if (!Types.ObjectId.isValid(userId)) {
         throw new BadRequestException('Invalid user ID format');
       }
@@ -649,8 +640,6 @@ export class PostsService {
         companyId,
         this.companyManagerModel,
       );
-
-      console.log('authorId:', authorId);
 
       const objectIdUserId = new Types.ObjectId(authorId);
       const objectIdPostId = new Types.ObjectId(postId);
@@ -684,10 +673,7 @@ export class PostsService {
         .exec();
       const reactorType = reactorProfile ? 'User' : 'Company';
 
-      //console.log(updateReactionsDto);
       for (const [reactionType, value] of Object.entries(reactions)) {
-        //console.log("'reactionType':", reactionType);
-        //console.log("'value':", value);
         if (value) {
           const existingReaction = await this.reactModel
             .findOne({
@@ -697,14 +683,7 @@ export class PostsService {
             })
             .exec();
 
-          // console.log('existingReaction:', existingReaction);
-          // console.log('existing reaction type:', existingReaction?.react_type);
-          // console.log('reactionType:', reactionType);
-          // console.log('post:', post);
-          // console.log('comment:', comment);
-
           if (!existingReaction) {
-            // console.log('Creating new reaction');
             const newReaction = new this.reactModel({
               _id: new Types.ObjectId(),
               post_id: objectIdPostId,
@@ -719,7 +698,7 @@ export class PostsService {
                 (post.react_count[reactionType] || 0) + 1;
               post.markModified('react_count');
               addNotification(
-                this.notificationModel, // Pass the notification model
+                this.notificationModel,
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(post.author_id),
                 new Types.ObjectId(newReaction._id),
@@ -727,22 +706,21 @@ export class PostsService {
                 'React',
                 `reacted to your post`,
                 new Date(),
-                this.notificationGateway, // Pass NotificationGateway
-                this.profileModel, // Pass Profile model
-                this.companyModel, // Pass Company model
-                this.userModel, // Pass User model
-                this.companyManagerModel, // Pass CompanyManager model
+                this.notificationGateway,
+                this.profileModel,
+                this.companyModel,
+                this.userModel,
+                this.companyManagerModel,
               );
               await post.save();
             }
 
             if (comment) {
-              //console.log('Comment react count:', comment.react_count);
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
               addNotification(
-                this.notificationModel, // Pass the notification model
+                this.notificationModel,
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(newReaction._id),
@@ -750,18 +728,17 @@ export class PostsService {
                 'React',
                 `reacted to your comment`,
                 new Date(),
-                this.notificationGateway, // Pass NotificationGateway
-                this.profileModel, // Pass Profile model
-                this.companyModel, // Pass Company model
-                this.userModel, // Pass User model
-                this.companyManagerModel, // Pass CompanyManager model
+                this.notificationGateway,
+                this.profileModel,
+                this.companyModel,
+                this.userModel,
+                this.companyManagerModel,
               );
               await comment.save();
             }
 
             await newReaction.save();
           } else if (existingReaction.react_type !== reactionType) {
-            //console.log('got here');
             if (post) {
               post.react_count[existingReaction.react_type] =
                 (post.react_count[existingReaction.react_type] || 1) - 1;
@@ -772,34 +749,33 @@ export class PostsService {
               existingReaction.react_type = reactionType;
               deleteNotification(
                 this.notificationModel,
-                new Types.ObjectId(existingReaction._id), // Pass the item
+                new Types.ObjectId(existingReaction._id),
               );
 
               addNotification(
-                this.notificationModel, // Pass the notification model
-                new Types.ObjectId(authorId), // Pass the sender
-                new Types.ObjectId(post.author_id), // Pass the receiver
-                new Types.ObjectId(existingReaction._id), // Pass the item
+                this.notificationModel,
+                new Types.ObjectId(authorId),
+                new Types.ObjectId(post.author_id),
+                new Types.ObjectId(existingReaction._id),
                 new Types.ObjectId(post._id),
                 'React',
                 `reacted to your post`,
                 new Date(),
-                this.notificationGateway, // Pass NotificationGateway
-                this.profileModel, // Pass Profile model
-                this.companyModel, // Pass Company model
-                this.userModel, // Pass User model
-                this.companyManagerModel, // Pass CompanyManager model
+                this.notificationGateway,
+                this.profileModel,
+                this.companyModel,
+                this.userModel,
+                this.companyManagerModel,
               );
             }
 
             if (comment) {
-              //console.log('Comment react count:', comment.react_count);
               comment.react_count[existingReaction.react_type] =
                 (comment.react_count[existingReaction.react_type] || 1) - 1;
               comment.react_count[reactionType] =
                 (comment.react_count[reactionType] || 0) + 1;
               comment.markModified('react_count');
-              //console.log('Comment react count after :', comment.react_count);
+
               await comment.save();
               existingReaction.react_type = reactionType;
               deleteNotification(
@@ -808,7 +784,7 @@ export class PostsService {
               );
 
               addNotification(
-                this.notificationModel, // Pass the notification model
+                this.notificationModel,
                 new Types.ObjectId(authorId),
                 new Types.ObjectId(comment.author_id),
                 new Types.ObjectId(existingReaction._id),
@@ -816,11 +792,11 @@ export class PostsService {
                 'React',
                 `reacted to your comment`,
                 new Date(),
-                this.notificationGateway, // Pass NotificationGateway
-                this.profileModel, // Pass Profile model
-                this.companyModel, // Pass Company model
-                this.userModel, // Pass User model
-                this.companyManagerModel, // Pass CompanyManager model
+                this.notificationGateway,
+                this.profileModel,
+                this.companyModel,
+                this.userModel,
+                this.companyManagerModel,
               );
             }
 
@@ -1002,7 +978,6 @@ export class PostsService {
     companyId: string,
   ): Promise<{ message: string }> {
     try {
-      // console.log('Unsave post:', postId, userId);
       const authorId = await getUserAccessed(
         userId,
         companyId,
@@ -1014,8 +989,6 @@ export class PostsService {
           user_id: new Types.ObjectId(authorId),
         })
         .exec();
-
-      // console.log('savedPost:', savedPost);
 
       if (!savedPost) {
         throw new NotFoundException('Saved post not found');
@@ -1116,7 +1089,7 @@ export class PostsService {
       );
       let post: PostDocument | null = null;
       let comment: CommentDocument | null = null;
-      // console.log(createCommentDto);
+
       if (createCommentDto.isReply === false) {
         post = await this.postModel.findById(new Types.ObjectId(postId)).exec();
         if (!post) {
@@ -1170,7 +1143,7 @@ export class PostsService {
       if (post) {
         post.comment_count++;
         addNotification(
-          this.notificationModel, // Pass the notification model
+          this.notificationModel,
           new Types.ObjectId(authorId),
           new Types.ObjectId(post.author_id),
           new Types.ObjectId(newComment._id),
@@ -1178,17 +1151,17 @@ export class PostsService {
           'Comment',
           `commented on your post`,
           new Date(),
-          this.notificationGateway, // Pass NotificationGateway
-          this.profileModel, // Pass Profile model
-          this.companyModel, // Pass Company model
-          this.userModel, // Pass User model
-          this.companyManagerModel, // Pass CompanyManager model
+          this.notificationGateway,
+          this.profileModel,
+          this.companyModel,
+          this.userModel,
+          this.companyManagerModel,
         );
         await post.save();
       } else if (comment) {
         comment?.replies.push(newComment._id);
         addNotification(
-          this.notificationModel, // Pass the notification model
+          this.notificationModel,
           new Types.ObjectId(authorId),
           new Types.ObjectId(comment.author_id),
           new Types.ObjectId(newComment._id),
@@ -1196,11 +1169,11 @@ export class PostsService {
           'Comment',
           `replied to your comment`,
           new Date(),
-          this.notificationGateway, // Pass NotificationGateway
-          this.profileModel, // Pass Profile model
-          this.companyModel, // Pass Company model
-          this.userModel, // Pass User model
-          this.companyManagerModel, // Pass CompanyManager model
+          this.notificationGateway,
+          this.profileModel,
+          this.companyModel,
+          this.userModel,
+          this.companyManagerModel,
         );
         await comment?.save();
       }
@@ -1457,7 +1430,7 @@ export class PostsService {
 
       const postQuery: any = {
         $or: searchWords.map((word) => ({
-          text: { $regex: new RegExp(word, 'i') }, // ✅ CORRECT regex usage
+          text: { $regex: new RegExp(word, 'i') },
         })),
       };
 
@@ -1497,7 +1470,7 @@ export class PostsService {
               : conn.sending_party.toString(),
           ),
           ...following.map((conn) => conn.receiving_party.toString()),
-          authorId, // include self
+          authorId,
         ]);
 
         // 🔁 Convert all IDs to ObjectId before querying
@@ -1514,8 +1487,6 @@ export class PostsService {
         .limit(limit)
         .exec();
 
-      // console.log(posts);
-
       return Promise.all(
         posts.map((post) =>
           getPostInfo(
@@ -1531,7 +1502,6 @@ export class PostsService {
         ),
       );
     } catch (err) {
-      //console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to search posts');
     }
@@ -1643,7 +1613,6 @@ export class PostsService {
         ),
       );
     } catch (err) {
-      // console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch reposts');
     }
@@ -1713,7 +1682,6 @@ export class PostsService {
         ),
       );
     } catch (err) {
-      // console.error(err);
       if (err instanceof HttpException) throw err;
       throw new InternalServerErrorException('Failed to fetch user reposts');
     }
