@@ -15,7 +15,7 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { getConversations, getMessages } from './dto/messages.mapper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { addNotification } from '../notifications/helpers/notification.helper';
 import {
   Notification,
