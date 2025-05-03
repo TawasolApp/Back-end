@@ -51,215 +51,216 @@ export class AdminService {
     @InjectModel(React.name) private readonly reactModel: Model<ReactDocument>,
   ) {}
 
+  /**
+   * Retrieves user analytics, including total users, most active users, and reported user statistics.
+   * @returns An object containing user analytics data.
+   */
   async getUserAnalytics() {
-    try {
-      const thirtyDaysAgo = new Date(
-        new Date().setDate(new Date().getDate() - 30),
-      );
+    const thirtyDaysAgo = new Date(
+      new Date().setDate(new Date().getDate() - 30),
+    );
 
-      const totalUsers = await this.userModel.countDocuments();
+    const totalUsers = await this.userModel.countDocuments();
 
-      const mostActiveUsers = await this.userModel.aggregate([
-        {
-          $lookup: {
-            from: 'Posts',
-            localField: '_id',
-            foreignField: 'author_id',
-            as: 'posts',
+    const mostActiveUsers = await this.userModel.aggregate([
+      {
+        $lookup: {
+          from: 'Posts',
+          localField: '_id',
+          foreignField: 'author_id',
+          as: 'posts',
+        },
+      },
+      {
+        $lookup: {
+          from: 'Reacts',
+          localField: '_id',
+          foreignField: 'user_id',
+          as: 'reactions',
+        },
+      },
+      {
+        $lookup: {
+          from: 'UserConnections',
+          localField: '_id',
+          foreignField: 'sending_party',
+          as: 'connections',
+        },
+      },
+      {
+        $project: {
+          userId: '$_id',
+          activityScore: {
+            $add: [
+              { $size: '$posts' },
+              { $size: '$reactions' },
+              { $size: '$connections' },
+            ],
           },
         },
-        {
-          $lookup: {
-            from: 'Reacts',
-            localField: '_id',
-            foreignField: 'user_id',
-            as: 'reactions',
-          },
-        },
-        {
-          $lookup: {
-            from: 'UserConnections',
-            localField: '_id',
-            foreignField: 'sending_party',
-            as: 'connections',
-          },
-        },
-        {
-          $project: {
-            userId: '$_id',
-            activityScore: {
-              $add: [
-                { $size: '$posts' },
-                { $size: '$reactions' },
-                { $size: '$connections' },
-              ],
-            },
-          },
-        },
-        { $sort: { activityScore: -1 } },
-        { $limit: 5 },
-      ]);
+      },
+      { $sort: { activityScore: -1 } },
+      { $limit: 5 },
+    ]);
 
-      const userReportedCount = await this.reportModel.countDocuments({
-        reported_type: 'Profile',
-        reported_at: { $gte: thirtyDaysAgo },
-      });
+    const userReportedCount = await this.reportModel.countDocuments({
+      reported_type: 'Profile',
+      reported_at: { $gte: thirtyDaysAgo },
+    });
 
-      const mostReportedUser = await this.reportModel.aggregate([
-        { $match: { reported_type: 'Profile' } },
-        {
-          $group: {
-            _id: '$reported_id',
-            reportCount: { $sum: '$report_count' },
-          },
+    const mostReportedUser = await this.reportModel.aggregate([
+      { $match: { reported_type: 'Profile' } },
+      {
+        $group: {
+          _id: '$reported_id',
+          reportCount: { $sum: '$report_count' },
         },
-        { $sort: { reportCount: -1 } },
-        { $limit: 1 },
-      ]);
+      },
+      { $sort: { reportCount: -1 } },
+      { $limit: 1 },
+    ]);
 
-      return {
-        totalUsers,
-        mostActiveUsers,
-        userReportedCount,
-        mostReportedUser: mostReportedUser[0]?._id || null,
-      };
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to fetch user analytics');
-    }
+    return {
+      totalUsers,
+      mostActiveUsers,
+      userReportedCount,
+      mostReportedUser: mostReportedUser[0]?._id || null,
+    };
   }
 
+  /**
+   * Retrieves post analytics, including total posts, interactions, and reported post statistics.
+   * @returns An object containing post analytics data.
+   */
   async getPostAnalytics() {
-    try {
-      const thirtyDaysAgo = new Date(
-        new Date().setDate(new Date().getDate() - 30),
-      );
+    const thirtyDaysAgo = new Date(
+      new Date().setDate(new Date().getDate() - 30),
+    );
 
-      const totalPosts = await this.postModel.countDocuments({
-        posted_at: { $gte: thirtyDaysAgo },
-      });
+    const totalPosts = await this.postModel.countDocuments({
+      posted_at: { $gte: thirtyDaysAgo },
+    });
 
-      const totalShares = await this.shareModel.countDocuments({
-        shared_at: { $gte: thirtyDaysAgo },
-      });
+    const totalShares = await this.shareModel.countDocuments({
+      shared_at: { $gte: thirtyDaysAgo },
+    });
 
-      const totalComments = await this.commentModel.countDocuments({
-        commented_at: { $gte: thirtyDaysAgo },
-      });
+    const totalComments = await this.commentModel.countDocuments({
+      commented_at: { $gte: thirtyDaysAgo },
+    });
 
-      const totalReacts = await this.reactModel.countDocuments({
-        reacted_at: { $gte: thirtyDaysAgo },
-      });
+    const totalReacts = await this.reactModel.countDocuments({
+      reacted_at: { $gte: thirtyDaysAgo },
+    });
 
-      const postWithMostInteractions = await this.postModel.aggregate([
-        {
-          $project: {
-            _id: 1,
-            interactionCount: {
-              $add: [
-                '$comment_count',
-                '$share_count',
-                '$react_count.Like',
-                '$react_count.Love',
-                '$react_count.Funny',
-                '$react_count.Celebrate',
-                '$react_count.Insightful',
-                '$react_count.Support',
-              ],
-            },
+    const postWithMostInteractions = await this.postModel.aggregate([
+      {
+        $project: {
+          _id: 1,
+          interactionCount: {
+            $add: [
+              '$comment_count',
+              '$share_count',
+              '$react_count.Like',
+              '$react_count.Love',
+              '$react_count.Funny',
+              '$react_count.Celebrate',
+              '$react_count.Insightful',
+              '$react_count.Support',
+            ],
           },
         },
-        { $sort: { interactionCount: -1 } },
-        { $limit: 1 },
-      ]);
+      },
+      { $sort: { interactionCount: -1 } },
+      { $limit: 1 },
+    ]);
 
-      const postReportedCount = await this.reportModel.countDocuments({
-        reported_type: 'Post',
-        reported_at: { $gte: thirtyDaysAgo },
-      });
+    const postReportedCount = await this.reportModel.countDocuments({
+      reported_type: 'Post',
+      reported_at: { $gte: thirtyDaysAgo },
+    });
 
-      const mostReportedPost = await this.reportModel.aggregate([
-        { $match: { reported_type: 'Post' } },
-        {
-          $group: {
-            _id: '$reported_id',
-            reportCount: { $sum: '$report_count' },
-          },
+    const mostReportedPost = await this.reportModel.aggregate([
+      { $match: { reported_type: 'Post' } },
+      {
+        $group: {
+          _id: '$reported_id',
+          reportCount: { $sum: '$report_count' },
         },
-        { $sort: { reportCount: -1 } },
-        { $limit: 1 },
-      ]);
+      },
+      { $sort: { reportCount: -1 } },
+      { $limit: 1 },
+    ]);
 
-      return {
-        totalPosts,
-        totalShares,
-        totalComments,
-        totalReacts,
-        postWithMostInteractions: postWithMostInteractions[0]?._id || null,
-        postReportedCount,
-        mostReportedPost: mostReportedPost[0]?._id || null,
-      };
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to fetch post analytics');
-    }
+    return {
+      totalPosts,
+      totalShares,
+      totalComments,
+      totalReacts,
+      postWithMostInteractions: postWithMostInteractions[0]?._id || null,
+      postReportedCount,
+      mostReportedPost: mostReportedPost[0]?._id || null,
+    };
   }
 
+  /**
+   * Retrieves job analytics, including total jobs, most applied jobs, and flagged job statistics.
+   * @returns An object containing job analytics data.
+   */
   async getJobAnalytics() {
-    try {
-      const totalJobs = await this.jobModel.countDocuments();
-      const mostAppliedCompany = await this.jobModel.aggregate([
-        {
-          $group: {
-            _id: '$company_id',
-            applicationCount: { $sum: '$applicants' },
-          },
+    const totalJobs = await this.jobModel.countDocuments();
+    const mostAppliedCompany = await this.jobModel.aggregate([
+      {
+        $group: {
+          _id: '$company_id',
+          applicationCount: { $sum: '$applicants' },
         },
-        { $sort: { applicationCount: -1 } },
-        { $limit: 1 },
-      ]);
-      const mostAppliedJob = await this.jobModel
-        .findOne()
-        .sort({ applicants: -1 })
-        .lean();
-      const jobReportedCount = await this.jobModel.countDocuments({
-        is_flagged: true,
-      });
+      },
+      { $sort: { applicationCount: -1 } },
+      { $limit: 1 },
+    ]);
+    const mostAppliedJob = await this.jobModel
+      .findOne()
+      .sort({ applicants: -1 })
+      .lean();
+    const jobReportedCount = await this.jobModel.countDocuments({
+      is_flagged: true,
+    });
 
-      return {
-        totalJobs,
-        mostAppliedCompany: mostAppliedCompany[0] || null,
-        mostAppliedJob,
-        jobReportedCount,
-      };
-    } catch (error) {
-      throw new InternalServerErrorException('Failed to fetch job analytics');
-    }
+    return {
+      totalJobs,
+      mostAppliedCompany: mostAppliedCompany[0] || null,
+      mostAppliedJob,
+      jobReportedCount,
+    };
   }
 
+  /**
+   * Marks a flagged job as ignored.
+   * @param jobId - The ID of the job to ignore.
+   * @throws BadRequestException if the job ID is invalid.
+   * @throws NotFoundException if the job is not found.
+   */
   async ignoreJob(jobId: string): Promise<void> {
-    try {
-      if (!Types.ObjectId.isValid(jobId)) {
-        throw new BadRequestException('Invalid job ID format.');
-      }
+    if (!Types.ObjectId.isValid(jobId)) {
+      throw new BadRequestException('Invalid job ID format.');
+    }
 
-      const result = await this.jobModel.updateOne(
-        { _id: new Types.ObjectId(jobId) },
-        { $set: { is_flagged: false } },
-      );
+    const result = await this.jobModel.updateOne(
+      { _id: new Types.ObjectId(jobId) },
+      { $set: { is_flagged: false } },
+    );
 
-      if (result.matchedCount === 0) {
-        throw new NotFoundException('Job not found.');
-      }
-    } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof NotFoundException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to ignore job');
+    if (result.matchedCount === 0) {
+      throw new NotFoundException('Job not found.');
     }
   }
 
+  /**
+   * Retrieves reported posts with optional status filtering.
+   * @param status - The status to filter reported posts by.
+   * @returns A list of reported posts.
+   */
   async getReportedPosts(status?: string): Promise<ReportedPostsDto[]> {
     const matchStage: any = { reported_type: 'Post' };
     if (status) {
@@ -390,6 +391,11 @@ export class AdminService {
     }));
   }
 
+  /**
+   * Retrieves reported users with optional status filtering.
+   * @param status - The status to filter reported users by.
+   * @returns A list of reported users.
+   */
   async getReportedUsers(status?: string): Promise<ReportedUsersDto[]> {
     const matchStage: any = { reported_type: 'Profile' };
     if (status) {
@@ -474,105 +480,87 @@ export class AdminService {
     }));
   }
 
+  /**
+   * Suspends a user based on a report.
+   * @param reportId - The ID of the report.
+   * @throws NotFoundException if the report, post, or user is not found.
+   * @throws BadRequestException if the report type is invalid.
+   */
   async suspendUser(reportId: string): Promise<void> {
-    try {
-      if (!Types.ObjectId.isValid(reportId)) {
-        throw new BadRequestException('Invalid report ID format.');
-      }
+    const report = await this.reportModel
+      .findOne({ _id: new Types.ObjectId(reportId) })
+      .lean();
 
-      const report = await this.reportModel
-        .findOne({ _id: new Types.ObjectId(reportId) })
-        .lean();
-
-      if (!report) {
-        throw new NotFoundException('Report not found.');
-      }
-
-      let userId: Types.ObjectId;
-
-      if (report.reported_type === 'Profile') {
-        userId = new Types.ObjectId(report.reported_id);
-      } else if (report.reported_type === 'Post') {
-        const post = await this.postModel.findById(report.reported_id).lean();
-
-        if (!post) {
-          throw new NotFoundException('Post not found.');
-        }
-
-        if (post.author_type === 'Company') {
-          throw new BadRequestException(
-            'Cannot suspend a company for a reported post.',
-          );
-        }
-
-        userId = new Types.ObjectId(post.author_id);
-      } else {
-        throw new BadRequestException(
-          'Invalid report type. Only profiles or posts can be used to suspend users.',
-        );
-      }
-
-      if (!Types.ObjectId.isValid(userId)) {
-        throw new BadRequestException('Invalid user ID format.');
-      }
-
-      const user = await this.userModel.findById(userId);
-
-      if (!user) {
-        throw new NotFoundException('User not found.');
-      }
-
-      const suspensionEndDate = new Date();
-      suspensionEndDate.setDate(suspensionEndDate.getDate() + 7);
-
-      user.is_suspended = true;
-      user.suspension_end_date = suspensionEndDate;
-      await user.save();
-
-      const updateResult = await this.reportModel.updateOne(
-        { _id: new Types.ObjectId(reportId) },
-        { $set: { status: 'Actioned' } },
-      );
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to suspend user');
+    if (!report) {
+      throw new NotFoundException('Report not found.');
     }
+
+    let userId: Types.ObjectId;
+
+    if (report.reported_type === 'Profile') {
+      userId = new Types.ObjectId(report.reported_id);
+    } else if (report.reported_type === 'Post') {
+      const post = await this.postModel.findById(report.reported_id).lean();
+
+      if (!post) {
+        throw new NotFoundException('Post not found.');
+      }
+
+      userId = new Types.ObjectId(post.author_id);
+    } else {
+      throw new BadRequestException(
+        'Invalid report type. Only profiles or posts can be used to suspend users.',
+      );
+    }
+
+    const user = await this.userModel.findById(userId);
+
+    if (!user) {
+      throw new NotFoundException('User not found.');
+    }
+
+    user.is_suspended = true;
+    user.suspension_end_date = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+    await user.save();
+
+    await this.reportModel.updateOne(
+      { _id: new Types.ObjectId(reportId) },
+      { $set: { status: 'Actioned' } },
+    );
   }
 
+  /**
+   * Ignores a report by marking it as dismissed.
+   * @param reportId - The ID of the report.
+   * @throws BadRequestException if the report ID is invalid.
+   * @throws NotFoundException if the report is not found.
+   */
   async ignoreReport(reportId: string): Promise<void> {
-    try {
-      if (!Types.ObjectId.isValid(reportId)) {
-        throw new BadRequestException('Invalid report ID format.');
-      }
-
-      const report = await this.reportModel
-        .findOne({ _id: new Types.ObjectId(reportId) })
-        .lean();
-
-      if (!report) {
-        throw new NotFoundException('Report not found.');
-      }
-
-      const updateResult = await this.reportModel.updateOne(
-        { _id: new Types.ObjectId(reportId) },
-        { $set: { status: 'Dismissed' } },
-      );
-    } catch (error) {
-      if (
-        error instanceof NotFoundException ||
-        error instanceof BadRequestException
-      ) {
-        throw error;
-      }
-      throw new InternalServerErrorException('Failed to ignore report');
+    if (!Types.ObjectId.isValid(reportId)) {
+      throw new BadRequestException('Invalid report ID format.');
     }
+
+    const report = await this.reportModel
+      .findOne({ _id: new Types.ObjectId(reportId) })
+      .lean();
+
+    if (!report) {
+      throw new NotFoundException('Report not found.');
+    }
+
+    await this.reportModel.updateOne(
+      { _id: new Types.ObjectId(reportId) },
+      { $set: { status: 'Dismissed' } },
+    );
   }
 
+  /**
+   * Resolves a report by performing the specified action.
+   * @param reportId - The ID of the report.
+   * @param action - The action to perform (delete_post, suspend_user, ignore).
+   * @throws BadRequestException if the report ID or action is invalid.
+   * @throws NotFoundException if the report or related entities are not found.
+   */
   async resolveReport(reportId: string, action: string): Promise<void> {
     if (!Types.ObjectId.isValid(reportId)) {
       throw new BadRequestException('Invalid report ID format.');

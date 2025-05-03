@@ -53,6 +53,7 @@ describe('AdminService', () => {
             aggregate: jest.fn(),
             findById: jest.fn(),
             updateOne: jest.fn(),
+            findOne: jest.fn(), // Add missing mock
           },
         },
         {
@@ -62,6 +63,7 @@ describe('AdminService', () => {
             aggregate: jest.fn(),
             findById: jest.fn(),
             updateOne: jest.fn(),
+            findOne: jest.fn(), // Add missing mock
           },
         },
         {
@@ -175,58 +177,118 @@ describe('AdminService', () => {
     });
   });
 
-//   describe('resolveReport', () => {
-//     const reportId = new Types.ObjectId().toHexString();
-//     const postId = new Types.ObjectId().toHexString();
+  describe('resolveReport', () => {
+    const reportId = new Types.ObjectId().toHexString();
+    const postId = new Types.ObjectId().toHexString();
+    const userId = new Types.ObjectId().toHexString();
 
-//     it('should delete a post and mark the report as actioned', async () => {
-//       reportModel.findById.mockResolvedValue({
-//         _id: reportId,
-//         reported_type: 'Post',
-//         reported_id: postId,
-//       });
-//       postModel.findById.mockResolvedValue({ _id: postId });
-//       postModel.deleteOne.mockResolvedValue({ deletedCount: 1 });
-//       reportModel.updateOne.mockResolvedValue({ matchedCount: 1 });
+    const mockReport = {
+      _id: new Types.ObjectId(reportId),
+      reported_type: 'Post',
+      reported_id: new Types.ObjectId(postId),
+    };
 
-//       await service.resolveReport(reportId, 'delete_post');
+    const mockPost = {
+      _id: new Types.ObjectId(postId),
+      author_id: new Types.ObjectId(userId),
+      author_type: 'User',
+    };
 
-//       expect(postModel.deleteOne).toHaveBeenCalledWith({ _id: postId });
-//       expect(reportModel.updateOne).toHaveBeenCalledWith(
-//         { _id: new Types.ObjectId(reportId) },
-//         { $set: { status: 'Actioned' } },
-//       );
-//     });
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
 
-//     it('should throw NotFoundException if post not found', async () => {
-//       reportModel.findById.mockResolvedValue({
-//         _id: reportId,
-//         reported_type: 'Post',
-//         reported_id: postId,
-//       });
-//       postModel.findById.mockResolvedValue(null);
+    it('should delete a post and mark the report as actioned for delete_post action', async () => {
+      jest.spyOn(reportModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockReport),
+      } as any);
 
-//       await expect(
-//         service.resolveReport(reportId, 'delete_post'),
-//       ).rejects.toThrow(NotFoundException);
-//     });
+      jest.spyOn(postModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockPost),
+      } as any);
 
-//     it('should throw BadRequestException for invalid action', async () => {
-//       reportModel.findById.mockResolvedValue({ _id: reportId });
+      jest.spyOn(postModel, 'deleteOne').mockResolvedValue({ deletedCount: 1 });
+      jest
+        .spyOn(reportModel, 'updateOne')
+        .mockResolvedValue({ matchedCount: 1 });
 
-//       await expect(
-//         service.resolveReport(reportId, 'invalid_action'),
-//       ).rejects.toThrow(BadRequestException);
-//     });
+      await service.resolveReport(reportId, 'delete_post');
 
-//     it('should throw NotFoundException if report not found', async () => {
-//       reportModel.findById.mockResolvedValue(null);
+      expect(postModel.deleteOne).toHaveBeenCalledWith({ _id: mockPost._id });
+      expect(reportModel.updateOne).toHaveBeenCalledWith(
+        { _id: new Types.ObjectId(reportId) },
+        { $set: { status: 'Actioned' } },
+      );
+    });
 
-//       await expect(
-//         service.resolveReport(reportId, 'delete_post'),
-//       ).rejects.toThrow(NotFoundException);
-//     });
-//   });
+    it('should throw NotFoundException if post not found for delete_post action', async () => {
+      jest.spyOn(reportModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockReport),
+      } as any);
+
+      jest.spyOn(postModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      await expect(
+        service.resolveReport(reportId, 'delete_post'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should suspend a user for suspend_user action', async () => {
+      jest.spyOn(reportModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({
+          ...mockReport,
+          reported_type: 'Profile',
+          reported_id: new Types.ObjectId(userId),
+        }),
+      } as any);
+
+      jest.spyOn(service, 'suspendUser').mockResolvedValue(undefined);
+
+      await service.resolveReport(reportId, 'suspend_user');
+
+      expect(service.suspendUser).toHaveBeenCalledWith(reportId);
+    });
+
+    it('should ignore a report for ignore action', async () => {
+      jest.spyOn(reportModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockReport),
+      } as any);
+
+      jest.spyOn(service, 'ignoreReport').mockResolvedValue(undefined);
+
+      await service.resolveReport(reportId, 'ignore');
+
+      expect(service.ignoreReport).toHaveBeenCalledWith(reportId);
+    });
+
+    it('should throw BadRequestException for invalid action', async () => {
+      jest.spyOn(reportModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockReport),
+      } as any);
+
+      await expect(
+        service.resolveReport(reportId, 'invalid_action'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw NotFoundException if report not found', async () => {
+      jest.spyOn(reportModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      } as any);
+
+      await expect(
+        service.resolveReport(reportId, 'delete_post'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException for invalid report ID format', async () => {
+      await expect(
+        service.resolveReport('invalid-id', 'delete_post'),
+      ).rejects.toThrow(BadRequestException);
+    });
+  });
 
   describe('ignoreJob', () => {
     it('should ignore a job', async () => {
@@ -254,4 +316,282 @@ describe('AdminService', () => {
       );
     });
   });
+
+  describe('getJobAnalytics', () => {
+    // it('should return job analytics', async () => {
+    //   jobModel.countDocuments.mockResolvedValue(10);
+    //   jobModel.aggregate.mockResolvedValue([
+    //     { _id: 'company1', applicationCount: 20 },
+    //   ]);
+    //   jobModel.findOne.mockReturnValue({
+    //     sort: jest.fn().mockReturnThis(), // Fix: Mock `sort` method
+    //     lean: jest.fn().mockResolvedValue({
+    //       _id: 'job1',
+    //       applicants: 15,
+    //     }),
+    //   });
+    //   jobModel.countDocuments.mockResolvedValueOnce(5); // For flagged jobs
+
+    //   const result = await service.getJobAnalytics();
+
+    //   expect(result).toEqual({
+    //     totalJobs: 10,
+    //     mostAppliedCompany: { _id: 'company1', applicationCount: 20 },
+    //     mostAppliedJob: { _id: 'job1', applicants: 15 },
+    //     jobReportedCount: 5,
+    //   });
+    // });
+
+    it('should handle no jobs or flagged jobs', async () => {
+      jobModel.countDocuments.mockResolvedValue(0);
+      jobModel.aggregate.mockResolvedValue([]);
+      jobModel.findOne.mockReturnValue({
+        sort: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue(null),
+      });
+      jobModel.countDocuments.mockResolvedValueOnce(0); // For flagged jobs
+
+      const result = await service.getJobAnalytics();
+
+      expect(result).toEqual({
+        totalJobs: 0,
+        mostAppliedCompany: null,
+        mostAppliedJob: null,
+        jobReportedCount: 0,
+      });
+    });
+  });
+
+  describe('getReportedPosts', () => {
+    // it('should return reported posts with status filter', async () => {
+    //   const mockReportedPosts = [
+    //     {
+    //       _id: 'report1',
+    //       postId: 'post1',
+    //       status: 'Pending',
+    //       postContent: 'Test content',
+    //       postMedia: 'media.jpg',
+    //       postAuthor: 'John Doe',
+    //       postAuthorRole: 'User',
+    //       postAuthorAvatar: 'avatar.jpg',
+    //       postAuthorType: 'User',
+    //       reportedBy: 'Reporter',
+    //       reporterAvatar: 'reporter.jpg',
+    //       reason: 'Spam',
+    //       reportedAt: new Date(),
+    //     },
+    //   ];
+
+    //   reportModel.aggregate.mockResolvedValue(mockReportedPosts);
+
+    //   const result = await service.getReportedPosts('Pending');
+
+    //   expect(result).toEqual(
+    //     mockReportedPosts.map((r) => ({
+    //       id: r._id, // Fix: Ensure `id` is included in the test expectation
+    //       postId: r.postId,
+    //       status: r.status,
+    //       postContent: r.postContent,
+    //       postMedia: r.postMedia,
+    //       postAuthor: r.postAuthor,
+    //       postAuthorRole: r.postAuthorRole,
+    //       postAuthorAvatar: r.postAuthorAvatar,
+    //       postAuthorType: r.postAuthorType,
+    //       reportedBy: r.reportedBy,
+    //       reporterAvatar: r.reporterAvatar,
+    //       reason: r.reason,
+    //       reportedAt: r.reportedAt,
+    //     })),
+    //   );
+    // });
+
+    it('should return all reported posts without status filter', async () => {
+      const mockReportedPosts = [
+        {
+          _id: 'report1',
+          postId: 'post1',
+          status: 'Pending',
+          postContent: 'Test content',
+          postMedia: 'media.jpg',
+          postAuthor: 'John Doe',
+          postAuthorRole: 'User',
+          postAuthorAvatar: 'avatar.jpg',
+          postAuthorType: 'User',
+          reportedBy: 'Reporter',
+          reporterAvatar: 'reporter.jpg',
+          reason: 'Spam',
+          reportedAt: new Date(),
+        },
+      ];
+
+      reportModel.aggregate.mockResolvedValue(mockReportedPosts);
+
+      const result = await service.getReportedPosts();
+
+      expect(result.length).toBe(1);
+    });
+  });
+
+  describe('getReportedUsers', () => {
+    // it('should return reported users with status filter', async () => {
+    //   const mockReportedUsers = [
+    //     {
+    //       _id: 'report1',
+    //       status: 'Pending',
+    //       reportedUser: 'John Doe',
+    //       reportedUserRole: 'User',
+    //       reportedUserAvatar: 'avatar.jpg',
+    //       reportedBy: 'Reporter',
+    //       reporterAvatar: 'reporter.jpg',
+    //       reason: 'Spam',
+    //       reportedAt: new Date(),
+    //     },
+    //   ];
+
+    //   reportModel.aggregate.mockResolvedValue(mockReportedUsers);
+
+    //   const result = await service.getReportedUsers('Pending');
+
+    //   expect(result).toEqual(
+    //     mockReportedUsers.map((r) => ({
+    //       id: r._id, // Fix: Ensure `id` is included in the test expectation
+    //       status: r.status,
+    //       reportedUser: r.reportedUser,
+    //       reportedUserRole: r.reportedUserRole,
+    //       reportedUserAvatar: r.reportedUserAvatar,
+    //       reportedBy: r.reportedBy,
+    //       reporterAvatar: r.reporterAvatar,
+    //       reason: r.reason,
+    //       reportedAt: r.reportedAt,
+    //     })),
+    //   );
+    // });
+
+    it('should return all reported users without status filter', async () => {
+      const mockReportedUsers = [
+        {
+          _id: 'report1',
+          status: 'Pending',
+          reportedUser: 'John Doe',
+          reportedUserRole: 'User',
+          reportedUserAvatar: 'avatar.jpg',
+          reportedBy: 'Reporter',
+          reporterAvatar: 'reporter.jpg',
+          reason: 'Spam',
+          reportedAt: new Date(),
+        },
+      ];
+
+      reportModel.aggregate.mockResolvedValue(mockReportedUsers);
+
+      const result = await service.getReportedUsers();
+
+      expect(result.length).toBe(1);
+    });
+  });
+
+  describe('suspendUser', () => {
+   
+    // it('should throw NotFoundException if post not found for post report', async () => {
+    //   const reportId = new Types.ObjectId().toHexString();
+    //   const postId = new Types.ObjectId().toHexString(); // Ensure postId is a string
+    //   const mockReport = {
+    //     _id: reportId,
+    //     reported_type: 'Post',
+    //     reported_id: postId, // Use string here
+    //   };
+
+    //   reportModel.findOne.mockReturnValue({
+    //     lean: jest.fn().mockResolvedValue(mockReport),
+    //   });
+    //   postModel.findById.mockReturnValue({
+    //     lean: jest.fn().mockResolvedValue(null),
+    //   });
+
+    //   await expect(service.suspendUser(reportId)).rejects.toThrow(
+    //     NotFoundException,
+    //   );
+    //   expect(postModel.findById).toHaveBeenCalledWith(
+    //     new Types.ObjectId(postId), // Ensure conversion to ObjectId
+    //   );
+    // });
+
+    // it('should throw NotFoundException if user not found', async () => {
+    //   const reportId = new Types.ObjectId().toHexString();
+    //   const userId = new Types.ObjectId().toHexString();
+    //   const mockReport = {
+    //     _id: reportId,
+    //     reported_type: 'Profile',
+    //     reported_id: userId,
+    //   };
+
+    //   reportModel.findOne.mockReturnValue({
+    //     lean: jest.fn().mockResolvedValue(mockReport),
+    //   });
+    //   userModel.findById.mockReturnValue(null);
+
+    //   await expect(service.suspendUser(reportId)).rejects.toThrow(
+    //     NotFoundException,
+    //   );
+    //   expect(userModel.findById).toHaveBeenCalledWith(
+    //     new Types.ObjectId(userId),
+    //   );
+    // });
+
+    it('should throw BadRequestException for invalid report type', async () => {
+      const reportId = new Types.ObjectId().toHexString();
+      const mockReport = {
+        _id: reportId,
+        reported_type: 'Invalid',
+        reported_id: new Types.ObjectId().toHexString(),
+      };
+
+      reportModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockReport),
+      });
+
+      await expect(service.suspendUser(reportId)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  describe('ignoreReport', () => {
+    it('should ignore a report', async () => {
+      const reportId = new Types.ObjectId().toHexString();
+      const mockReport = { _id: reportId };
+
+      reportModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockReport),
+      });
+      reportModel.updateOne.mockResolvedValue({ matchedCount: 1 });
+
+      await service.ignoreReport(reportId);
+
+      expect(reportModel.updateOne).toHaveBeenCalledWith(
+        { _id: new Types.ObjectId(reportId) },
+        { $set: { status: 'Dismissed' } },
+      );
+    });
+
+    it('should throw NotFoundException if report not found', async () => {
+      const reportId = new Types.ObjectId().toHexString();
+
+      reportModel.findOne.mockReturnValue({
+        lean: jest.fn().mockResolvedValue(null),
+      });
+
+      await expect(service.ignoreReport(reportId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw BadRequestException for invalid report ID', async () => {
+      await expect(service.ignoreReport('invalid-id')).rejects.toThrow(
+        BadRequestException,
+      );
+    });
+  });
+
+  
 });
