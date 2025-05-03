@@ -70,7 +70,6 @@ export async function getCommentInfo(
   if (comment.author_type === 'User') {
     authorProfile = await profileModel.findById(comment.author_id).exec();
 
-    //console.log('authorProfile', authorProfile);
     if (authorProfile) {
       authorProfilePicture =
         'profile_picture' in authorProfile
@@ -84,7 +83,7 @@ export async function getCommentInfo(
     }
   } else if (comment.author_type === 'Company') {
     authorProfile = await companyModel.findById(comment.author_id).exec();
-    //console.log('authorProfile', authorProfile);
+
     if (authorProfile) {
       if ('logo' in authorProfile) {
         authorProfilePicture =
@@ -187,8 +186,7 @@ export async function getPostInfo(
   let authorProfile: ProfileDocument | CompanyDocument | null = null;
   let authorProfilePicture: string | undefined;
   let authorBio: string | undefined;
-  //console.log('post', post);
-  //   console.log(post);
+
   if (post.author_type === 'User') {
     authorProfile = await profileModel
       .findById(new Types.ObjectId(post.author_id))
@@ -204,7 +202,7 @@ export async function getPostInfo(
     authorProfile = await companyModel
       .findById(new Types.ObjectId(post.author_id))
       .exec();
-    //console.log('authorProfile', authorProfile);
+
     if (!authorProfile) {
       throw new NotFoundException('Author profile not found');
     }
@@ -221,7 +219,6 @@ export async function getPostInfo(
     parentPost = await postModel.findOne({ _id: post.parent_post_id }).exec();
 
     if (!parentPost) {
-      //console.log('Parent post not found');
     } else {
       parentPostDto = await getPostInfo(
         parentPost,
@@ -337,8 +334,8 @@ export async function getUserAccessed(
   companyId: string,
   companyManagerModel,
 ): Promise<string> {
-  userId = userId.trim(); // Remove spaces from userId
-  companyId = companyId.trim(); // Remove spaces from companyId
+  userId = userId.trim();
+  companyId = companyId.trim();
 
   console.log('userId', userId);
   console.log('companyId', companyId);
@@ -347,8 +344,8 @@ export async function getUserAccessed(
 
   const managed = await companyManagerModel
     .find({
-      manager_id: new Types.ObjectId(userId), // Ensure user_id is an ObjectId
-      company_id: new Types.ObjectId(companyId), // Ensure company_id is an ObjectId
+      manager_id: new Types.ObjectId(userId),
+      company_id: new Types.ObjectId(companyId),
     })
     .exec();
 

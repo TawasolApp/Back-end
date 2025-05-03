@@ -23,9 +23,7 @@ export async function setConnectionStatus(
     (await getIgnored(model, loggedInUser, otherUser))
   ) {
     return ProfileStatus.PENDING;
-  } else if (
-    await getPending(model, otherUser, loggedInUser)
-  ) {
+  } else if (await getPending(model, otherUser, loggedInUser)) {
     return ProfileStatus.REQUEST;
   } else {
     return ProfileStatus.NULL;
@@ -39,9 +37,7 @@ export async function setFollowStatus(
 ) {
   if (loggedInUser == otherUser) {
     return ProfileStatus.ME;
-  } else if (
-    await getFollow(model, loggedInUser, otherUser)
-  ) {
+  } else if (await getFollow(model, loggedInUser, otherUser)) {
     return ProfileStatus.FOLLOWING;
   } else {
     return ProfileStatus.NULL;
