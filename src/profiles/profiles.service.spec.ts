@@ -24,6 +24,13 @@ import { CertificationDto } from './dto/certification.dto';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompaniesService } from '../companies/companies.service';
+import {
+  getBlocked,
+} from '../connections/helpers/connection-helpers';
+
+jest.mock('../connections/helpers/connection-helpers', () => ({
+  getBlocked: jest.fn(),
+}));
 
 const mockProfile = {
   _id: new Types.ObjectId(),
@@ -98,7 +105,6 @@ describe('ProfilesService', () => {
       controllers: [ProfilesController],
       providers: [
         JwtService,
-
         ProfilesService,
         {
           provide: getModelToken(Profile.name),
@@ -185,7 +191,8 @@ describe('ProfilesService', () => {
       jest.spyOn(profileModel, 'findById').mockReturnValue({
         exec: jest.fn().mockResolvedValue(mockProfile),
       } as any);
-
+      (getBlocked as jest.Mock).mockResolvedValue(null);
+      (getBlocked as jest.Mock).mockResolvedValue(null);
       const result = await service.getProfile(
         mockProfile._id,
         mockProfile._id.toString(),
