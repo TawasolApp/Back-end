@@ -17,7 +17,16 @@ import { Types } from 'mongoose';
 @Controller('messages')
 export class MessagesController {
   constructor(private readonly messagesService: MessagesService) {}
-
+  /**
+   * Retrieves paginated conversations for the authenticated user
+   * @param req - Request object containing user information
+   * @param page - Page number for pagination (default: 1)
+   * @param limit - Number of conversations per page (default: 10)
+   * @returns {Promise<Object>} Paginated list of conversations with:
+   *   - data: Array of conversation objects
+   *   - pagination: Pagination metadata
+   * @throws {UnauthorizedException} If user is not authenticated
+   */
   @Get('conversations')
   @UseGuards(JwtAuthGuard)
   @UsePipes(new ValidationPipe())
@@ -37,7 +46,17 @@ export class MessagesController {
     );
     return conversations;
   }
-
+  /**
+   * Retrieves paginated messages for a specific conversation
+   * @param req - Request object containing user information
+   * @param conversationId - ID of the conversation to retrieve messages from
+   * @param page - Page number for pagination (default: 1)
+   * @param limit - Number of messages per page (default: 20)
+   * @returns {Promise<Object>} Paginated list of messages with:
+   *   - data: Array of message objects
+   *   - pagination: Pagination metadata
+   * @throws {UnauthorizedException} If user is not authenticated
+   */
   @Get('conversations/:conversationId')
   @UseGuards(JwtAuthGuard)
   @UsePipes(new ValidationPipe())
@@ -58,7 +77,18 @@ export class MessagesController {
     );
     return messages;
   }
-
+  /**
+   * Marks all messages in a conversation as read
+   * @param req - Request object containing user information
+   * @param conversationId - ID of the conversation to mark as read
+   * @returns {Promise<Object>} Updated conversation details including:
+   *   - lastMessage: The most recent message
+   *   - unseenCount: Number of unseen messages
+   *   - markedAsUnread: Boolean indicating if conversation is marked unread
+   *   - otherParticipant: Information about the other conversation participant
+   * @throws {UnauthorizedException} If user is not authenticated
+   * @throws {NotFoundException} If conversation is not found
+   */
   @Patch('conversations/:conversationId/mark-as-read')
   @UseGuards(JwtAuthGuard)
   async markConversationAsRead(
@@ -75,6 +105,18 @@ export class MessagesController {
     );
   }
 
+  /**
+   * Marks a conversation as unread for the authenticated user
+   * @param req - Request object containing user information
+   * @param conversationId - ID of the conversation to mark as unread
+   * @returns {Promise<Object>} Updated conversation details including:
+   *   - lastMessage: The most recent message
+   *   - unseenCount: Number of unseen messages
+   *   - markedAsUnread: Boolean indicating if conversation is marked unread
+   *   - otherParticipant: Information about the other conversation participant
+   * @throws {UnauthorizedException} If user is not authenticated
+   * @throws {NotFoundException} If conversation is not found
+   */
   @Patch('conversations/:conversationId/mark-as-unread')
   @UseGuards(JwtAuthGuard)
   async markConversationAsUnread(

@@ -403,4 +403,142 @@ describe('MessagesService', () => {
       expect(result.pagination.totalItems).toBe(2);
     });
   });
+  describe('setConversationAsUnread', () => {
+    it('should mark conversation as unread for user', async () => {
+      const conversationId = new Types.ObjectId();
+      const userId = new Types.ObjectId();
+      const otherUserId = new Types.ObjectId();
+
+      const mockConversation = {
+        _id: conversationId,
+        participants: [userId, otherUserId],
+        marked_as_unread: [false, false],
+        unseen_count: 1,
+        last_message_id: new Types.ObjectId(),
+      };
+
+      const updatedConversation = {
+        ...mockConversation,
+        marked_as_unread: [true, false],
+      };
+
+      const mockMessage = {
+        _id: mockConversation.last_message_id,
+        text: 'Hey!',
+        sent_at: new Date(),
+      };
+
+      const mockProfile = {
+        _id: otherUserId,
+        first_name: 'Alice',
+        last_name: 'Smith',
+        profile_picture: 'pic.jpg',
+      };
+
+      jest
+        .spyOn(conversationModel, 'findById')
+        .mockResolvedValue(mockConversation as any);
+
+      jest.spyOn(conversationModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(updatedConversation),
+      } as any);
+
+      jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+        select: jest.fn().mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(mockProfile),
+        }),
+      } as any);
+
+      jest.spyOn(messageModel, 'findById').mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockMessage),
+      } as any);
+
+      const result = await service.setConversationAsUnread(
+        userId,
+        conversationId,
+      );
+
+      expect(result).toEqual({
+        _id: updatedConversation._id,
+        lastMessage: mockMessage,
+        unseenCount: updatedConversation.unseen_count,
+        markedAsUnread: true,
+        otherParticipant: {
+          _id: mockProfile._id,
+          first_name: mockProfile.first_name,
+          last_name: mockProfile.last_name,
+          profile_picture: mockProfile.profile_picture,
+        },
+      });
+    });
+  });
+
+  describe('setConversationAsRead', () => {
+    it('should mark conversation as read for user', async () => {
+      const conversationId = new Types.ObjectId();
+      const userId = new Types.ObjectId();
+      const otherUserId = new Types.ObjectId();
+
+      const mockConversation = {
+        _id: conversationId,
+        participants: [userId, otherUserId],
+        marked_as_unread: [true, false],
+        unseen_count: 2,
+        last_message_id: new Types.ObjectId(),
+      };
+
+      const mockUpdatedConversation = {
+        ...mockConversation,
+        marked_as_unread: [false, false],
+      };
+
+      const mockProfile = {
+        _id: otherUserId,
+        firstName: 'Jane',
+        lastName: 'Doe',
+        profilePicture: 'profile.jpg',
+      };
+
+      const mockMessage = {
+        _id: mockConversation.last_message_id,
+        content: 'Hey!',
+      };
+
+      jest
+        .spyOn(conversationModel, 'findById')
+        .mockResolvedValue(mockConversation as any);
+
+      jest.spyOn(conversationModel, 'findByIdAndUpdate').mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockUpdatedConversation),
+      } as any);
+
+      jest.spyOn(profileModel, 'findById').mockReturnValueOnce({
+        select: jest.fn().mockReturnValueOnce({
+          lean: jest.fn().mockResolvedValueOnce(mockProfile),
+        }),
+      } as any);
+
+      jest.spyOn(messageModel, 'findById').mockReturnValueOnce({
+        lean: jest.fn().mockResolvedValueOnce(mockMessage),
+      } as any);
+
+      const result = await service.setConversationAsRead(
+        userId,
+        conversationId,
+      );
+
+      expect(result).toEqual({
+        _id: mockUpdatedConversation._id,
+        lastMessage: mockMessage,
+        unseenCount: mockUpdatedConversation.unseen_count,
+        markedAsUnread: mockUpdatedConversation.marked_as_unread[0],
+        otherParticipant: {
+          _id: otherUserId,
+          firstName: 'Jane',
+          lastName: 'Doe',
+          profilePicture: 'profile.jpg',
+        },
+      });
+    });
+  });
 });
