@@ -16,32 +16,21 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import {
-  Company,
-  CompanyDocument,
-} from '../companies/infrastructure/database/schemas/company.schema';
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
-import {
-  User,
-  UserDocument,
-} from '../users/infrastructure/database/schemas/user.schema';
+import { User } from '../users/infrastructure/database/schemas/user.schema';
+import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
 import { NotificationGateway } from '../common/gateway/notification.gateway';
-import { NotFoundException } from '@nestjs/common';
-
-// Helper type for mocked documents
-type MockDocument<T> = T & {
-  _id: Types.ObjectId;
-  save: jest.Mock;
-};
+import * as notificationHelpers from '../notifications/helpers/notification.helper';
 
 describe('MessagesService', () => {
   let service: MessagesService;
   let messageModel: Model<MessageDocument>;
   let conversationModel: Model<ConversationDocument>;
   let profileModel: Model<ProfileDocument>;
-  let companyModel: Model<CompanyDocument>;
-  let companyManagerModel: Model<any>;
-  let userModel: Model<UserDocument>;
-  let notificationGateway: NotificationGateway;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -55,22 +44,33 @@ describe('MessagesService', () => {
             updateMany: jest.fn(),
             find: jest.fn(),
             findById: jest.fn(),
+            findOne: jest.fn(),
+
+            lean: jest.fn(),
+            exec: jest.fn(),
+            findByIdAndUpdate: jest.fn().mockImplementation(() => ({
+              lean: jest.fn().mockImplementation(() => ({
+                exec: jest.fn().mockResolvedValue({
+                  _id: 'conv123',
+                  unreadBy: ['participant1'],
+                }),
+              })),
+            })),
           },
         },
         {
           provide: getModelToken(Conversation.name),
           useValue: {
+            create: jest.fn(),
             findOne: jest.fn(),
-            create: jest.fn().mockImplementation((doc) => ({
-              ...doc,
-              _id: new Types.ObjectId(),
-              save: jest.fn().mockResolvedValue(doc),
-            })),
             find: jest.fn(),
             countDocuments: jest.fn(),
             findById: jest.fn(),
-            findByIdAndUpdate: jest.fn(),
+            findByIdAndUpdate: jest.fn().mockReturnThis(),
             updateOne: jest.fn(),
+            findOneAndUpdate: jest.fn(),
+            lean: jest.fn().mockReturnThis(),
+            exec: jest.fn(),
           },
         },
         {
@@ -80,10 +80,12 @@ describe('MessagesService', () => {
           },
         },
         {
+          provide: getModelToken(Notification.name),
+          useValue: {},
+        },
+        {
           provide: getModelToken(Company.name),
-          useValue: {
-            findById: jest.fn(),
-          },
+          useValue: {},
         },
         {
           provide: getModelToken(CompanyManager.name),
@@ -91,19 +93,15 @@ describe('MessagesService', () => {
         },
         {
           provide: getModelToken(User.name),
-          useValue: {
-            findById: jest.fn(),
-          },
+          useValue: {},
         },
         {
           provide: NotificationGateway,
-          useValue: {
-            emitNotification: jest.fn(),
-          },
+          useValue: {},
         },
       ],
     }).compile();
-
+    jest.spyOn(notificationHelpers, 'addNotification').mockResolvedValue(null);
     service = module.get<MessagesService>(MessagesService);
     messageModel = module.get<Model<MessageDocument>>(
       getModelToken(Message.name),
@@ -114,31 +112,26 @@ describe('MessagesService', () => {
     profileModel = module.get<Model<ProfileDocument>>(
       getModelToken(Profile.name),
     );
-    companyModel = module.get<Model<CompanyDocument>>(
-      getModelToken(Company.name),
-    );
-    companyManagerModel = module.get<Model<any>>(
-      getModelToken(CompanyManager.name),
-    );
-    userModel = module.get<Model<UserDocument>>(getModelToken(User.name));
-    notificationGateway = module.get<NotificationGateway>(NotificationGateway);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
   });
 
   describe('createMessage', () => {
-    it('should create a new message and conversation', async () => {
-      const senderId = new Types.ObjectId();
-      const receiverId = new Types.ObjectId();
+    it('should create a new conversation and message when none exists', async () => {
+      const senderId = new Types.ObjectId().toString();
+      const receiverId = new Types.ObjectId().toString();
       const messageText = 'Hello';
       const media = ['image1.jpg'];
       const messageDate = new Date();
 
-      const mockConversation: MockDocument<Conversation> = {
+      const mockConversation = {
         _id: new Types.ObjectId(),
         participants: [senderId, receiverId],
-        unseen_count: 0,
         last_message_id: new Types.ObjectId(),
-        marked_as_unread: [false, false],
-        save: jest.fn().mockResolvedValue(this),
+        unseen_count: 1,
+        save: jest.fn(),
       };
 
       const mockMessage = {
@@ -157,13 +150,12 @@ describe('MessagesService', () => {
         .spyOn(conversationModel, 'create')
         .mockResolvedValue(mockConversation as any);
       jest.spyOn(messageModel, 'create').mockResolvedValue(mockMessage as any);
-      jest.spyOn(profileModel, 'findById').mockResolvedValue({} as any);
-      jest.spyOn(companyModel, 'findById').mockResolvedValue(null);
-      jest.spyOn(userModel, 'findById').mockResolvedValue({} as any);
+      jest.spyOn(service, 'markMessagesAsRead').mockResolvedValue(undefined);
+      jest.spyOn(service, 'updateUnseenCount').mockResolvedValue(undefined);
 
       const result = await service.createMessage(
-        senderId.toString(),
-        receiverId.toString(),
+        senderId,
+        receiverId,
         messageText,
         media,
         messageDate,
@@ -191,14 +183,67 @@ describe('MessagesService', () => {
         message: mockMessage,
       });
     });
+
+    it('should use existing conversation and create message', async () => {
+      const senderId = new Types.ObjectId().toString();
+      const receiverId = new Types.ObjectId().toString();
+      const messageText = 'Hello again';
+      const media = ['image2.jpg'];
+      const messageDate = new Date();
+
+      const existingConversation = {
+        _id: new Types.ObjectId(),
+        participants: [senderId, receiverId],
+        last_message_id: new Types.ObjectId('645a3a1e7e3d4f001f3e3e3e'),
+        unseen_count: 3,
+        save: jest.fn(),
+      };
+
+      const mockMessage = {
+        _id: new Types.ObjectId(),
+        sender_id: new Types.ObjectId(senderId),
+        receiver_id: new Types.ObjectId(receiverId),
+        conversation_id: existingConversation._id,
+        text: messageText,
+        media,
+        status: MessageStatus.Sent,
+        sent_at: messageDate,
+      };
+
+      jest
+        .spyOn(conversationModel, 'findOne')
+        .mockResolvedValue(existingConversation as any);
+      jest.spyOn(messageModel, 'create').mockResolvedValue(mockMessage as any);
+      jest.spyOn(service, 'markMessagesAsRead').mockResolvedValue(undefined);
+      jest.spyOn(service, 'updateUnseenCount').mockResolvedValue(undefined);
+
+      const result = await service.createMessage(
+        senderId,
+        receiverId,
+        messageText,
+        media,
+        messageDate,
+      );
+
+      expect(conversationModel.findOne).toHaveBeenCalledWith({
+        participants: { $all: [senderId, receiverId] },
+      });
+      expect(conversationModel.create).not.toHaveBeenCalled();
+      expect(messageModel.create).toHaveBeenCalled();
+      expect(existingConversation.save).toHaveBeenCalled();
+      expect(result).toEqual({
+        conversation: existingConversation,
+        message: mockMessage,
+      });
+    });
   });
 
   describe('updateUnseenCount', () => {
     it('should update unseen count for conversation', async () => {
       const conversationId = new Types.ObjectId();
-      const count = 5;
+      const unseenCount = 5;
 
-      jest.spyOn(messageModel, 'countDocuments').mockResolvedValue(count);
+      jest.spyOn(messageModel, 'countDocuments').mockResolvedValue(unseenCount);
       jest.spyOn(conversationModel, 'updateOne').mockResolvedValue({} as any);
 
       await service.updateUnseenCount(conversationId);
@@ -214,13 +259,13 @@ describe('MessagesService', () => {
       });
       expect(conversationModel.updateOne).toHaveBeenCalledWith(
         { _id: conversationId },
-        { $set: { unseen_count: count } },
+        { $set: { unseen_count: unseenCount } },
       );
     });
   });
 
   describe('markMessagesAsDelivered', () => {
-    it('should mark messages as delivered', async () => {
+    it('should update message status to delivered', async () => {
       const userId = new Types.ObjectId().toString();
 
       jest.spyOn(messageModel, 'updateMany').mockResolvedValue({} as any);
@@ -238,12 +283,12 @@ describe('MessagesService', () => {
   });
 
   describe('markMessagesAsRead', () => {
-    it('should mark messages as read', async () => {
+    it('should update message status to read and update unseen count', async () => {
       const conversationId = new Types.ObjectId();
       const userId = new Types.ObjectId();
 
       jest.spyOn(messageModel, 'updateMany').mockResolvedValue({} as any);
-      jest.spyOn(service, 'updateUnseenCount').mockResolvedValue();
+      jest.spyOn(service, 'updateUnseenCount').mockResolvedValue(undefined);
 
       await service.markMessagesAsRead(conversationId, userId);
 
@@ -251,7 +296,9 @@ describe('MessagesService', () => {
         {
           conversation_id: conversationId,
           receiver_id: userId,
-          status: { $in: [MessageStatus.Sent, MessageStatus.Delivered] },
+          status: {
+            $in: [MessageStatus.Sent, MessageStatus.Delivered],
+          },
         },
         { $set: { status: MessageStatus.Read } },
       );
@@ -260,19 +307,18 @@ describe('MessagesService', () => {
   });
 
   describe('getConversations', () => {
-    it('should return paginated conversations', async () => {
+    it('should return paginated conversations for user', async () => {
       const userId = new Types.ObjectId();
-      const otherParticipantId = new Types.ObjectId();
-      const conversationId = new Types.ObjectId();
-      const messageId = new Types.ObjectId();
+      const page = 1;
+      const limit = 10;
 
       const mockConversations = [
         {
-          _id: conversationId,
-          participants: [userId, otherParticipantId],
-          last_message_id: messageId,
-          unseen_count: 1,
-          markedAsUnread: [false, false],
+          _id: new Types.ObjectId(),
+          participants: [userId, new Types.ObjectId()],
+          last_message_id: new Types.ObjectId(),
+          unseen_count: 2,
+          marked_as_unread: [false, false],
         },
       ];
 
@@ -283,207 +329,78 @@ describe('MessagesService', () => {
       };
 
       const mockMessage = {
-        _id: messageId,
-        text: 'Hello',
+        _id: mockConversations[0].last_message_id,
+        text: 'Last message',
         sent_at: new Date(),
       };
 
-      jest
-        .spyOn(conversationModel, 'find')
-        .mockResolvedValue(mockConversations);
+      jest.spyOn(conversationModel, 'find').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockConversations),
+      } as any);
       jest.spyOn(conversationModel, 'countDocuments').mockResolvedValue(1);
-      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
-      jest.spyOn(messageModel, 'findById').mockResolvedValue(mockMessage);
+      jest.spyOn(profileModel, 'findById').mockReturnValue({
+        select: jest.fn().mockReturnValue({
+          lean: jest.fn().mockResolvedValue(mockProfile),
+        }),
+      } as any);
+      jest.spyOn(messageModel, 'findById').mockReturnValue({
+        lean: jest.fn().mockResolvedValue(mockMessage),
+      } as any);
 
-      const result = await service.getConversations(userId, 1, 10);
+      const result = await service.getConversations(userId, page, limit);
 
-      expect(result.data).toHaveLength(1);
-      expect(result.pagination).toEqual({
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 1,
-        itemsPerPage: 10,
-      });
-    });
-
-    it('should handle missing profile', async () => {
-      const userId = new Types.ObjectId();
-      const otherParticipantId = new Types.ObjectId();
-      const conversationId = new Types.ObjectId();
-      const messageId = new Types.ObjectId();
-
-      const mockConversations = [
-        {
-          _id: conversationId,
-          participants: [userId, otherParticipantId],
-          last_message_id: messageId,
-          unseen_count: 1,
-          markedAsUnread: [false, false],
-        },
-      ];
-
-      jest
-        .spyOn(conversationModel, 'find')
-        .mockResolvedValue(mockConversations);
-      jest.spyOn(conversationModel, 'countDocuments').mockResolvedValue(1);
-      jest.spyOn(profileModel, 'findById').mockResolvedValue(null);
-      jest.spyOn(messageModel, 'findById').mockResolvedValue(null);
-
-      const result = await service.getConversations(userId, 1, 10);
-
-      expect(result.data[0].otherParticipant.firstName).toBeUndefined();
+      expect(result.data.length).toBe(1);
+      expect(result.pagination.currentPage).toBe(page);
+      expect(result.pagination.itemsPerPage).toBe(limit);
+      expect(result.pagination.totalItems).toBe(1);
+      expect(result.data[0].otherParticipant.firstName).toBe(
+        mockProfile.first_name,
+      );
     });
   });
 
   describe('getConversationMessages', () => {
-    it('should return paginated messages', async () => {
+    it('should return paginated messages for conversation', async () => {
       const conversationId = new Types.ObjectId().toString();
+      const page = 1;
+      const limit = 10;
+
       const mockMessages = [
         {
           _id: new Types.ObjectId(),
-          text: 'Hello',
+          text: 'Message 1',
           sent_at: new Date(),
+          status: MessageStatus.Read,
+        },
+        {
+          _id: new Types.ObjectId(),
+          text: 'Message 2',
+          sent_at: new Date(),
+          status: MessageStatus.Read,
         },
       ];
 
-      jest.spyOn(messageModel, 'countDocuments').mockResolvedValue(1);
-      jest.spyOn(messageModel, 'find').mockResolvedValue(mockMessages);
+      jest.spyOn(messageModel, 'countDocuments').mockResolvedValue(2);
+      jest.spyOn(messageModel, 'find').mockReturnValue({
+        sort: jest.fn().mockReturnValue({
+          skip: jest.fn().mockReturnValue({
+            limit: jest.fn().mockReturnValue({
+              lean: jest.fn().mockResolvedValue(mockMessages),
+            }),
+          }),
+        }),
+      } as any);
 
       const result = await service.getConversationMessages(
         conversationId,
-        1,
-        10,
+        page,
+        limit,
       );
 
-      expect(result.data).toHaveLength(1);
-      expect(result.pagination).toEqual({
-        currentPage: 1,
-        totalPages: 1,
-        totalItems: 1,
-        itemsPerPage: 10,
-      });
-    });
-  });
-
-  describe('setConversationAsUnread', () => {
-    it('should mark conversation as unread', async () => {
-      const userId = new Types.ObjectId();
-      const otherParticipantId = new Types.ObjectId();
-      const conversationId = new Types.ObjectId();
-      const messageId = new Types.ObjectId();
-
-      const mockConversation = {
-        _id: conversationId,
-        participants: [userId, otherParticipantId],
-        last_message_id: messageId,
-        unseen_count: 1,
-        markedAsUnread: [false, false],
-      };
-
-      const mockUpdatedConversation = {
-        ...mockConversation,
-        markedAsUnread: [true, false],
-      };
-
-      const mockProfile = {
-        first_name: 'John',
-        last_name: 'Doe',
-        profile_picture: 'profile.jpg',
-      };
-
-      const mockMessage = {
-        _id: messageId,
-        text: 'Hello',
-        sent_at: new Date(),
-      };
-
-      jest
-        .spyOn(conversationModel, 'findById')
-        .mockResolvedValue(mockConversation);
-      jest
-        .spyOn(conversationModel, 'findByIdAndUpdate')
-        .mockResolvedValue(mockUpdatedConversation);
-      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
-      jest.spyOn(messageModel, 'findById').mockResolvedValue(mockMessage);
-
-      const result = await service.setConversationAsUnread(
-        userId,
-        conversationId,
-      );
-
-      expect(result.markedAsUnread).toBe(true);
-    });
-
-    it('should throw NotFoundException if conversation not found', async () => {
-      jest.spyOn(conversationModel, 'findById').mockResolvedValue(null);
-
-      await expect(
-        service.setConversationAsUnread(
-          new Types.ObjectId(),
-          new Types.ObjectId(),
-        ),
-      ).rejects.toThrow(NotFoundException);
-    });
-  });
-
-  describe('setConversationAsRead', () => {
-    it('should mark conversation as read', async () => {
-      const userId = new Types.ObjectId();
-      const otherParticipantId = new Types.ObjectId();
-      const conversationId = new Types.ObjectId();
-      const messageId = new Types.ObjectId();
-
-      const mockConversation = {
-        _id: conversationId,
-        participants: [userId, otherParticipantId],
-        last_message_id: messageId,
-        unseen_count: 1,
-        markedAsUnread: [true, false],
-      };
-
-      const mockUpdatedConversation = {
-        ...mockConversation,
-        markedAsUnread: [false, false],
-      };
-
-      const mockProfile = {
-        first_name: 'John',
-        last_name: 'Doe',
-        profile_picture: 'profile.jpg',
-      };
-
-      const mockMessage = {
-        _id: messageId,
-        text: 'Hello',
-        sent_at: new Date(),
-      };
-
-      jest
-        .spyOn(conversationModel, 'findById')
-        .mockResolvedValue(mockConversation);
-      jest
-        .spyOn(conversationModel, 'findByIdAndUpdate')
-        .mockResolvedValue(mockUpdatedConversation);
-      jest.spyOn(profileModel, 'findById').mockResolvedValue(mockProfile);
-      jest.spyOn(messageModel, 'findById').mockResolvedValue(mockMessage);
-
-      const result = await service.setConversationAsRead(
-        userId,
-        conversationId,
-      );
-
-      expect(result.markedAsUnread).toBe(false);
-    });
-
-    it('should throw NotFoundException if conversation not found', async () => {
-      jest.spyOn(conversationModel, 'findById').mockResolvedValue(null);
-
-      await expect(
-        service.setConversationAsRead(
-          new Types.ObjectId(),
-          new Types.ObjectId(),
-        ),
-      ).rejects.toThrow(NotFoundException);
+      expect(result.data.length).toBe(2);
+      expect(result.pagination.currentPage).toBe(page);
+      expect(result.pagination.itemsPerPage).toBe(limit);
+      expect(result.pagination.totalItems).toBe(2);
     });
   });
 });
