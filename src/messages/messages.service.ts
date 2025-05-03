@@ -156,6 +156,7 @@ export class MessagesService {
       },
       { $set: { status: MessageStatus.Read } },
     );
+    await this.updateUnseenCount(new Types.ObjectId(conversationId));
 
     console.log('after service read message');
   }
