@@ -1,9 +1,7 @@
 import { Profile } from '../../profiles/infrastructure/database/schemas/profile.schema';
 import { GetUserDto } from '../dtos/get-user.dto';
 
-export function toGetUserDto(
-  profile: Partial<Profile>,
-): GetUserDto {
+export function toGetUserDto(profile: Partial<Profile>): GetUserDto {
   const dto: Partial<GetUserDto> = {};
 
   if (profile._id) dto.userId = profile._id.toString();

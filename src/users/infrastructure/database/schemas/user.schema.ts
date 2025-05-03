@@ -43,7 +43,7 @@ export class User {
   @Prop({ default: false })
   is_suspended: boolean;
 
-  @Prop({ type: Date, default: null }) 
+  @Prop({ type: Date, default: null })
   suspension_end_date: Date | null;
 }
 

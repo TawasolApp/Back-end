@@ -6,8 +6,6 @@ import {
   Delete,
   Param,
   HttpCode,
-  HttpException,
-  InternalServerErrorException,
   BadRequestException,
   HttpStatus,
   UseGuards,

@@ -43,5 +43,5 @@ export class PostJobDto {
 
   @IsUrl()
   @IsOptional()
-  readonly applicationLink?: string
+  readonly applicationLink?: string;
 }
