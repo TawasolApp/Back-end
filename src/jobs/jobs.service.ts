@@ -40,7 +40,7 @@ import { GetUserDto } from '../common/dtos/get-user.dto';
 import { handleError } from '../common/utils/exception-handler';
 import { toApplicationDto } from './mappers/application.mapper';
 import { addNotification } from '../notifications/helpers/notification.helper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   Notification,
   NotificationDocument,
@@ -49,7 +49,6 @@ import {
   PlanDetail,
   PlanDetailDocument,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
-import { isPremium } from '../payments/helpers/check-premium.helper';
 
 @Injectable()
 export class JobsService {

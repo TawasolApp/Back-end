@@ -15,7 +15,7 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { getConversations, getMessages } from './dto/messages.mapper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { addNotification } from '../notifications/helpers/notification.helper';
 import {
   Notification,
@@ -25,7 +25,7 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { CompanyManager, CompanyManagerDocument } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import {
   User,
   UserDocument,
@@ -38,14 +38,14 @@ export class MessagesService {
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
     @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
+    private readonly profileModel: Model<ProfileDocument>,
     private readonly notificationGateway: NotificationGateway,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>, // Replace 'any' with the actual type of your Company model
+    private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
-    private readonly companyManagerModel: Model<any>,
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {}
@@ -206,8 +206,8 @@ export class MessagesService {
 
         // Get the correct markedAsUnread value
         const markedAsUnread = isFirstParticipant
-          ? conversation.markedAsUnread[0]
-          : conversation.markedAsUnread[1];
+          ? conversation.marked_as_unread[0]
+          : conversation.marked_as_unread[1];
 
         return {
           _id: conversation._id,
@@ -346,8 +346,8 @@ export class MessagesService {
 
     // Get the correct markedAsUnread value
     const markedAsUnread = isFirstParticipant
-      ? updatedConversation.markedAsUnread[0]
-      : updatedConversation.markedAsUnread[1];
+      ? updatedConversation.marked_as_unread[0]
+      : updatedConversation.marked_as_unread[1];
 
     return {
       _id: updatedConversation._id,
@@ -415,8 +415,8 @@ export class MessagesService {
 
     // Get the correct markedAsUnread value
     const markedAsUnread = isFirstParticipant
-      ? updatedConversation.markedAsUnread[0]
-      : updatedConversation.markedAsUnread[1];
+      ? updatedConversation.marked_as_unread[0]
+      : updatedConversation.marked_as_unread[1];
 
     return {
       _id: updatedConversation._id,

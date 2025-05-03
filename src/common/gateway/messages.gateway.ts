@@ -8,21 +8,20 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
-import { SendMessageDto } from '../messages/dto/send-message.dto';
+import { MessagesService } from '../../messages/messages.service';
+import { SendMessageDto } from '../../messages/dto/send-message.dto';
 import { Model, Types } from 'mongoose';
-import { isPremium } from '../payments/helpers/check-premium.helper';
 import {
   PlanDetail,
   PlanDetailDocument,
-} from '../payments/infrastructure/database/schemas/plan-detail.schema';
+} from '../../payments/infrastructure/database/schemas/plan-detail.schema';
 import { InjectModel } from '@nestjs/mongoose';
 
 import Redis from 'ioredis';
 import {
   Profile,
   ProfileDocument,
-} from '../profiles/infrastructure/database/schemas/profile.schema';
+} from '../../profiles/infrastructure/database/schemas/profile.schema';
 
 @WebSocketGateway({
   cors: {
@@ -81,7 +80,6 @@ export class MessagesGateway
 
     if (userId) {
       client.data.userId = userId;
-      //client.data.isPremium = await isPremium(userId, this.planDetailModel);
       const profile = await this.profileModel
         .findById(new Types.ObjectId(userId))
         .lean();

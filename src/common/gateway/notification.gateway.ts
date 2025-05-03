@@ -8,7 +8,6 @@ import {
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
 import { Server } from 'socket.io';
-import { GetNotificationsDto } from 'src/notifications/dto/get-notifications.dto';
 
 @WebSocketGateway({
   cors: {

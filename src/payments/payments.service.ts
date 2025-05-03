@@ -22,7 +22,7 @@ import {
   Profile,
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
-import { MessagesGateway } from '../gateway/messages.gateway';
+import { MessagesGateway } from '../common/gateway/messages.gateway';
 
 @Injectable()
 export class PaymentsService {

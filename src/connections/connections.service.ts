@@ -47,7 +47,7 @@ import {
 } from './helpers/connection-helpers';
 import { handleError } from '../common/utils/exception-handler';
 import { getSortData } from './helpers/sort-helper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   addNotification,
   deleteNotification,

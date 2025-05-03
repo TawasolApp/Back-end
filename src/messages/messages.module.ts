@@ -16,7 +16,7 @@ import { ConversationSeeder } from './infrastructure/database/seeders/conversati
 import { MessageSeeder } from './infrastructure/database/seeders/message.seeder';
 import { MessagesController } from './messages.controller';
 import { MessagesService } from './messages.service';
-import { MessagesGateway } from '../gateway/messages.gateway';
+import { MessagesGateway } from '../common/gateway/messages.gateway';
 import {
   Profile,
   ProfileSchema,
@@ -25,7 +25,7 @@ import {
   PlanDetail,
   PlanDetailSchema,
 } from '../payments/infrastructure/database/schemas/plan-detail.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   NotificationSchema,
   Notification,

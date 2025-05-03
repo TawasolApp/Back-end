@@ -19,7 +19,7 @@ import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
 import { JobsService } from './jobs.service';
 import { JobsController } from './jobs.controller';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   Notification,
   NotificationSchema,
