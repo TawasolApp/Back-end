@@ -78,9 +78,8 @@ export class JobsService {
         company_id: new Types.ObjectId(companyId),
       })
       .lean();
-   
 
-    return !!(allowedManager );
+    return !!allowedManager;
   }
 
   /**
@@ -163,7 +162,7 @@ export class JobsService {
       return jobDto;
     } catch (error) {
       if (error instanceof NotFoundException) {
-        throw error; 
+        throw error;
       }
       throw new InternalServerErrorException('Failed to retrieve job details');
     }
@@ -210,7 +209,7 @@ export class JobsService {
       const [applications, totalItems] = await Promise.all([
         this.applicationModel
           .find({ job_id: new Types.ObjectId(jobId) })
-          .sort({ applied_at: -1 }) 
+          .sort({ applied_at: -1 })
           .skip(skip)
           .limit(limit)
           .lean(),
@@ -334,6 +333,9 @@ export class JobsService {
           .lean();
         jobDto.status = application?.status || null;
 
+        // Ensure locationType is mapped correctly
+        jobDto.locationType = job.location_type || null;
+
         jobDtos.push(jobDto);
       }
 
@@ -344,6 +346,7 @@ export class JobsService {
         currentPage: page,
       };
     } catch (error) {
+      console.error('Error in getJobs:', error); // Add logging for debugging
       throw new InternalServerErrorException('Failed to get jobs');
     }
   }
@@ -362,10 +365,6 @@ export class JobsService {
         { _id: new Types.ObjectId(jobId) },
         { $addToSet: { saved_by: new Types.ObjectId(userId) } },
       );
-
-      if (updateResult.modifiedCount === 0) {
-        throw new InternalServerErrorException('Failed to save job');
-      }
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -419,15 +418,10 @@ export class JobsService {
         );
       }
 
+      // Handle cases where there are no associated applications
       const deleteApplicationsResult = await this.applicationModel.deleteMany({
         job_id: new Types.ObjectId(jobId),
       });
-
-      if (deleteApplicationsResult.deletedCount === 0) {
-        throw new InternalServerErrorException(
-          'Failed to delete associated applications.',
-        );
-      }
 
       const deleteJobResult = await this.jobModel.deleteOne({
         _id: new Types.ObjectId(jobId),
@@ -441,7 +435,7 @@ export class JobsService {
         error instanceof NotFoundException ||
         error instanceof ForbiddenException
       ) {
-        throw error; 
+        throw error;
       }
       throw new InternalServerErrorException('Failed to delete job');
     }
@@ -499,13 +493,11 @@ export class JobsService {
   ): Promise<void> {
     const { jobId, phoneNumber, resumeURL } = applyJobDto;
 
-   
     const job = await this.jobModel.findById(new Types.ObjectId(jobId)).lean();
     if (!job) {
       throw new NotFoundException('Job not found');
     }
 
-   
     const existingApplication = await this.applicationModel
       .findOne({
         user_id: new Types.ObjectId(userId),
@@ -517,14 +509,12 @@ export class JobsService {
       throw new ForbiddenException('You have already applied for this job');
     }
 
-    
     const userProfile = await this.profileModel
       .findById(new Types.ObjectId(userId))
       .lean();
     if (!userProfile) {
       throw new NotFoundException('User profile not found');
     }
-
 
     if (!userProfile.is_premium) {
       if (userProfile.plan_statistics.application_count <= 0) {
@@ -545,7 +535,6 @@ export class JobsService {
       }
     }
 
-   
     const encodedResumeURL = encodeURIComponent(resumeURL ?? '');
     await this.applicationModel.create({
       _id: new Types.ObjectId(),
@@ -557,17 +546,10 @@ export class JobsService {
       applied_at: new Date().toISOString(),
     });
 
-    
     const jobUpdateResult = await this.jobModel.updateOne(
       { _id: new Types.ObjectId(jobId) },
       { $inc: { applicants: 1 } },
     );
-
-    if (jobUpdateResult.modifiedCount === 0) {
-      throw new InternalServerErrorException(
-        'Failed to update job applicant count',
-      );
-    }
   }
 
   async getAppliedApplications(
@@ -586,7 +568,7 @@ export class JobsService {
       const [applications, totalItems] = await Promise.all([
         this.applicationModel
           .find({ user_id: new Types.ObjectId(userId) })
-          .sort({ applied_at: -1 }) 
+          .sort({ applied_at: -1 })
           .skip(skip)
           .limit(limit)
           .lean(),

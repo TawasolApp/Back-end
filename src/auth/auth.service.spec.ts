@@ -206,8 +206,8 @@ describe('AuthService', () => {
       expect(result).toEqual({
         token: 'token',
         refreshToken: 'token',
-        is_social_login: false, 
-        role: 'user', 
+        is_social_login: false,
+        role: 'user',
       });
     });
 
