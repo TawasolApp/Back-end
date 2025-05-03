@@ -29,7 +29,7 @@ import { UserConnection } from '../connections/infrastructure/database/schemas/u
 import * as postHelpers from '../posts/helpers/posts.helpers';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
 import * as connectionHelpers from '../connections/helpers/connection-helpers';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 describe('PostsService', () => {
