@@ -25,11 +25,15 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 import {
   User,
   UserDocument,
 } from '../users/infrastructure/database/schemas/user.schema';
+
 @Injectable()
 export class MessagesService {
   constructor(
@@ -38,14 +42,14 @@ export class MessagesService {
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
     @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
+    private readonly profileModel: Model<ProfileDocument>,
     private readonly notificationGateway: NotificationGateway,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>, // Replace 'any' with the actual type of your Company model
+    private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
-    private readonly companyManagerModel: Model<any>,
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {}
@@ -60,7 +64,6 @@ export class MessagesService {
     let conversation = await this.conversationModel.findOne({
       participants: { $all: [senderId, receiverId] },
     });
-    //console.log('Conversation:', conversation);
 
     if (!conversation) {
       conversation = await this.conversationModel.create({
@@ -79,7 +82,6 @@ export class MessagesService {
       status: MessageStatus.Sent,
       sent_at: messageDate,
     });
-    //console.log('Conversation Id:', conversation._id);
 
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
@@ -104,7 +106,6 @@ export class MessagesService {
       this.userModel,
       this.companyManagerModel,
     );
-    // await newMessage.save();
     await this.updateUnseenCount(conversation._id);
 
     return { conversation, message: newMessage };
@@ -120,7 +121,6 @@ export class MessagesService {
         ],
       },
     });
-    //console.log('update unseen count: ' + unseenCount);
 
     // Update the unseen_count field in the conversation
     await this.conversationModel.updateOne(
@@ -130,8 +130,6 @@ export class MessagesService {
   }
 
   async markMessagesAsDelivered(userId: string) {
-    console.log('messages delivered');
-    console.log('sheeeeeeeeeeeeeesh: ' + MessageStatus.Delivered.toString());
 
     await this.messageModel.updateMany(
       { receiver_id: new Types.ObjectId(userId), status: MessageStatus.Sent },
@@ -143,9 +141,6 @@ export class MessagesService {
     conversationId: Types.ObjectId,
     userId: Types.ObjectId,
   ) {
-    console.log('in service read message');
-    console.log('conversation' + conversationId);
-    console.log('userId' + userId);
     await this.messageModel.updateMany(
       {
         conversation_id: conversationId,
@@ -157,8 +152,6 @@ export class MessagesService {
       { $set: { status: MessageStatus.Read } },
     );
     await this.updateUnseenCount(new Types.ObjectId(conversationId));
-
-    console.log('after service read message');
   }
 
   async getConversations(
@@ -166,16 +159,12 @@ export class MessagesService {
     page: number = 1,
     limit: number = 10,
   ) {
-    // Calculate skip value based on page and limit
     const skip = (page - 1) * limit;
 
     // Find all conversations where the user is a participant with pagination
     const conversations = await this.conversationModel
       .find({ participants: userId })
       .lean();
-    //console.log('Conversations:', conversations);
-
-    // Get total count for pagination metadata
     const total = await this.conversationModel.countDocuments({
       participants: userId,
     });
@@ -213,7 +202,7 @@ export class MessagesService {
           _id: conversation._id,
           lastMessage: lastMessage || null,
           unseenCount: conversation.unseen_count,
-          markedAsUnread, // Add this field
+          markedAsUnread, 
           otherParticipant: {
             _id: otherParticipantId,
             first_name: profile?.first_name,
@@ -239,11 +228,8 @@ export class MessagesService {
         : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-    // console.log('Sorted Conversations:', sortedConversations);
-    // console.log('unseen count in service:', sortedConversations[0].unseenCount);
 
     const mappedConversations = getConversations(sortedConversations);
-    // console.log('Mapped Conversations:', mappedConversations);
     mappedConversations.forEach((conversation) => {
       if (conversation.unseenCount === undefined) {
         conversation.unseenCount =
@@ -279,12 +265,11 @@ export class MessagesService {
     });
     const messages = await this.messageModel
       .find({ conversation_id: new Types.ObjectId(conversationId) })
-      .sort({ sent_at: -1 }) // Sort by most recent message first
+      .sort({ sent_at: -1 }) 
       .skip(skip)
       .limit(limit)
       .lean();
 
-    // console.log(messages);
     const mappedMessages = getMessages(messages);
     return {
       data: mappedMessages,
