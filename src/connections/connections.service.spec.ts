@@ -15,7 +15,7 @@ import { User } from '../users/infrastructure/database/schemas/user.schema';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { ConnectionStatus } from './enums/connection-status.enum';
 import { handleError } from '../common/utils/exception-handler';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';

@@ -1,6 +1,6 @@
 import { Model, Types } from 'mongoose';
 import { NotificationDocument } from '../infrastructure/database/schemas/notification.schema';
-import { NotificationGateway } from '../../gateway/notification.gateway';
+import { NotificationGateway } from '../../common/gateway/notification.gateway';
 import { mapToGetNotificationsDto } from '../mappers/notification.mapper';
 import { ProfileDocument } from '../../profiles/infrastructure/database/schemas/profile.schema';
 import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
@@ -50,12 +50,7 @@ export async function addNotification(
     sender_id: senderId,
     receiver_id: receiverId,
     item_id: referenceId,
-    reference_type: referenceType as
-      | 'React'
-      | 'Comment'
-      | 'UserConnection'
-      | 'Message'
-      | 'JobOffer',
+    reference_type: referenceType,
     content,
     seen: false,
     sent_at: sentAt,

@@ -4,10 +4,7 @@ import { getModelToken } from '@nestjs/mongoose';
 import { Post } from './infrastructure/database/schemas/post.schema';
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
-import {
-  React,
-  ReactDocument,
-} from './infrastructure/database/schemas/react.schema';
+import { React } from './infrastructure/database/schemas/react.schema';
 import { Save } from './infrastructure/database/schemas/save.schema';
 import { Comment } from './infrastructure/database/schemas/comment.schema';
 import { Notification } from '../notifications/infrastructure/database/schemas/notification.schema';
@@ -24,15 +21,9 @@ import {
   mockReaction,
   mockSave,
   mockCompany,
-  mockProfiles,
-  mockCompanies,
-  mockComments,
-  mockReacts,
-  mockSaves,
   mockEditPostDto,
   mockCommentDto,
   mockCompanyPost,
-  mockCompanyId,
   mockPostWithMedia,
   mockPostWithTags,
   mockPostWithComments,
@@ -42,19 +33,18 @@ import {
   mockGetPostDto,
   mockCreatePostDto,
 } from './mock.data';
-import { _, T } from '@faker-js/faker/dist/airline-CBNP41sR';
-import { mock } from 'node:test';
+import { _ } from '@faker-js/faker/dist/airline-CBNP41sR';
+import {} from 'node:test';
 import {
   BadRequestException,
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { UserConnection } from '../connections/infrastructure/database/schemas/user-connection.schema';
-import { getPostInfo } from './helpers/posts.helpers';
 import * as postHelpers from '../posts/helpers/posts.helpers';
 import * as notificationHelpers from '../notifications/helpers/notification.helper';
 import * as connectionHelpers from '../connections/helpers/connection-helpers';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import { User } from '../users/infrastructure/database/schemas/user.schema';
 describe('PostsService', () => {

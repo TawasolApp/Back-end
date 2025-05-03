@@ -55,7 +55,7 @@ export class NotificationsService {
       const notifications = await this.notificationModel
         .find({
           receiver_id: new Types.ObjectId(authorId),
-          type: { $ne: 'Message' },
+          reference_type: { $ne: 'Message' },
         })
         .sort({ timestamp: -1, _id: -1 })
         .skip(skip)
@@ -74,7 +74,7 @@ export class NotificationsService {
 
       return mappedNotifications.filter(
         (notification) => notification !== null,
-      ) as GetNotificationsDto[];
+      );
     } catch (error) {
       throw new InternalServerErrorException('Failed to fetch notifications');
     }
@@ -102,7 +102,7 @@ export class NotificationsService {
         .find({
           receiver_id: new Types.ObjectId(authorId),
           seen: false,
-          type: { $ne: 'Message' },
+          reference_type: { $ne: 'Message' },
         })
         .sort({ timestamp: -1, _id: -1 })
         .skip(skip)
@@ -121,7 +121,7 @@ export class NotificationsService {
 
       return mappedNotifications.filter(
         (notification) => notification !== null,
-      ) as GetNotificationsDto[];
+      );
     } catch (error) {
       throw new InternalServerErrorException('Failed to fetch unread messages');
     }
@@ -177,7 +177,7 @@ export class NotificationsService {
       const unseenCount = await this.notificationModel.countDocuments({
         receiver_id: new Types.ObjectId(authorId),
         seen: false,
-        type: { $ne: 'Message' },
+        reference_type: { $ne: 'Message' },
       });
       return { unseenCount };
     } catch (error) {
@@ -204,7 +204,7 @@ export class NotificationsService {
       const unseenCount = await this.notificationModel.countDocuments({
         receiver_id: new Types.ObjectId(authorId),
         seen: false,
-        type: 'Message',
+        reference_type: 'Message',
       });
       return { unseenCount };
     } catch (error) {

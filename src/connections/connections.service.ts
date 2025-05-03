@@ -47,7 +47,7 @@ import {
 } from './helpers/connection-helpers';
 import { handleError } from '../common/utils/exception-handler';
 import { getSortData } from './helpers/sort-helper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import {
   addNotification,
   deleteNotification,
@@ -534,7 +534,7 @@ export class ConnectionsService {
       const field = Object.keys(params)[0];
       const dir = params[field];
 
-      let sort: Record<string, 1 | -1> = {};
+      const sort: Record<string, 1 | -1> = {};
       if (field === 'created_at') {
         sort['created_at'] = dir;
       } else {

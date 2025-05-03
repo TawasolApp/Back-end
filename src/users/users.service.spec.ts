@@ -23,12 +23,14 @@ describe('UsersService', () => {
   let mockShareModel: any;
   let mockUserConnectionModel: any;
   let mockCompanyConnectionModel: any;
-  let mockCompanyEmployerModel: any;
   let mockCompanyManagerModel: any;
   let mockApplicationModel: any;
   let mockJobModel: any;
   let mockJwtService: any;
   let mockMailerService: any;
+  let mockReportModel: any;
+  let mockMessageModel: any;
+  let mockConversationModel: any;
 
   beforeEach(async () => {
     mockUserModel = {
@@ -55,7 +57,6 @@ describe('UsersService', () => {
     mockShareModel = { deleteMany: jest.fn() };
     mockUserConnectionModel = { deleteMany: jest.fn() };
     mockCompanyConnectionModel = { deleteMany: jest.fn() };
-    mockCompanyEmployerModel = { deleteMany: jest.fn() };
     mockCompanyManagerModel = { deleteMany: jest.fn() };
     mockApplicationModel = {
       find: jest.fn(),
@@ -69,6 +70,9 @@ describe('UsersService', () => {
     mockMailerService = {
       sendEmailChangeConfirmation: jest.fn(),
     };
+    mockReportModel = { deleteMany: jest.fn() };
+    mockMessageModel = { deleteMany: jest.fn() };
+    mockConversationModel = { deleteMany: jest.fn() };
 
     jest
       .spyOn(bcrypt, 'compare')
@@ -117,10 +121,6 @@ describe('UsersService', () => {
           useValue: mockCompanyConnectionModel,
         },
         {
-          provide: getModelToken('CompanyEmployer'),
-          useValue: mockCompanyEmployerModel,
-        },
-        {
           provide: getModelToken('CompanyManager'),
           useValue: mockCompanyManagerModel,
         },
@@ -131,6 +131,18 @@ describe('UsersService', () => {
         {
           provide: getModelToken('Job'),
           useValue: mockJobModel,
+        },
+        {
+          provide: getModelToken('Report'),
+          useValue: mockReportModel,
+        },
+        {
+          provide: getModelToken('Message'),
+          useValue: mockMessageModel,
+        },
+        {
+          provide: getModelToken('Conversation'),
+          useValue: mockConversationModel,
         },
         {
           provide: JwtService,
@@ -400,9 +412,6 @@ describe('UsersService', () => {
       });
       expect(mockCompanyConnectionModel.deleteMany).toHaveBeenCalledWith({
         user_id: objectId,
-      });
-      expect(mockCompanyEmployerModel.deleteMany).toHaveBeenCalledWith({
-        employer_id: objectId,
       });
       expect(mockCompanyManagerModel.deleteMany).toHaveBeenCalledWith({
         manager_id: objectId,

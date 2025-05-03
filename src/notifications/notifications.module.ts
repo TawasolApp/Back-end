@@ -1,10 +1,9 @@
-import { forwardRef, Module, ValidationPipe } from '@nestjs/common';
+import { Module, ValidationPipe } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_PIPE } from '@nestjs/core';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
-import { ProfilesModule } from '../profiles/profiles.module';
 import {
   Notification,
   NotificationSchema,
@@ -45,7 +44,7 @@ import {
   CompanySchema,
 } from '../companies/infrastructure/database/schemas/company.schema';
 import { CompaniesModule } from '../companies/companies.module';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { firebaseAdminProvider } from './firebase-admin.provider';
 
 @Module({

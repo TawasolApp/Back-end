@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Message,
@@ -15,7 +19,7 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { getConversations, getMessages } from './dto/messages.mapper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { addNotification } from '../notifications/helpers/notification.helper';
 import {
   Notification,
@@ -25,7 +29,10 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import {
+  CompanyManager,
+  CompanyManagerDocument,
+} from '../companies/infrastructure/database/schemas/company-manager.schema';
 import {
   User,
   UserDocument,
@@ -38,14 +45,14 @@ export class MessagesService {
     @InjectModel(Conversation.name)
     private readonly conversationModel: Model<ConversationDocument>,
     @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>, // Replace 'any' with the actual type of your Profile model
+    private readonly profileModel: Model<ProfileDocument>,
     private readonly notificationGateway: NotificationGateway,
     @InjectModel(Notification.name)
     private readonly notificationModel: Model<NotificationDocument>,
     @InjectModel(Company.name)
-    private readonly companyModel: Model<CompanyDocument>, // Replace 'any' with the actual type of your Company model
+    private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
-    private readonly companyManagerModel: Model<any>,
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {}
@@ -60,7 +67,6 @@ export class MessagesService {
     let conversation = await this.conversationModel.findOne({
       participants: { $all: [senderId, receiverId] },
     });
-    //console.log('Conversation:', conversation);
 
     if (!conversation) {
       conversation = await this.conversationModel.create({
@@ -79,7 +85,6 @@ export class MessagesService {
       status: MessageStatus.Sent,
       sent_at: messageDate,
     });
-    //console.log('Conversation Id:', conversation._id);
 
     conversation.last_message_id = newMessage._id;
     conversation.unseen_count += 1;
@@ -104,13 +109,11 @@ export class MessagesService {
       this.userModel,
       this.companyManagerModel,
     );
-    // await newMessage.save();
     await this.updateUnseenCount(conversation._id);
 
     return { conversation, message: newMessage };
   }
   async updateUnseenCount(conversationId: Types.ObjectId): Promise<void> {
-    // Count messages with status 'Sent' or 'Delivered' for the given conversationId
     const unseenCount = await this.messageModel.countDocuments({
       conversation_id: conversationId,
       status: {
@@ -120,9 +123,6 @@ export class MessagesService {
         ],
       },
     });
-    //console.log('update unseen count: ' + unseenCount);
-
-    // Update the unseen_count field in the conversation
     await this.conversationModel.updateOne(
       { _id: new Types.ObjectId(conversationId) },
       { $set: { unseen_count: unseenCount } },
@@ -130,9 +130,6 @@ export class MessagesService {
   }
 
   async markMessagesAsDelivered(userId: string) {
-    console.log('messages delivered');
-    console.log('sheeeeeeeeeeeeeesh: ' + MessageStatus.Delivered.toString());
-
     await this.messageModel.updateMany(
       { receiver_id: new Types.ObjectId(userId), status: MessageStatus.Sent },
       { $set: { status: MessageStatus.Delivered.toString() } },
@@ -143,9 +140,6 @@ export class MessagesService {
     conversationId: Types.ObjectId,
     userId: Types.ObjectId,
   ) {
-    console.log('in service read message');
-    console.log('conversation' + conversationId);
-    console.log('userId' + userId);
     await this.messageModel.updateMany(
       {
         conversation_id: conversationId,
@@ -157,8 +151,6 @@ export class MessagesService {
       { $set: { status: MessageStatus.Read } },
     );
     await this.updateUnseenCount(new Types.ObjectId(conversationId));
-
-    console.log('after service read message');
   }
 
   async getConversations(
@@ -166,45 +158,30 @@ export class MessagesService {
     page: number = 1,
     limit: number = 10,
   ) {
-    // Calculate skip value based on page and limit
     const skip = (page - 1) * limit;
-
-    // Find all conversations where the user is a participant with pagination
     const conversations = await this.conversationModel
       .find({ participants: userId })
       .lean();
-    //console.log('Conversations:', conversations);
-
-    // Get total count for pagination metadata
     const total = await this.conversationModel.countDocuments({
       participants: userId,
     });
 
     const modifiedConversations = await Promise.all(
       conversations.map(async (conversation) => {
-        // Find the other participant (not the current user)
         const otherParticipantId = conversation.participants.find(
           (participant: any) => participant.toString() !== userId.toString(),
         );
 
         if (!otherParticipantId) return null;
-
-        // Fetch the profile data
         const profile = await this.profileModel
           .findById(new Types.ObjectId(otherParticipantId))
           .select('profile_picture first_name last_name')
           .lean();
-
-        // Fetch the last message
         const lastMessage = await this.messageModel
           .findById(conversation.last_message_id)
           .lean();
-
-        // Determine if the current user is the first participant
         const isFirstParticipant =
           conversation.participants[0].toString() === userId.toString();
-
-        // Get the correct markedAsUnread value
         const markedAsUnread = isFirstParticipant
           ? conversation.marked_as_unread[0]
           : conversation.marked_as_unread[1];
@@ -213,7 +190,7 @@ export class MessagesService {
           _id: conversation._id,
           lastMessage: lastMessage || null,
           unseenCount: conversation.unseen_count,
-          markedAsUnread, // Add this field
+          markedAsUnread,
           otherParticipant: {
             _id: otherParticipantId,
             first_name: profile?.first_name,
@@ -223,13 +200,9 @@ export class MessagesService {
         };
       }),
     );
-
-    // Filter out any null conversations
     const filteredConversations = modifiedConversations.filter(
       (conv) => conv !== null,
     );
-
-    // Sort by last message date (newest first)
     const sortedConversations = filteredConversations.sort((a, b) => {
       const dateA = a.lastMessage?.sent_at
         ? new Date(a.lastMessage.sent_at)
@@ -239,11 +212,8 @@ export class MessagesService {
         : new Date(0);
       return dateB.getTime() - dateA.getTime();
     });
-    // console.log('Sorted Conversations:', sortedConversations);
-    // console.log('unseen count in service:', sortedConversations[0].unseenCount);
 
     const mappedConversations = getConversations(sortedConversations);
-    // console.log('Mapped Conversations:', mappedConversations);
     mappedConversations.forEach((conversation) => {
       if (conversation.unseenCount === undefined) {
         conversation.unseenCount =
@@ -279,12 +249,10 @@ export class MessagesService {
     });
     const messages = await this.messageModel
       .find({ conversation_id: new Types.ObjectId(conversationId) })
-      .sort({ sent_at: -1 }) // Sort by most recent message first
+      .sort({ sent_at: -1 })
       .skip(skip)
       .limit(limit)
       .lean();
-
-    // console.log(messages);
     const mappedMessages = getMessages(messages);
     return {
       data: mappedMessages,
@@ -300,51 +268,36 @@ export class MessagesService {
     userId: Types.ObjectId,
     conversationId: Types.ObjectId,
   ) {
-    // First find the conversation
     const conversation = await this.conversationModel.findById(conversationId);
 
     if (!conversation) {
-      throw new Error('Conversation not found');
+      throw new NotFoundException('Conversation not found');
     }
-
-    // Determine if the user is the first or second participant
     const isFirstParticipant = conversation.participants[0] == userId;
-
-    // Update the correct position in markedAsUnread array
     const update = isFirstParticipant
       ? { $set: { 'marked_as_unread.0': true } }
       : { $set: { 'marked_as_unread.1': true } };
-
-    // Update the conversation
     const updatedConversation = await this.conversationModel
       .findByIdAndUpdate(conversationId, update, { new: true })
       .lean();
 
     if (!updatedConversation) {
-      throw new Error('Failed to update conversation');
+      throw new InternalServerErrorException('Failed to update conversation');
     }
-
-    // Format the response like getConversations
     const otherParticipantId = updatedConversation.participants.find(
       (participant: any) => participant.toString() !== userId.toString(),
     );
 
     if (!otherParticipantId) {
-      throw new Error('Other participant not found');
+      throw new InternalServerErrorException('Other participant not found');
     }
-
-    // Fetch the profile data
     const profile = await this.profileModel
       .findById(new Types.ObjectId(otherParticipantId))
       .select('profile_picture first_name last_name')
       .lean();
-
-    // Fetch the last message
     const lastMessage = await this.messageModel
       .findById(updatedConversation.last_message_id)
       .lean();
-
-    // Get the correct markedAsUnread value
     const markedAsUnread = isFirstParticipant
       ? updatedConversation.marked_as_unread[0]
       : updatedConversation.marked_as_unread[1];
@@ -367,53 +320,36 @@ export class MessagesService {
     userId: Types.ObjectId,
     conversationId: Types.ObjectId,
   ) {
-    // First find the conversation
     const conversation = await this.conversationModel.findById(conversationId);
 
     if (!conversation) {
-      throw new Error('Conversation not found');
+      throw new NotFoundException('Conversation not found');
     }
-
-    // Determine if the user is the first or second participant
     const isFirstParticipant = conversation.participants[0] == userId;
-
-    // Update the correct position in markedAsUnread array
     const update = isFirstParticipant
       ? { $set: { 'marked_as_unread.0': false } }
       : { $set: { 'marked_as_unread.1': false } };
-
-    // Update the conversation
     const updatedConversation = await this.conversationModel
       .findByIdAndUpdate(conversationId, update, { new: true })
       .lean();
 
     if (!updatedConversation) {
-      throw new Error('Failed to update conversation');
+      throw new InternalServerErrorException('Failed to update conversation');
     }
-
-    // Format the response like getConversations
-    console.log('updatedConversation:', updatedConversation);
     const otherParticipantId = updatedConversation.participants.find(
       (participant: any) => participant.toString() !== userId.toString(),
     );
-    console.log('otherParticipantId:', otherParticipantId);
 
     if (!otherParticipantId) {
-      throw new Error('Other participant not found');
+      throw new InternalServerErrorException('Other participant not found');
     }
-
-    // Fetch the profile data
     const profile = await this.profileModel
       .findById(new Types.ObjectId(otherParticipantId))
       .select('profile_picture first_name last_name')
       .lean();
-    console.log('profile:', profile);
-    // Fetch the last message
     const lastMessage = await this.messageModel
       .findById(updatedConversation.last_message_id)
       .lean();
-
-    // Get the correct markedAsUnread value
     const markedAsUnread = isFirstParticipant
       ? updatedConversation.marked_as_unread[0]
       : updatedConversation.marked_as_unread[1];

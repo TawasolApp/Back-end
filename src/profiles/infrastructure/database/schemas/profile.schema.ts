@@ -179,7 +179,7 @@ export class Profile {
 
   @Prop({
     type: PlanStatistics,
-    default: { message_count: 0, application_count: 0 },
+    default: { message_count: 0, application_count: 5 },
   })
   plan_statistics: PlanStatistics;
 }
