@@ -52,14 +52,14 @@ export class AdminService {
   ) {}
 
   async getUserAnalytics() {
-    const thirtyDaysAgo = new Date(
-      new Date().setDate(new Date().getDate() - 30),
-    );
+    try {
+      const thirtyDaysAgo = new Date(
+        new Date().setDate(new Date().getDate() - 30),
+      );
 
-    const totalUsers = await this.userModel.countDocuments();
+      const totalUsers = await this.userModel.countDocuments();
 
-    const mostActiveUsers = await this.userModel
-      .aggregate([
+      const mostActiveUsers = await this.userModel.aggregate([
         {
           $lookup: {
             from: 'Posts',
@@ -98,16 +98,14 @@ export class AdminService {
         },
         { $sort: { activityScore: -1 } },
         { $limit: 5 },
-      ])
-      .exec();
+      ]);
 
-    const userReportedCount = await this.reportModel.countDocuments({
-      reported_type: 'Profile',
-      reported_at: { $gte: thirtyDaysAgo },
-    });
+      const userReportedCount = await this.reportModel.countDocuments({
+        reported_type: 'Profile',
+        reported_at: { $gte: thirtyDaysAgo },
+      });
 
-    const mostReportedUser = await this.reportModel
-      .aggregate([
+      const mostReportedUser = await this.reportModel.aggregate([
         { $match: { reported_type: 'Profile' } },
         {
           $group: {
@@ -117,40 +115,42 @@ export class AdminService {
         },
         { $sort: { reportCount: -1 } },
         { $limit: 1 },
-      ])
-      .exec();
+      ]);
 
-    return {
-      totalUsers,
-      mostActiveUsers,
-      userReportedCount,
-      mostReportedUser: mostReportedUser[0]?._id || null,
-    };
+      return {
+        totalUsers,
+        mostActiveUsers,
+        userReportedCount,
+        mostReportedUser: mostReportedUser[0]?._id || null,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch user analytics');
+    }
   }
 
   async getPostAnalytics() {
-    const thirtyDaysAgo = new Date(
-      new Date().setDate(new Date().getDate() - 30),
-    );
+    try {
+      const thirtyDaysAgo = new Date(
+        new Date().setDate(new Date().getDate() - 30),
+      );
 
-    const totalPosts = await this.postModel.countDocuments({
-      posted_at: { $gte: thirtyDaysAgo },
-    });
+      const totalPosts = await this.postModel.countDocuments({
+        posted_at: { $gte: thirtyDaysAgo },
+      });
 
-    const totalShares = await this.shareModel.countDocuments({
-      shared_at: { $gte: thirtyDaysAgo },
-    });
+      const totalShares = await this.shareModel.countDocuments({
+        shared_at: { $gte: thirtyDaysAgo },
+      });
 
-    const totalComments = await this.commentModel.countDocuments({
-      commented_at: { $gte: thirtyDaysAgo },
-    });
+      const totalComments = await this.commentModel.countDocuments({
+        commented_at: { $gte: thirtyDaysAgo },
+      });
 
-    const totalReacts = await this.reactModel.countDocuments({
-      reacted_at: { $gte: thirtyDaysAgo },
-    });
+      const totalReacts = await this.reactModel.countDocuments({
+        reacted_at: { $gte: thirtyDaysAgo },
+      });
 
-    const postWithMostInteractions = await this.postModel
-      .aggregate([
+      const postWithMostInteractions = await this.postModel.aggregate([
         {
           $project: {
             _id: 1,
@@ -170,16 +170,14 @@ export class AdminService {
         },
         { $sort: { interactionCount: -1 } },
         { $limit: 1 },
-      ])
-      .exec();
+      ]);
 
-    const postReportedCount = await this.reportModel.countDocuments({
-      reported_type: 'Post',
-      reported_at: { $gte: thirtyDaysAgo },
-    });
+      const postReportedCount = await this.reportModel.countDocuments({
+        reported_type: 'Post',
+        reported_at: { $gte: thirtyDaysAgo },
+      });
 
-    const mostReportedPost = await this.reportModel
-      .aggregate([
+      const mostReportedPost = await this.reportModel.aggregate([
         { $match: { reported_type: 'Post' } },
         {
           $group: {
@@ -189,24 +187,26 @@ export class AdminService {
         },
         { $sort: { reportCount: -1 } },
         { $limit: 1 },
-      ])
-      .exec();
+      ]);
 
-    return {
-      totalPosts,
-      totalShares,
-      totalComments,
-      totalReacts,
-      postWithMostInteractions: postWithMostInteractions[0]?._id || null,
-      postReportedCount,
-      mostReportedPost: mostReportedPost[0]?._id || null,
-    };
+      return {
+        totalPosts,
+        totalShares,
+        totalComments,
+        totalReacts,
+        postWithMostInteractions: postWithMostInteractions[0]?._id || null,
+        postReportedCount,
+        mostReportedPost: mostReportedPost[0]?._id || null,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch post analytics');
+    }
   }
 
   async getJobAnalytics() {
-    const totalJobs = await this.jobModel.countDocuments();
-    const mostAppliedCompany = await this.jobModel
-      .aggregate([
+    try {
+      const totalJobs = await this.jobModel.countDocuments();
+      const mostAppliedCompany = await this.jobModel.aggregate([
         {
           $group: {
             _id: '$company_id',
@@ -215,32 +215,48 @@ export class AdminService {
         },
         { $sort: { applicationCount: -1 } },
         { $limit: 1 },
-      ])
-      .exec();
-    const mostAppliedJob = await this.jobModel
-      .findOne()
-      .sort({ applicants: -1 })
-      .lean();
-    const jobReportedCount = await this.jobModel.countDocuments({
-      is_flagged: true,
-    });
+      ]);
+      const mostAppliedJob = await this.jobModel
+        .findOne()
+        .sort({ applicants: -1 })
+        .lean();
+      const jobReportedCount = await this.jobModel.countDocuments({
+        is_flagged: true,
+      });
 
-    return {
-      totalJobs,
-      mostAppliedCompany: mostAppliedCompany[0],
-      mostAppliedJob,
-      jobReportedCount,
-    };
+      return {
+        totalJobs,
+        mostAppliedCompany: mostAppliedCompany[0] || null,
+        mostAppliedJob,
+        jobReportedCount,
+      };
+    } catch (error) {
+      throw new InternalServerErrorException('Failed to fetch job analytics');
+    }
   }
 
   async ignoreJob(jobId: string): Promise<void> {
-    const result = await this.jobModel.updateOne(
-      { _id: new Types.ObjectId(jobId) },
-      { $set: { is_flagged: false } },
-    );
+    try {
+      if (!Types.ObjectId.isValid(jobId)) {
+        throw new BadRequestException('Invalid job ID format.');
+      }
 
-    if (result.matchedCount === 0) {
-      throw new NotFoundException('Job not found.');
+      const result = await this.jobModel.updateOne(
+        { _id: new Types.ObjectId(jobId) },
+        { $set: { is_flagged: false } },
+      );
+
+      if (result.matchedCount === 0) {
+        throw new NotFoundException('Job not found.');
+      }
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to ignore job');
     }
   }
 
@@ -459,89 +475,101 @@ export class AdminService {
   }
 
   async suspendUser(reportId: string): Promise<void> {
-    if (!Types.ObjectId.isValid(reportId)) {
-      throw new BadRequestException('Invalid report ID format.');
-    }
-
-    const report = await this.reportModel
-      .findOne({ _id: new Types.ObjectId(reportId) })
-      .lean();
-
-    if (!report) {
-      throw new NotFoundException('Report not found.');
-    }
-
-    let userId: Types.ObjectId;
-
-    if (report.reported_type === 'Profile') {
-      userId = new Types.ObjectId(report.reported_id);
-    } else if (report.reported_type === 'Post') {
-      const post = await this.postModel.findById(report.reported_id).lean();
-
-      if (!post) {
-        throw new NotFoundException('Post not found.');
+    try {
+      if (!Types.ObjectId.isValid(reportId)) {
+        throw new BadRequestException('Invalid report ID format.');
       }
 
-      if (post.author_type === 'Company') {
+      const report = await this.reportModel
+        .findOne({ _id: new Types.ObjectId(reportId) })
+        .lean();
+
+      if (!report) {
+        throw new NotFoundException('Report not found.');
+      }
+
+      let userId: Types.ObjectId;
+
+      if (report.reported_type === 'Profile') {
+        userId = new Types.ObjectId(report.reported_id);
+      } else if (report.reported_type === 'Post') {
+        const post = await this.postModel.findById(report.reported_id).lean();
+
+        if (!post) {
+          throw new NotFoundException('Post not found.');
+        }
+
+        if (post.author_type === 'Company') {
+          throw new BadRequestException(
+            'Cannot suspend a company for a reported post.',
+          );
+        }
+
+        userId = new Types.ObjectId(post.author_id);
+      } else {
         throw new BadRequestException(
-          'Cannot suspend a company for a reported post.',
+          'Invalid report type. Only profiles or posts can be used to suspend users.',
         );
       }
 
-      userId = new Types.ObjectId(post.author_id);
-    } else {
-      throw new BadRequestException(
-        'Invalid report type. Only profiles or posts can be used to suspend users.',
+      if (!Types.ObjectId.isValid(userId)) {
+        throw new BadRequestException('Invalid user ID format.');
+      }
+
+      const user = await this.userModel.findById(userId);
+
+      if (!user) {
+        throw new NotFoundException('User not found.');
+      }
+
+      const suspensionEndDate = new Date();
+      suspensionEndDate.setDate(suspensionEndDate.getDate() + 7);
+
+      user.is_suspended = true;
+      user.suspension_end_date = suspensionEndDate;
+      await user.save();
+
+      const updateResult = await this.reportModel.updateOne(
+        { _id: new Types.ObjectId(reportId) },
+        { $set: { status: 'Actioned' } },
       );
-    }
-
-    if (!Types.ObjectId.isValid(userId)) {
-      throw new BadRequestException('Invalid user ID format.');
-    }
-
-    const user = await this.userModel.findById(userId);
-
-    if (!user) {
-      throw new NotFoundException('User not found.');
-    }
-
-    const suspensionEndDate = new Date();
-    suspensionEndDate.setDate(suspensionEndDate.getDate() + 7);
-
-    user.is_suspended = true;
-    user.suspension_end_date = suspensionEndDate;
-    await user.save();
-
-    const updateResult = await this.reportModel.updateOne(
-      { _id: new Types.ObjectId(reportId) },
-      { $set: { status: 'Actioned' } },
-    );
-
-    if (updateResult.modifiedCount === 0) {
-      throw new InternalServerErrorException('Failed to update report status.');
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to suspend user');
     }
   }
 
   async ignoreReport(reportId: string): Promise<void> {
-    if (!Types.ObjectId.isValid(reportId)) {
-      throw new BadRequestException('Invalid report ID format.');
-    }
+    try {
+      if (!Types.ObjectId.isValid(reportId)) {
+        throw new BadRequestException('Invalid report ID format.');
+      }
 
-    const report = await this.reportModel
-      .findOne({ _id: new Types.ObjectId(reportId) })
-      .lean();
+      const report = await this.reportModel
+        .findOne({ _id: new Types.ObjectId(reportId) })
+        .lean();
 
-    if (!report) {
-      throw new NotFoundException('Report not found.');
-    }
+      if (!report) {
+        throw new NotFoundException('Report not found.');
+      }
 
-    const updateResult = await this.reportModel.updateOne(
-      { _id: new Types.ObjectId(reportId) },
-      { $set: { status: 'Dismissed' } },
-    );
-
-    if (updateResult.modifiedCount === 0) {
-      throw new InternalServerErrorException('Failed to update report status.');
+      const updateResult = await this.reportModel.updateOne(
+        { _id: new Types.ObjectId(reportId) },
+        { $set: { status: 'Dismissed' } },
+      );
+    } catch (error) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof BadRequestException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to ignore report');
     }
   }
 
@@ -552,7 +580,8 @@ export class AdminService {
 
     const report = await this.reportModel
       .findById(new Types.ObjectId(reportId))
-      .lean(); // Ensure proper ObjectId conversion
+      .lean();
+
     if (!report) {
       throw new NotFoundException('Report not found.');
     }
@@ -564,6 +593,7 @@ export class AdminService {
       }
 
       await this.postModel.deleteOne({ _id: post._id });
+
       await this.reportModel.updateOne(
         { _id: new Types.ObjectId(reportId) },
         { $set: { status: 'Actioned' } },
