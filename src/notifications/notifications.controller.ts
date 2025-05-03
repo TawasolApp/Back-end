@@ -33,7 +33,7 @@ export class NotificationsController {
     @Query('limit') limit = 10,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    const userId = req.user['sub']; // Extract user ID from JWT payload
+    const userId = req.user['sub'];
     return await this.notificationsService.getNotifications(
       userId,
       companyId,
@@ -51,7 +51,7 @@ export class NotificationsController {
     @Query('limit') limit = 10,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    const userId = req.user['sub']; // Extract user ID from JWT payload
+    const userId = req.user['sub'];
     return await this.notificationsService.getUnreadNotifications(
       userId,
       companyId,
@@ -66,7 +66,7 @@ export class NotificationsController {
     @Param('companyId') companyId: string,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    const userId = req.user['sub']; // Extract user ID from JWT payload
+    const userId = req.user['sub'];
     return await this.notificationsService.getUnseenCount(userId, companyId);
   }
   @Get('unseen-messages')
@@ -76,7 +76,7 @@ export class NotificationsController {
     @Param('companyId') companyId: string,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    const userId = req.user['sub']; // Extract user ID from JWT payload
+    const userId = req.user['sub'];
     return await this.notificationsService.getUnseenMessagesCount(
       userId,
       companyId,
@@ -91,7 +91,7 @@ export class NotificationsController {
     @Param('companyId') companyId: string,
   ) {
     if (!req.user) throw new UnauthorizedException('User not authenticated');
-    const userId = req.user['sub']; // Extract user ID from JWT payload
+    const userId = req.user['sub'];
     return await this.notificationsService.markAsRead(
       notificationId,
       userId,

@@ -14,7 +14,6 @@ export function toApplicationDto(
   if (application.status) dto.status = application.status;
   if (application.applied_at) dto.appliedDate = application.applied_at;
 
-
   dto.applicantName = undefined;
   dto.applicantEmail = undefined;
   dto.applicantPicture = undefined;

@@ -5,12 +5,9 @@ import {
   IsBoolean,
   IsEnum,
   IsISO8601,
-  ValidateNested,
   IsOptional,
   IsObject,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { PostDocument } from '../infrastructure/database/schemas/post.schema';
 
 export class GetPostDto {
   @IsString()

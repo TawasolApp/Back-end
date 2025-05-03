@@ -109,7 +109,7 @@ export class MessagesGateway
     const isPremiumUser = client.data.isPremium;
 
     const redisKey = `message_count:${userId}`;
-    let count = parseInt((await this.redis.get(redisKey)) || '0');
+    const count = parseInt((await this.redis.get(redisKey)) || '0');
     console.log('Current message count:', count);
 
     await this.redis.expire(redisKey, 864000); // Set expiry to 24 hours

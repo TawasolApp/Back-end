@@ -527,7 +527,7 @@ export class JobsService {
         user_id: new Types.ObjectId(userId),
         job_id: new Types.ObjectId(jobId),
         phone_number: phoneNumber,
-        resume_url: encodedResumeURL, 
+        resume_url: encodedResumeURL,
         status: 'Pending',
         applied_at: new Date().toISOString(),
       });

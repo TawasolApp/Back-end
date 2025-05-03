@@ -1,12 +1,6 @@
 import { NotificationDocument } from '../infrastructure/database/schemas/notification.schema';
-import {
-  Profile,
-  ProfileDocument,
-} from '../../profiles/infrastructure/database/schemas/profile.schema';
-import {
-  Company,
-  CompanyDocument,
-} from '../../companies/infrastructure/database/schemas/company.schema';
+import { ProfileDocument } from '../../profiles/infrastructure/database/schemas/profile.schema';
+import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';
 import { GetNotificationsDto } from '../dto/get-notifications.dto';
 import { Model, Types } from 'mongoose';
 
