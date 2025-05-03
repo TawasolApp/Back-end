@@ -17,6 +17,7 @@ import { ReportRequestDto } from './dto/report-request.dto';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConnectionsService } from '../connections/connections.service';
+import { handleError } from 'src/common/utils/exception-handler';
 
 @UseGuards(JwtAuthGuard)
 @Controller('security')
@@ -29,7 +30,14 @@ export class SecurityController {
   @Post('report')
   @UsePipes(new ValidationPipe())
   async reportContent(@Req() req, @Body() reportRequest: ReportRequestDto) {
-    return this.securityService.createReport(req.user.sub, reportRequest);
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    try {
+      return this.securityService.createReport(req.user.sub, reportRequest);
+    } catch (error) {
+      handleError(error, 'Failed to create report');
+    }
   }
 
   @Post('report/job/:jobId')
@@ -37,7 +45,11 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.securityService.reportJob(new Types.ObjectId(jobId));
+    try {
+      return this.securityService.reportJob(new Types.ObjectId(jobId));
+    } catch (error) {
+      handleError(error, 'Failed to report job');
+    }
   }
 
   @Get('blocked-users')
@@ -46,20 +58,41 @@ export class SecurityController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    return await this.connectionService.getBlocked(
-      req.user.sub,
-      Number(page),
-      Number(limit),
-    );
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    try {
+      return await this.connectionService.getBlocked(
+        req.user.sub,
+        Number(page),
+        Number(limit),
+      );
+    } catch (error) {
+      handleError(error, 'Failed to fetch blocked users');
+    }
   }
 
   @Post('block/:userId')
   async blockUser(@Req() req, @Param('userId') userId: string) {
-    return this.connectionService.block(req.user.sub.toString(), userId);
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    try {
+      return this.connectionService.block(req.user.sub.toString(), userId);
+    } catch (error) {
+      handleError(error, 'Failed to block user');
+    }
   }
 
   @Post('unblock/:userId')
   async unblockUser(@Req() req, @Param('userId') userId: string) {
-    return this.connectionService.unblock(req.user.sub.toString(), userId);
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+    try {
+      return this.connectionService.unblock(req.user.sub.toString(), userId);
+    } catch (error) {
+      handleError(error, 'Failed to unblock user');
+    }
   }
 }

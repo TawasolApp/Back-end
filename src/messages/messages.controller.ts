@@ -13,6 +13,7 @@ import {
 import { MessagesService } from './messages.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Types } from 'mongoose';
+import { handleError } from 'src/common/utils/exception-handler';
 
 @Controller('messages')
 export class MessagesController {
@@ -29,12 +30,16 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    const conversations = await this.messagesService.getConversations(
-      req.user.sub,
-      page,
-      limit,
-    );
-    return conversations;
+    try {
+      const conversations = await this.messagesService.getConversations(
+        req.user.sub,
+        page,
+        limit,
+      );
+      return conversations;
+    } catch (error) {
+      throw handleError(error, 'Failed to fetch conversations');
+    }
   }
 
   @Get('conversations/:conversationId')
@@ -49,13 +54,16 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
-    const messages = await this.messagesService.getConversationMessages(
-      conversationId,
-      page,
-      limit,
-    );
-    return messages;
+    try {
+      const messages = await this.messagesService.getConversationMessages(
+        conversationId,
+        page,
+        limit,
+      );
+      return messages;
+    } catch (error) {
+      throw handleError(error, 'Failed to fetch conversation messages');
+    }
   }
 
   @Patch('conversations/:conversationId/mark-as-read')
@@ -67,10 +75,14 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    return this.messagesService.setConversationAsRead(
-      req.user.sub,
-      new Types.ObjectId(conversationId),
-    );
+    try {
+      return this.messagesService.setConversationAsRead(
+        req.user.sub,
+        new Types.ObjectId(conversationId),
+      );
+    } catch (error) {
+      throw handleError(error, 'Failed to mark conversation as read');
+    }
   }
 
   @Patch('conversations/:conversationId/mark-as-unread')
@@ -82,10 +94,13 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-
-    return this.messagesService.setConversationAsUnread(
-      req.user.sub,
-      new Types.ObjectId(conversationId),
-    );
+    try {
+      return this.messagesService.setConversationAsUnread(
+        req.user.sub,
+        new Types.ObjectId(conversationId),
+      );
+    } catch (error) {
+      throw handleError(error, 'Failed to mark conversation as unread');
+    }
   }
 }

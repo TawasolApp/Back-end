@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ReportRequestDto } from './dto/report-request.dto';
 
 import {
@@ -24,8 +24,7 @@ export class SecurityService {
     loggedInUserId: Types.ObjectId,
     reportRequest: ReportRequestDto,
   ) {
-    console.log('Report Request:', reportRequest);
-    await this.reportModel.create({
+    const createdReport = await this.reportModel.create({
       _id: new Types.ObjectId(),
       user_id: new Types.ObjectId(loggedInUserId),
       reported_id: new Types.ObjectId(reportRequest.reportedId),
@@ -34,15 +33,22 @@ export class SecurityService {
       status: 'Pending',
       reported_at: new Date(),
     });
+    if (!createdReport) {
+      throw new InternalServerErrorException('Failed to create report');
+    }
     return;
   }
 
   async reportJob(jobId: Types.ObjectId) {
-    await this.jobModel.findByIdAndUpdate(
+    const updatedJob = await this.jobModel.findByIdAndUpdate(
       jobId,
       { is_flagged: true },
       { new: true },
     );
+
+    if (!updatedJob) {
+      throw new InternalServerErrorException('Failed to report job');
+    }
 
     return;
   }

@@ -1,4 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import {
   Message,
@@ -264,7 +268,7 @@ export class MessagesService {
     const conversation = await this.conversationModel.findById(conversationId);
 
     if (!conversation) {
-      throw new Error('Conversation not found');
+      throw new NotFoundException('Conversation not found');
     }
     const isFirstParticipant = conversation.participants[0] == userId;
     const update = isFirstParticipant
@@ -275,14 +279,14 @@ export class MessagesService {
       .lean();
 
     if (!updatedConversation) {
-      throw new Error('Failed to update conversation');
+      throw new InternalServerErrorException('Failed to update conversation');
     }
     const otherParticipantId = updatedConversation.participants.find(
       (participant: any) => participant.toString() !== userId.toString(),
     );
 
     if (!otherParticipantId) {
-      throw new Error('Other participant not found');
+      throw new InternalServerErrorException('Other participant not found');
     }
     const profile = await this.profileModel
       .findById(new Types.ObjectId(otherParticipantId))
@@ -316,7 +320,7 @@ export class MessagesService {
     const conversation = await this.conversationModel.findById(conversationId);
 
     if (!conversation) {
-      throw new Error('Conversation not found');
+      throw new NotFoundException('Conversation not found');
     }
     const isFirstParticipant = conversation.participants[0] == userId;
     const update = isFirstParticipant
@@ -327,14 +331,14 @@ export class MessagesService {
       .lean();
 
     if (!updatedConversation) {
-      throw new Error('Failed to update conversation');
+      throw new InternalServerErrorException('Failed to update conversation');
     }
     const otherParticipantId = updatedConversation.participants.find(
       (participant: any) => participant.toString() !== userId.toString(),
     );
 
     if (!otherParticipantId) {
-      throw new Error('Other participant not found');
+      throw new InternalServerErrorException('Other participant not found');
     }
     const profile = await this.profileModel
       .findById(new Types.ObjectId(otherParticipantId))
