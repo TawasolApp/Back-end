@@ -1,6 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ReportRequestDto } from './dto/report-request.dto';
-import { BlockedUserDto } from './dto/blocked-user.dto';
+
 import {
   ReportDocument,
   Report,
@@ -11,10 +11,6 @@ import {
   Job,
   JobDocument,
 } from '../jobs/infrastructure/database/schemas/job.schema';
-import {
-  Profile,
-  ProfileDocument,
-} from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @Injectable()
 export class SecurityService {
@@ -23,17 +19,12 @@ export class SecurityService {
     private readonly reportModel: Model<ReportDocument>,
     @InjectModel(Job.name)
     private readonly jobModel: Model<JobDocument>,
-    @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>,
-  ) {
-    // Inject necessary models or services here
-  }
+  ) {}
   async createReport(
     loggedInUserId: Types.ObjectId,
     reportRequest: ReportRequestDto,
   ) {
-    console.log('Report Request:', reportRequest);
-    await this.reportModel.create({
+    const createdReport = await this.reportModel.create({
       _id: new Types.ObjectId(),
       user_id: new Types.ObjectId(loggedInUserId),
       reported_id: new Types.ObjectId(reportRequest.reportedId),
@@ -42,15 +33,22 @@ export class SecurityService {
       status: 'Pending',
       reported_at: new Date(),
     });
+    if (!createdReport) {
+      throw new InternalServerErrorException('Failed to create report');
+    }
     return;
   }
 
   async reportJob(jobId: Types.ObjectId) {
-    await this.jobModel.findByIdAndUpdate(
+    const updatedJob = await this.jobModel.findByIdAndUpdate(
       jobId,
       { is_flagged: true },
       { new: true },
     );
+
+    if (!updatedJob) {
+      throw new InternalServerErrorException('Failed to report job');
+    }
 
     return;
   }

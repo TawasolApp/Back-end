@@ -40,10 +40,6 @@ import {
   setConnectionStatus,
   setFollowStatus,
 } from './helpers/set-status.utils';
-import {
-  PlanDetail,
-  PlanDetailDocument,
-} from '../payments/infrastructure/database/schemas/plan-detail.schema';
 import { getBlocked } from '../connections/helpers/connection-helpers';
 
 @Injectable()
@@ -55,8 +51,6 @@ export class ProfilesService {
     private readonly userConnectionModel: Model<UserConnectionDocument>,
     @InjectModel(User.name)
     private userModel: Model<UserDocument>,
-    @InjectModel(PlanDetail.name)
-    private readonly planDetailModel: Model<PlanDetailDocument>,
   ) {}
   /**
    * Creates a new profile for a user.

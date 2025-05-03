@@ -2,7 +2,6 @@ import {
   Controller,
   Get,
   Param,
-  ParseIntPipe,
   Patch,
   Query,
   Req,
@@ -30,6 +29,7 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
+
     const conversations = await this.messagesService.getConversations(
       req.user.sub,
       page,
@@ -50,7 +50,7 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    console.log('Fetching messages for conversation:', conversationId);
+
     const messages = await this.messagesService.getConversationMessages(
       conversationId,
       page,
@@ -68,6 +68,7 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
+
     return this.messagesService.setConversationAsRead(
       req.user.sub,
       new Types.ObjectId(conversationId),
@@ -83,7 +84,7 @@ export class MessagesController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    console.log('Marking conversation as unread:', conversationId);
+
     return this.messagesService.setConversationAsUnread(
       req.user.sub,
       new Types.ObjectId(conversationId),

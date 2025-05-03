@@ -11,10 +11,8 @@ import {
   ValidationPipe,
   Query,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
 import { SecurityService } from './security.service';
 import { ReportRequestDto } from './dto/report-request.dto';
-import { BlockedUserDto } from './dto/blocked-user.dto';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConnectionsService } from '../connections/connections.service';
@@ -30,6 +28,9 @@ export class SecurityController {
   @Post('report')
   @UsePipes(new ValidationPipe())
   async reportContent(@Req() req, @Body() reportRequest: ReportRequestDto) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return this.securityService.createReport(req.user.sub, reportRequest);
   }
 
@@ -47,8 +48,9 @@ export class SecurityController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    console.log('limit', limit);
-    console.log('page', page);
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return await this.connectionService.getBlocked(
       req.user.sub,
       Number(page),
@@ -58,11 +60,17 @@ export class SecurityController {
 
   @Post('block/:userId')
   async blockUser(@Req() req, @Param('userId') userId: string) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return this.connectionService.block(req.user.sub.toString(), userId);
   }
 
   @Post('unblock/:userId')
   async unblockUser(@Req() req, @Param('userId') userId: string) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
     return this.connectionService.unblock(req.user.sub.toString(), userId);
   }
 }
