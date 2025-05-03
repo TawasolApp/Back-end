@@ -443,6 +443,19 @@ describe('JobsService', () => {
       const result = await service.getJob(jobId, userId);
       expect(result.status).toBe('Pending');
     });
+
+    it('should throw InternalServerErrorException if an unexpected error occurs', async () => {
+      const jobId = mockJobs[0]._id.toString();
+      const userId = mockProfiles[0]._id.toString();
+
+      jobModel.findById.mockImplementation(() => {
+        throw new Error('Unexpected database error');
+      });
+
+      await expect(service.getJob(jobId, userId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
   });
 
   describe('getJobApplicants', () => {
@@ -519,6 +532,24 @@ describe('JobsService', () => {
         lean: jest.fn().mockResolvedValueOnce(mockJobs[0]),
       });
       jest.spyOn(service, 'checkAccess').mockResolvedValueOnce(false);
+
+      await expect(
+        service.getJobApplicants(userId, jobId, page, limit),
+      ).rejects.toThrow(InternalServerErrorException);
+    });
+
+    it('should throw InternalServerErrorException if fetching applicants fails', async () => {
+      const jobId = mockJobs[0]._id.toString();
+      const userId = mockProfiles[0]._id.toString();
+      const page = 1;
+      const limit = 5;
+
+      jobModel.findById.mockResolvedValue(mockJobs[0]);
+      jest.spyOn(service, 'checkAccess').mockResolvedValue(true);
+
+      applicationModel.find.mockImplementation(() => {
+        throw new Error('Unexpected database error');
+      });
 
       await expect(
         service.getJobApplicants(userId, jobId, page, limit),
@@ -745,6 +776,33 @@ describe('JobsService', () => {
         { $inc: { 'plan_statistics.application_count': -1 } },
       );
     });
+
+    // it('should throw InternalServerErrorException if creating an application fails', async () => {
+    //   const userId = mockProfiles[0]._id.toString();
+    //   const applyJobDto = {
+    //     jobId: mockJobs[0]._id.toString(),
+    //     phoneNumber: '1234567890',
+    //     resumeURL: 'resume.pdf',
+    //   };
+
+    //   jobModel.findById.mockImplementation(() => ({
+    //     lean: jest.fn().mockResolvedValue(mockJobs[0]),
+    //   }));
+    //   applicationModel.findOne.mockImplementation(() => ({
+    //     lean: jest.fn().mockResolvedValue(null),
+    //   }));
+    //   profileModel.findById.mockResolvedValue(mockProfiles[0]);
+
+    //   applicationModel.create.mockImplementation(() => {
+    //     throw new Error('Unexpected database error');
+    //   });
+
+    //   await expect(service.addApplication(userId, applyJobDto)).rejects.toThrow(
+    //     InternalServerErrorException,
+    //   );
+    // });
+
+    
   });
 
   describe('saveJob', () => {
@@ -793,6 +851,19 @@ describe('JobsService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('should throw InternalServerErrorException if an unexpected error occurs', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const jobId = mockJobs[0]._id.toString();
+
+      jobModel.findById.mockImplementation(() => {
+        throw new Error('Unexpected database error');
+      });
+
+      await expect(service.saveJob(userId, jobId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
   });
 
   describe('unsaveJob', () => {
@@ -836,6 +907,19 @@ describe('JobsService', () => {
       }));
 
       jobModel.updateOne.mockResolvedValue({ modifiedCount: 0 });
+
+      await expect(service.unsaveJob(userId, jobId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+
+    it('should throw InternalServerErrorException if an unexpected error occurs', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const jobId = mockJobs[0]._id.toString();
+
+      jobModel.findById.mockImplementation(() => {
+        throw new Error('Unexpected database error');
+      });
 
       await expect(service.unsaveJob(userId, jobId)).rejects.toThrow(
         InternalServerErrorException,
@@ -942,6 +1026,39 @@ describe('JobsService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('should throw InternalServerErrorException if deleting applications fails', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const jobId = mockJobs[0]._id.toString();
+
+      jobModel.findById.mockResolvedValue(mockJobs[0]);
+      jest.spyOn(service, 'checkAccess').mockResolvedValue(true);
+
+      applicationModel.deleteMany.mockImplementation(() => {
+        throw new Error('Unexpected database error');
+      });
+
+      await expect(service.deleteJob(userId, jobId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+
+    it('should throw InternalServerErrorException if deleting the job fails', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const jobId = mockJobs[0]._id.toString();
+
+      jobModel.findById.mockResolvedValue(mockJobs[0]);
+      jest.spyOn(service, 'checkAccess').mockResolvedValue(true);
+
+      applicationModel.deleteMany.mockResolvedValue({ deletedCount: 1 });
+      jobModel.deleteOne.mockImplementation(() => {
+        throw new Error('Unexpected database error');
+      });
+
+      await expect(service.deleteJob(userId, jobId)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
   });
 
   describe('getSavedJobs', () => {
@@ -1024,44 +1141,6 @@ describe('JobsService', () => {
       expect(result.jobs[0].companyName).toBe(mockCompanies[0].name);
       expect(result.jobs[0].status).toBe('Pending');
     });
-
-    // it('should handle empty results', async () => {
-    //   const userId = mockProfiles[0]._id.toString();
-
-    //   applicationModel.find.mockReturnValue({
-    //     sort: jest.fn().mockReturnThis(),
-    //     skip: jest.fn().mockReturnThis(),
-    //     limit: jest.fn().mockReturnThis(),
-    //     lean: jest.fn().mockResolvedValue([]),
-    //   });
-
-    //   applicationModel.countDocuments.mockResolvedValue(0);
-
-    //   const result = await service.getAppliedApplications(userId, page, limit);
-    //   expect(result.jobs.length).toBe(0);
-    //   expect(result.totalItems).toBe(0);
-    //   expect(result.totalPages).toBe(0);
-    //   expect(result.currentPage).toBe(page);
-    // });
-
-    // it('should not throw an exception if no applications are found', async () => {
-    //   const userId = mockProfiles[0]._id.toString();
-
-    //   applicationModel.find.mockReturnValue({
-    //     sort: jest.fn().mockReturnThis(),
-    //     skip: jest.fn().mockReturnThis(),
-    //     limit: jest.fn().mockReturnThis(),
-    //     lean: jest.fn().mockResolvedValue([]),
-    //   });
-
-    //   applicationModel.countDocuments.mockResolvedValue(0);
-
-    //   const result = await service.getAppliedApplications(userId, page, limit);
-    //   expect(result.jobs).toEqual([]);
-    //   expect(result.totalItems).toBe(0);
-    //   expect(result.totalPages).toBe(0);
-    //   expect(result.currentPage).toBe(page);
-    // });
 
     it('should throw InternalServerErrorException if an error occurs', async () => {
       const userId = mockProfiles[0]._id.toString();
