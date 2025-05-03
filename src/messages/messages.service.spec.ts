@@ -24,7 +24,7 @@ import {
   User,
   UserDocument,
 } from '../users/infrastructure/database/schemas/user.schema';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { NotFoundException } from '@nestjs/common';
 
 // Helper type for mocked documents
@@ -137,7 +137,7 @@ describe('MessagesService', () => {
         participants: [senderId, receiverId],
         unseen_count: 0,
         last_message_id: new Types.ObjectId(),
-        markedAsUnread: [false, false],
+        marked_as_unread: [false, false],
         save: jest.fn().mockResolvedValue(this),
       };
 
