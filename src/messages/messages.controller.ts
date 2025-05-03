@@ -26,6 +26,10 @@ export class MessagesController {
     @Query('page') page = 1,
     @Query('limit') limit = 10,
   ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     const conversations = await this.messagesService.getConversations(
       req.user.sub,
       page,
@@ -43,6 +47,10 @@ export class MessagesController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     const messages = await this.messagesService.getConversationMessages(
       conversationId,
       page,
@@ -57,6 +65,10 @@ export class MessagesController {
     @Req() req,
     @Param('conversationId') conversationId: string,
   ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     return this.messagesService.setConversationAsRead(
       req.user.sub,
       new Types.ObjectId(conversationId),
@@ -69,6 +81,10 @@ export class MessagesController {
     @Req() req,
     @Param('conversationId') conversationId: string,
   ) {
+    if (!req.user) {
+      throw new UnauthorizedException('User not authenticated');
+    }
+
     return this.messagesService.setConversationAsUnread(
       req.user.sub,
       new Types.ObjectId(conversationId),
