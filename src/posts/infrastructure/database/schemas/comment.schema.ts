@@ -1,26 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { React } from './react.schema';
-
 export type CommentDocument = Comment & Document;
-
-// @Schema({ _id: false })
-// export class Reply {
-//   @Prop({ enum: ['User', 'Company'], required: true })
-//   author_type: string;
-
-//   @Prop({ type: Types.ObjectId, required: true, refPath: 'author_type' })
-//   author_id: Types.ObjectId;
-
-//   @Prop()
-//   content: string;
-
-//   @Prop({ type: [{ type: Types.ObjectId, ref: 'React' }], default: [] })
-//   reacts: Types.ObjectId[];
-
-//   @Prop({ type: [{ type: Types.ObjectId, ref: 'User' }], default: [] })
-//   tags: Types.ObjectId[];
-// }
 
 @Schema({
   timestamps: { createdAt: 'commented_at', updatedAt: false },

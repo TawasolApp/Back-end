@@ -273,7 +273,7 @@
 //   describe('getJobApplicants', () => {
 //     const page = 1;
 //     const limit = 5;
-  
+
 //     it('should return job applicants for jobId1 when accessed by manager profileId1', async () => {
 //       const jobId = mockJobs[0]._id.toString();
 //       const userId = mockProfiles[0]._id.toString();
@@ -289,7 +289,7 @@
 //       expect(result[1].userId.toString()).toBe(mockProfiles[3]._id.toString());
 //       expect(applicationModel.aggregate).toHaveBeenCalled();
 //     });
-  
+
 //     it('should throw NotFoundException if job does not exist', async () => {
 //       const jobId = new Types.ObjectId().toString();
 //       const userId = mockProfiles[0]._id.toString();
@@ -302,7 +302,7 @@
 //         'Failed to retrieve job applicants.',
 //       );
 //     });
-  
+
 //     it('should throw ForbiddenException if user has no access to jobId1', async () => {
 //       const jobId = mockJobs[0]._id.toString();
 //       const userId = mockProfiles[2]._id.toString();

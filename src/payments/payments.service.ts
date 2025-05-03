@@ -171,7 +171,7 @@ export class PaymentsService {
         { _id: new Types.ObjectId(userId) },
         { $set: { is_premium: false } },
       );
-      await this.messagesGateway.updatePremiumStatus(userId!, false);
+      await this.messagesGateway.updatePremiumStatus(userId, false);
     } catch (error) {
       handleError(error, 'Failed to cancel premium plan.');
     }

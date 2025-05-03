@@ -54,7 +54,7 @@ export function mapPostToDto(
     reactCounts: post.react_count,
     comments: post.comment_count,
     shares: post.share_count,
-    taggedUsers: post.tags, // Assuming this is handled elsewhere
+    taggedUsers: post.tags,
     visibility: post.visibility as 'Public' | 'Connections' | 'Private',
     authorType: post.author_type,
     reactType: userReactionType as
@@ -159,10 +159,10 @@ export function mapCommentToDto(
     authorBio: authorBio,
     authorType: comment.author_type as 'User' | 'Company',
     content: comment.content,
-    repliesCount: replies.length, // Assuming replies are handled elsewhere
+    repliesCount: replies.length,
     reactCounts: comment.react_count,
     timestamp: comment.commented_at.toISOString(),
-    taggedUsers: comment.tags, // Assuming tagged users are handled elsewhere
+    taggedUsers: comment.tags,
     reactType: userReactionType,
     isConnected: !!isConnected,
     isFollowing: !!isFollowing,

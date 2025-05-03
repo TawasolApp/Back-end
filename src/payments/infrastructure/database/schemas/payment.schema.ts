@@ -19,7 +19,7 @@ export class Payment {
 
   @Prop()
   is_success: boolean; // 1 for success, 0 for failed
-  
+
   @Prop()
   session_id?: string;
 

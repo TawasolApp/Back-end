@@ -25,19 +25,19 @@ export const mockCompanies = [
 export const mockUsers = [
   {
     _id: profileId1,
-    role: 'manager'
+    role: 'manager',
   },
   {
     _id: profileId2,
-    role: 'employer'
+    role: 'employer',
   },
   {
     _id: profileId3,
-    role: 'customer'
+    role: 'customer',
   },
   {
     _id: profileId4,
-    role: 'customer'
+    role: 'customer',
   },
 ];
 
@@ -84,7 +84,8 @@ export const mockCompanyManagers = [
     manager_id: profileId1,
     company_id: companyId2,
     created_at: new Date().toISOString(),
-  },,
+  },
+  ,
 ];
 
 export const mockCompanyEmployers = [
@@ -106,34 +107,34 @@ export const mockJobs = [
   {
     _id: jobId1,
     company_id: companyId1,
-    position: "Designer",
+    position: 'Designer',
   },
   {
     _id: jobId2,
     company_id: companyId1,
-    position: "Engineer",
+    position: 'Engineer',
   },
   {
     _id: new Types.ObjectId(),
     company_id: companyId2,
-    position: "Architect",
+    position: 'Architect',
   },
 ];
 
 export const mockApplications = [
-    {
-      _id: new Types.ObjectId(),
-      user_id: profileId3,
-      job_id: jobId1,
-    },
-    {
-      _id: new Types.ObjectId(),
-      user_id: profileId4,
-      job_id: jobId1,
-    },
-    {
-      _id: new Types.ObjectId(),
-      user_id: profileId3,
-      job_id: jobId2,
-    },
-  ];
+  {
+    _id: new Types.ObjectId(),
+    user_id: profileId3,
+    job_id: jobId1,
+  },
+  {
+    _id: new Types.ObjectId(),
+    user_id: profileId4,
+    job_id: jobId1,
+  },
+  {
+    _id: new Types.ObjectId(),
+    user_id: profileId3,
+    job_id: jobId2,
+  },
+];
