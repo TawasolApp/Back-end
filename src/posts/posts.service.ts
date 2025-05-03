@@ -41,9 +41,7 @@ import {
 import { CreateCommentDto } from './dto/create-comment.dto';
 import { GetCommentDto } from './dto/get-comment.dto';
 import { EditCommentDto } from './dto/edit-comment.dto';
-import { mapPostToDto } from './mappers/post.map';
 import {
-  findPostById,
   getCommentInfo,
   getPostInfo,
   getReactionInfo,
@@ -54,7 +52,6 @@ import {
   UserConnectionDocument,
 } from '../connections/infrastructure/database/schemas/user-connection.schema';
 import { ConnectionStatus } from '../connections/enums/connection-status.enum';
-import { P } from '@faker-js/faker/dist/airline-CBNP41sR';
 import {
   addNotification,
   deleteNotification,
@@ -69,11 +66,7 @@ import {
   UserDocument,
   User,
 } from '../users/infrastructure/database/schemas/user.schema';
-import { timeStamp } from 'console';
-import {
-  getBlocked,
-  getBlockedList,
-} from '../connections/helpers/connection-helpers';
+import { getBlockedList } from '../connections/helpers/connection-helpers';
 
 @Injectable()
 export class PostsService {

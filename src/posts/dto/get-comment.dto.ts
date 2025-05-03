@@ -1,14 +1,11 @@
 import {
   IsString,
   IsArray,
-  IsInt,
   IsISO8601,
-  ValidateNested,
   IsEnum,
   IsObject,
   IsBoolean,
 } from 'class-validator';
-import { Type } from 'class-transformer';
 
 export class GetCommentDto {
   @IsString()

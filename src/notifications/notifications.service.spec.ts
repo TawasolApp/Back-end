@@ -5,7 +5,6 @@ import { Notification } from './infrastructure/database/schemas/notification.sch
 import { Profile } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { Company } from '../companies/infrastructure/database/schemas/company.schema';
 import { Types } from 'mongoose';
-import * as notificationHelpers from './helpers/notification.helper';
 import * as notificationMappers from './mappers/notification.mapper';
 import * as postHelpers from '../posts/helpers/posts.helpers';
 import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
