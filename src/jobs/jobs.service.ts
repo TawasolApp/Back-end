@@ -36,9 +36,6 @@ import { GetJobDto } from './dtos/get-job.dto';
 import { ApplyJobDto } from './dtos/apply-job.dto';
 import { ApplicationDto } from './dtos/application.dto';
 import { toGetJobDto, toPostJobSchema } from './mappers/job.mapper';
-import { toGetUserDto } from '../common/mappers/user.mapper';
-import { GetUserDto } from '../common/dtos/get-user.dto';
-import { handleError } from '../common/utils/exception-handler';
 import { toApplicationDto } from './mappers/application.mapper';
 import { addNotification } from '../notifications/helpers/notification.helper';
 import { NotificationGateway } from '../gateway/notification.gateway';
@@ -139,22 +136,22 @@ export class JobsService {
       const createdJob = await newJob.save();
       return toGetJobDto(createdJob);
     } catch (error) {
-      handleError(error, 'Failed to add job listing.');
+      throw new InternalServerErrorException('Failed to add job listing.');
     }
   }
-
   async getJob(jobId: string, userId: string): Promise<GetJobDto> {
     try {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
         .lean();
+
       if (!job) {
-        throw new NotFoundException('Job not found.');
+        throw new NotFoundException('Job not found');
       }
 
       const company = await this.companyModel.findById(job.company_id).lean();
       if (!company) {
-        throw new NotFoundException('Company not found.');
+        throw new NotFoundException('Company not found');
       }
 
       const jobDto = toGetJobDto(job);
@@ -177,10 +174,12 @@ export class JobsService {
 
       return jobDto;
     } catch (error) {
-      handleError(error, 'Failed to retrieve job details.');
+      if (error instanceof NotFoundException) {
+        throw error; 
+      }
+      throw new InternalServerErrorException('Failed to retrieve job details');
     }
   }
-
   /**
    * retrieves the list of applicants for a given job, can apply optional filter by name.
    *
@@ -223,7 +222,7 @@ export class JobsService {
       const [applications, totalItems] = await Promise.all([
         this.applicationModel
           .find({ job_id: new Types.ObjectId(jobId) })
-          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .sort({ applied_at: -1 }) 
           .skip(skip)
           .limit(limit)
           .lean(),
@@ -267,7 +266,9 @@ export class JobsService {
         currentPage: page,
       };
     } catch (error) {
-      handleError(error, 'Failed to retrieve job applicants.');
+      throw new InternalServerErrorException(
+        'Failed to retrieve job applicants.',
+      );
     }
   }
 
@@ -355,7 +356,7 @@ export class JobsService {
         currentPage: page,
       };
     } catch (error) {
-      handleError(error, 'Failed to retrieve jobs.');
+      throw new InternalServerErrorException('Failed to get jobs');
     }
   }
 
@@ -364,8 +365,9 @@ export class JobsService {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
         .lean();
+
       if (!job) {
-        throw new NotFoundException('Job not found.');
+        throw new NotFoundException('Job not found');
       }
 
       const updateResult = await this.jobModel.updateOne(
@@ -374,10 +376,13 @@ export class JobsService {
       );
 
       if (updateResult.modifiedCount === 0) {
-        throw new InternalServerErrorException('Failed to save job.');
+        throw new InternalServerErrorException('Failed to save job');
       }
     } catch (error) {
-      handleError(error, 'Failed to save job.');
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to save job');
     }
   }
 
@@ -386,8 +391,9 @@ export class JobsService {
       const job = await this.jobModel
         .findById(new Types.ObjectId(jobId))
         .lean();
+
       if (!job) {
-        throw new NotFoundException('Job not found.');
+        throw new NotFoundException('Job not found');
       }
 
       const updateResult = await this.jobModel.updateOne(
@@ -396,10 +402,13 @@ export class JobsService {
       );
 
       if (updateResult.modifiedCount === 0) {
-        throw new InternalServerErrorException('Failed to unsave job.');
+        throw new InternalServerErrorException('Failed to unsave job');
       }
     } catch (error) {
-      handleError(error, 'Failed to unsave job.');
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException('Failed to unsave job');
     }
   }
 
@@ -440,7 +449,13 @@ export class JobsService {
         throw new InternalServerErrorException('Failed to delete job.');
       }
     } catch (error) {
-      handleError(error, 'Failed to delete job.');
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error; 
+      }
+      throw new InternalServerErrorException('Failed to delete job');
     }
   }
 
@@ -486,7 +501,7 @@ export class JobsService {
         currentPage: page,
       };
     } catch (error) {
-      handleError(error, 'Failed to retrieve saved jobs.');
+      throw new InternalServerErrorException('Failed to get saved jobs');
     }
   }
 
@@ -494,86 +509,76 @@ export class JobsService {
     userId: string,
     applyJobDto: ApplyJobDto,
   ): Promise<void> {
-    try {
-      const { jobId, phoneNumber, resumeURL } = applyJobDto;
+    const { jobId, phoneNumber, resumeURL } = applyJobDto;
 
-      // Fetch the job
-      const job = await this.jobModel
-        .findById(new Types.ObjectId(jobId))
-        .lean();
-      if (!job) {
-        throw new NotFoundException('Job not found.');
-      }
+   
+    const job = await this.jobModel.findById(new Types.ObjectId(jobId)).lean();
+    if (!job) {
+      throw new NotFoundException('Job not found');
+    }
 
-      // Check if the user has already applied for the job
-      const existingApplication = await this.applicationModel
-        .findOne({
-          user_id: new Types.ObjectId(userId),
-          job_id: new Types.ObjectId(jobId),
-        })
-        .lean();
-
-      if (existingApplication) {
-        throw new ForbiddenException('You have already applied for this job.');
-      }
-
-      // Fetch the user's profile
-      const userProfile = await this.profileModel
-        .findById(new Types.ObjectId(userId))
-        .lean();
-      if (!userProfile) {
-        throw new NotFoundException('User profile not found.');
-      }
-
-      // Check if the user is a premium user or has remaining application credits
-      const premiumStatus = userProfile?.is_premium;
-      if (!premiumStatus) {
-        if (userProfile.plan_statistics.application_count <= 0) {
-          throw new ForbiddenException(
-            'You have reached your application limit. Upgrade to premium to apply for more jobs.',
-          );
-        }
-
-        // Decrement the application count for non-premium users
-        const updateResult = await this.profileModel.updateOne(
-          { _id: new Types.ObjectId(userId) },
-          { $inc: { 'plan_statistics.application_count': -1 } },
-        );
-
-        if (updateResult.modifiedCount === 0) {
-          throw new InternalServerErrorException(
-            'Failed to update application count for the user.',
-          );
-        }
-      }
-
-      // Encode the resume URL
-      const encodedResumeURL = encodeURIComponent(resumeURL ?? '');
-
-      // Create a new application
-      const newApplication = await this.applicationModel.create({
-        _id: new Types.ObjectId(),
+   
+    const existingApplication = await this.applicationModel
+      .findOne({
         user_id: new Types.ObjectId(userId),
         job_id: new Types.ObjectId(jobId),
-        phone_number: phoneNumber,
-        resume_url: encodedResumeURL,
-        status: 'Pending',
-        applied_at: new Date().toISOString(),
-      });
+      })
+      .lean();
 
-      // Increment the applicant count for the job
-      const jobUpdateResult = await this.jobModel.updateOne(
-        { _id: new Types.ObjectId(jobId) },
-        { $inc: { applicants: 1 } },
-      );
+    if (existingApplication) {
+      throw new ForbiddenException('You have already applied for this job');
+    }
 
-      if (jobUpdateResult.modifiedCount === 0) {
-        throw new InternalServerErrorException(
-          'Failed to increment the applicant count for the job.',
+    
+    const userProfile = await this.profileModel
+      .findById(new Types.ObjectId(userId))
+      .lean();
+    if (!userProfile) {
+      throw new NotFoundException('User profile not found');
+    }
+
+
+    if (!userProfile.is_premium) {
+      if (userProfile.plan_statistics.application_count <= 0) {
+        throw new ForbiddenException(
+          'Application limit reached. Upgrade to premium for unlimited applications',
         );
       }
-    } catch (error) {
-      handleError(error, 'Failed to apply for the job.');
+
+      const updateResult = await this.profileModel.updateOne(
+        { _id: new Types.ObjectId(userId) },
+        { $inc: { 'plan_statistics.application_count': -1 } },
+      );
+
+      if (updateResult.modifiedCount === 0) {
+        throw new InternalServerErrorException(
+          'Failed to update application count',
+        );
+      }
+    }
+
+   
+    const encodedResumeURL = encodeURIComponent(resumeURL ?? '');
+    await this.applicationModel.create({
+      _id: new Types.ObjectId(),
+      user_id: new Types.ObjectId(userId),
+      job_id: new Types.ObjectId(jobId),
+      phone_number: phoneNumber,
+      resume_url: encodedResumeURL,
+      status: 'Pending',
+      applied_at: new Date().toISOString(),
+    });
+
+    
+    const jobUpdateResult = await this.jobModel.updateOne(
+      { _id: new Types.ObjectId(jobId) },
+      { $inc: { applicants: 1 } },
+    );
+
+    if (jobUpdateResult.modifiedCount === 0) {
+      throw new InternalServerErrorException(
+        'Failed to update job applicant count',
+      );
     }
   }
 
@@ -593,7 +598,7 @@ export class JobsService {
       const [applications, totalItems] = await Promise.all([
         this.applicationModel
           .find({ user_id: new Types.ObjectId(userId) })
-          .sort({ applied_at: -1 }) // Sort by applied date (descending)
+          .sort({ applied_at: -1 }) 
           .skip(skip)
           .limit(limit)
           .lean(),
@@ -633,7 +638,9 @@ export class JobsService {
         currentPage: page,
       };
     } catch (error) {
-      handleError(error, 'Failed to retrieve applied jobs.');
+      throw new InternalServerErrorException(
+        'Failed to retrieve applied jobs.',
+      );
     }
   }
 
@@ -647,29 +654,38 @@ export class JobsService {
         .findById(new Types.ObjectId(applicationId))
         .lean();
       if (!application) {
-        throw new NotFoundException('Application not found.');
+        throw new NotFoundException('Application not found');
       }
 
       const job = await this.jobModel.findById(application.job_id).lean();
       if (!job) {
-        throw new NotFoundException('Job not found.');
+        throw new NotFoundException('Job not found');
       }
 
-      if (!(await this.checkAccess(userId, job.company_id.toString()))) {
+      const hasAccess = await this.checkAccess(
+        userId,
+        job.company_id.toString(),
+      );
+      if (!hasAccess) {
         throw new ForbiddenException(
-          'You do not have permission to update the status of this application.',
+          'No permission to update this application',
         );
       }
 
-      await this.applicationModel.updateOne(
+      const updateResult = await this.applicationModel.updateOne(
         { _id: new Types.ObjectId(applicationId) },
         { $set: { status } },
       );
 
-      // Send notification based on the status
+      if (updateResult.modifiedCount === 0) {
+        throw new InternalServerErrorException(
+          'Failed to update application status',
+        );
+      }
+
       const company = await this.companyModel.findById(job.company_id).lean();
       if (!company) {
-        throw new NotFoundException('Company not found.');
+        throw new NotFoundException('Company not found');
       }
 
       const notificationMessage =
@@ -693,7 +709,15 @@ export class JobsService {
         this.companyManagerModel,
       );
     } catch (error) {
-      handleError(error, 'Failed to update application status.');
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Failed to update application status.',
+      );
     }
   }
 }
