@@ -43,7 +43,9 @@ export class PaymentsService {
     private readonly profileModel: Model<ProfileDocument>,
     private readonly messagesGateway: MessagesGateway,
   ) {
-    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+    this.stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
+      apiVersion: '2025-04-30.basil',
+    });
   }
 
   async createCheckoutSession(
