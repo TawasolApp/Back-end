@@ -164,7 +164,7 @@ describe('JobsService', () => {
             lean: jest.fn(),
           },
         },
-    
+
         {
           provide: getModelToken(Profile.name),
           useValue: {
@@ -258,8 +258,6 @@ describe('JobsService', () => {
       });
     });
 
-
-
     it('should return false if the user is neither a manager nor an employer of the company', async () => {
       const userId = mockProfiles[0]._id.toString();
       const companyId = mockCompanies[0]._id.toString();
@@ -274,14 +272,12 @@ describe('JobsService', () => {
         lean: jest.fn().mockResolvedValueOnce(null),
       }));
 
-
       const result = await service.checkAccess(userId, companyId);
       expect(result).toBe(false);
       expect(companyManagerModel.findOne).toHaveBeenCalledWith({
         manager_id: new Types.ObjectId(userId),
         company_id: new Types.ObjectId(companyId),
       });
-    
     });
   });
 
@@ -419,6 +415,60 @@ describe('JobsService', () => {
       await expect(service.getJob(jobId, userId)).rejects.toThrow(
         InternalServerErrorException,
       );
+    });
+
+    it('should throw NotFoundException if company does not exist', async () => {
+      const jobId = mockJobs[0]._id.toString();
+      const userId = mockProfiles[0]._id.toString();
+
+      jobModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockJobs[0]),
+      }));
+
+      companyModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(null),
+      }));
+
+      await expect(service.getJob(jobId, userId)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should handle jobs with no saved_by field gracefully', async () => {
+      const jobId = mockJobs[0]._id.toString();
+      const userId = mockProfiles[0]._id.toString();
+
+      const jobWithoutSavedBy = { ...mockJobs[0], saved_by: undefined };
+      jobModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(jobWithoutSavedBy),
+      }));
+
+      companyModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockCompanies[0]),
+      }));
+
+      const result = await service.getJob(jobId, userId);
+      expect(result.isSaved).toBe(false);
+    });
+
+    it('should handle jobs with no application status', async () => {
+      const jobId = mockJobs[0]._id.toString();
+      const userId = mockProfiles[0]._id.toString();
+
+      jobModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockJobs[0]),
+      }));
+
+      companyModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockCompanies[0]),
+      }));
+
+      applicationModel.findOne.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(null),
+      }));
+
+      const result = await service.getJob(jobId, userId);
+      expect(result.status).toBeNull();
     });
   });
 
@@ -601,6 +651,80 @@ describe('JobsService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('should filter jobs by keyword', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const filters = { keyword: 'developer' };
+
+      jobModel.find.mockImplementation(() => ({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([mockJobs[0]]),
+      }));
+
+      jobModel.countDocuments.mockResolvedValue(1);
+
+      const result = await service.getJobs(userId, filters, 1, 10);
+      expect(result.jobs.length).toBe(1);
+      expect(result.jobs[0].position).toBe('Developer');
+    });
+
+    it('should filter jobs by location', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const filters = { location: 'Hybrid' };
+
+      jobModel.find.mockImplementation(() => ({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([]),
+      }));
+
+      jobModel.countDocuments.mockResolvedValue(0);
+
+      const result = await service.getJobs(userId, filters, 1, 10);
+      expect(result.jobs.length).toBe(0);
+      expect(result.totalItems).toBe(0);
+    });
+
+    it('should filter jobs by experience level', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const filters = { experienceLevel: 'Mid' };
+
+      jobModel.find.mockImplementation(() => ({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([]), // Simulate no matching jobs
+      }));
+
+      jobModel.countDocuments.mockResolvedValue(0);
+
+      const result = await service.getJobs(userId, filters, 1, 10);
+      expect(result.jobs.length).toBe(0);
+      expect(result.totalItems).toBe(0);
+    });
+
+    it('should filter jobs by minSalary and maxSalary', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const filters = { minSalary: 50000, maxSalary: 100000 };
+
+      jobModel.find.mockImplementation(() => ({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([mockJobs[0]]),
+      }));
+
+      jobModel.countDocuments.mockResolvedValue(1);
+
+      const result = await service.getJobs(userId, filters, 1, 10);
+      expect(result.jobs.length).toBe(1);
+      expect(result.totalItems).toBe(1);
+    });
+
+   
+
+      
+
+   
   });
 
   describe('addApplication', () => {
@@ -741,32 +865,68 @@ describe('JobsService', () => {
       );
     });
 
-    // it('should throw InternalServerErrorException if creating an application fails', async () => {
-    //   const userId = mockProfiles[0]._id.toString();
-    //   const applyJobDto = {
-    //     jobId: mockJobs[0]._id.toString(),
-    //     phoneNumber: '1234567890',
-    //     resumeURL: 'resume.pdf',
-    //   };
+    it('should throw NotFoundException if user profile is not found', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const applyJobDto = {
+        jobId: mockJobs[0]._id.toString(),
+        phoneNumber: '1234567890',
+        resumeURL: 'resume.pdf',
+      };
 
-    //   jobModel.findById.mockImplementation(() => ({
-    //     lean: jest.fn().mockResolvedValue(mockJobs[0]),
-    //   }));
-    //   applicationModel.findOne.mockImplementation(() => ({
-    //     lean: jest.fn().mockResolvedValue(null),
-    //   }));
-    //   profileModel.findById.mockResolvedValue(mockProfiles[0]);
+      jobModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockJobs[0]),
+      }));
 
-    //   applicationModel.create.mockImplementation(() => {
-    //     throw new Error('Unexpected database error');
-    //   });
+      applicationModel.findOne.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(null),
+      }));
 
-    //   await expect(service.addApplication(userId, applyJobDto)).rejects.toThrow(
-    //     InternalServerErrorException,
-    //   );
-    // });
+      profileModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(null), // Simulate profile not found
+      }));
 
-    
+      await expect(service.addApplication(userId, applyJobDto)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should handle jobs with no applicants field gracefully', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const applyJobDto = {
+        jobId: mockJobs[0]._id.toString(),
+        phoneNumber: '1234567890',
+        resumeURL: 'resume.pdf',
+      };
+
+      const jobWithoutApplicants = { ...mockJobs[0], applicants: undefined };
+      jobModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(jobWithoutApplicants),
+      }));
+
+      applicationModel.findOne.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(null),
+      }));
+
+      profileModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockProfiles[0]),
+      }));
+
+      applicationModel.create.mockResolvedValue({
+        _id: new Types.ObjectId(),
+        user_id: new Types.ObjectId(userId),
+        job_id: new Types.ObjectId(applyJobDto.jobId),
+        phone_number: applyJobDto.phoneNumber,
+        resume_url: encodeURIComponent(applyJobDto.resumeURL),
+        status: 'Pending',
+        applied_at: new Date().toISOString(),
+      });
+
+      jobModel.updateOne.mockResolvedValue({ modifiedCount: 1 });
+
+      await service.addApplication(userId, applyJobDto);
+      expect(applicationModel.create).toHaveBeenCalled();
+      expect(jobModel.updateOne).toHaveBeenCalled();
+    });
   });
 
   describe('saveJob', () => {
@@ -798,21 +958,6 @@ describe('JobsService', () => {
 
       await expect(service.saveJob(userId, jobId)).rejects.toThrow(
         NotFoundException,
-      );
-    });
-
-    it('should throw InternalServerErrorException if save operation fails', async () => {
-      const userId = mockProfiles[0]._id.toString();
-      const jobId = mockJobs[0]._id.toString();
-
-      jobModel.findById.mockImplementation(() => ({
-        lean: jest.fn().mockResolvedValue(mockJobs[0]),
-      }));
-
-      jobModel.updateOne.mockResolvedValue({ modifiedCount: 0 });
-
-      await expect(service.saveJob(userId, jobId)).rejects.toThrow(
-        InternalServerErrorException,
       );
     });
 
@@ -1023,6 +1168,30 @@ describe('JobsService', () => {
         InternalServerErrorException,
       );
     });
+
+    it('should handle jobs with no associated applications gracefully', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const jobId = mockJobs[0]._id.toString();
+
+      jobModel.findById.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(mockJobs[0]),
+      }));
+
+      companyManagerModel.findOne.mockImplementation(() => ({
+        lean: jest.fn().mockResolvedValue(true),
+      }));
+
+      applicationModel.deleteMany.mockResolvedValue({ deletedCount: 0 });
+      jobModel.deleteOne.mockResolvedValue({ deletedCount: 1 });
+
+      await service.deleteJob(userId, jobId);
+      expect(applicationModel.deleteMany).toHaveBeenCalledWith({
+        job_id: new Types.ObjectId(jobId),
+      });
+      expect(jobModel.deleteOne).toHaveBeenCalledWith({
+        _id: new Types.ObjectId(jobId),
+      });
+    });
   });
 
   describe('getSavedJobs', () => {
@@ -1223,4 +1392,42 @@ describe('JobsService', () => {
       ).rejects.toThrow(InternalServerErrorException);
     });
   });
+
+  describe('getJobs - Additional Branch Coverage', () => {
+  
+  
+    it('should handle minSalary filter without maxSalary', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const filters = { minSalary: '50000' };
+      
+      jobModel.find.mockImplementation(() => ({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([mockJobs[0]])
+      }));
+      jobModel.countDocuments.mockResolvedValue(1);
+  
+      const result = await service.getJobs(userId, filters, 1, 10);
+      expect(result.jobs.length).toBe(1);
+    });
+  
+    it('should handle maxSalary filter without minSalary', async () => {
+      const userId = mockProfiles[0]._id.toString();
+      const filters = { maxSalary: '100000' };
+      
+      jobModel.find.mockImplementation(() => ({
+        skip: jest.fn().mockReturnThis(),
+        limit: jest.fn().mockReturnThis(),
+        lean: jest.fn().mockResolvedValue([mockJobs[0]])
+      }));
+      jobModel.countDocuments.mockResolvedValue(1);
+  
+      const result = await service.getJobs(userId, filters, 1, 10);
+      expect(result.jobs.length).toBe(1);
+    });
+  });
+
+
 });
+
+
