@@ -11,10 +11,6 @@ import {
   Job,
   JobDocument,
 } from '../jobs/infrastructure/database/schemas/job.schema';
-import {
-  Profile,
-  ProfileDocument,
-} from '../profiles/infrastructure/database/schemas/profile.schema';
 
 @Injectable()
 export class SecurityService {
@@ -23,8 +19,6 @@ export class SecurityService {
     private readonly reportModel: Model<ReportDocument>,
     @InjectModel(Job.name)
     private readonly jobModel: Model<JobDocument>,
-    @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>,
   ) {}
   async createReport(
     loggedInUserId: Types.ObjectId,
