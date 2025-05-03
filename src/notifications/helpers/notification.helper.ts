@@ -1,6 +1,6 @@
 import { Model, Types } from 'mongoose';
 import { NotificationDocument } from '../infrastructure/database/schemas/notification.schema';
-import { NotificationGateway } from '../../gateway/notification.gateway';
+import { NotificationGateway } from '../../common/gateway/notification.gateway';
 import { mapToGetNotificationsDto } from '../mappers/notification.mapper';
 import { ProfileDocument } from '../../profiles/infrastructure/database/schemas/profile.schema';
 import { CompanyDocument } from '../../companies/infrastructure/database/schemas/company.schema';

@@ -44,7 +44,7 @@ import {
   CompanySchema,
 } from '../companies/infrastructure/database/schemas/company.schema';
 import { CompaniesModule } from '../companies/companies.module';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { firebaseAdminProvider } from './firebase-admin.provider';
 
 @Module({

@@ -40,7 +40,6 @@ import {
   setConnectionStatus,
   setFollowStatus,
 } from './helpers/set-status.utils';
-import { isPremium } from '../payments/helpers/check-premium.helper';
 import {
   PlanDetail,
   PlanDetailDocument,

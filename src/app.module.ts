@@ -18,7 +18,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { UsersModule } from './users/users.module';
 import { MediaModule } from './common/media/media.module';
-import { NotificationGateway } from './gateway/notification.gateway';
+import { NotificationGateway } from './common/gateway/notification.gateway';
 import { RawBodyMiddleware } from './payments/webhook/raw-body.middleware';
 import {
   User,

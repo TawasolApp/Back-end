@@ -19,7 +19,7 @@ import {
   ProfileDocument,
 } from '../profiles/infrastructure/database/schemas/profile.schema';
 import { getConversations, getMessages } from './dto/messages.mapper';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { addNotification } from '../notifications/helpers/notification.helper';
 import {
   Notification,
@@ -29,7 +29,7 @@ import {
   Company,
   CompanyDocument,
 } from '../companies/infrastructure/database/schemas/company.schema';
-import { CompanyManager } from '../companies/infrastructure/database/schemas/company-manager.schema';
+import { CompanyManager, CompanyManagerDocument } from '../companies/infrastructure/database/schemas/company-manager.schema';
 import {
   User,
   UserDocument,
@@ -49,7 +49,7 @@ export class MessagesService {
     @InjectModel(Company.name)
     private readonly companyModel: Model<CompanyDocument>,
     @InjectModel(CompanyManager.name)
-    private readonly companyManagerModel: Model<any>,
+    private readonly companyManagerModel: Model<CompanyManagerDocument>,
     @InjectModel(User.name)
     private readonly userModel: Model<UserDocument>,
   ) {}

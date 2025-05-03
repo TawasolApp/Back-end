@@ -11,9 +11,9 @@ import {
   Delete,
   UsePipes,
 } from '@nestjs/common';
-import { PaymentsService } from './payments.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Request } from 'express';
+import { PaymentsService } from './payments.service';
 import { UpgradePlanDto } from './dtos/upgrade-plan.dto';
 
 @UseGuards(JwtAuthGuard)

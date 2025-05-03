@@ -12,7 +12,7 @@ import { UserConnectionSeeder } from './infrastructure/database/seeders/user-con
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { ProfilesModule } from '../profiles/profiles.module';
-import { NotificationGateway } from '../gateway/notification.gateway';
+import { NotificationGateway } from '../common/gateway/notification.gateway';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CompaniesModule } from '../companies/companies.module';
 import { PaymentsModule } from '../payments/payments.module';
