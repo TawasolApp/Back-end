@@ -206,8 +206,8 @@ export class MessagesService {
 
         // Get the correct markedAsUnread value
         const markedAsUnread = isFirstParticipant
-          ? conversation.markedAsUnread[0]
-          : conversation.markedAsUnread[1];
+          ? conversation.marked_as_unread[0]
+          : conversation.marked_as_unread[1];
 
         return {
           _id: conversation._id,
@@ -312,8 +312,8 @@ export class MessagesService {
 
     // Update the correct position in markedAsUnread array
     const update = isFirstParticipant
-      ? { $set: { 'markedAsUnread.0': true } }
-      : { $set: { 'markedAsUnread.1': true } };
+      ? { $set: { 'marked_as_unread.0': true } }
+      : { $set: { 'marked_as_unread.1': true } };
 
     // Update the conversation
     const updatedConversation = await this.conversationModel
@@ -346,8 +346,8 @@ export class MessagesService {
 
     // Get the correct markedAsUnread value
     const markedAsUnread = isFirstParticipant
-      ? updatedConversation.markedAsUnread[0]
-      : updatedConversation.markedAsUnread[1];
+      ? updatedConversation.marked_as_unread[0]
+      : updatedConversation.marked_as_unread[1];
 
     return {
       _id: updatedConversation._id,
@@ -379,8 +379,8 @@ export class MessagesService {
 
     // Update the correct position in markedAsUnread array
     const update = isFirstParticipant
-      ? { $set: { 'markedAsUnread.0': false } }
-      : { $set: { 'markedAsUnread.1': false } };
+      ? { $set: { 'marked_as_unread.0': false } }
+      : { $set: { 'marked_as_unread.1': false } };
 
     // Update the conversation
     const updatedConversation = await this.conversationModel
@@ -415,8 +415,8 @@ export class MessagesService {
 
     // Get the correct markedAsUnread value
     const markedAsUnread = isFirstParticipant
-      ? updatedConversation.markedAsUnread[0]
-      : updatedConversation.markedAsUnread[1];
+      ? updatedConversation.marked_as_unread[0]
+      : updatedConversation.marked_as_unread[1];
 
     return {
       _id: updatedConversation._id,
