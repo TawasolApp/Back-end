@@ -33,11 +33,8 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    try {
-      return this.securityService.createReport(req.user.sub, reportRequest);
-    } catch (error) {
-      handleError(error, 'Failed to create report');
-    }
+
+    return this.securityService.createReport(req.user.sub, reportRequest);
   }
 
   @Post('report/job/:jobId')
@@ -45,11 +42,8 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    try {
-      return this.securityService.reportJob(new Types.ObjectId(jobId));
-    } catch (error) {
-      handleError(error, 'Failed to report job');
-    }
+
+    return this.securityService.reportJob(new Types.ObjectId(jobId));
   }
 
   @Get('blocked-users')
@@ -61,15 +55,12 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    try {
-      return await this.connectionService.getBlocked(
-        req.user.sub,
-        Number(page),
-        Number(limit),
-      );
-    } catch (error) {
-      handleError(error, 'Failed to fetch blocked users');
-    }
+
+    return await this.connectionService.getBlocked(
+      req.user.sub,
+      Number(page),
+      Number(limit),
+    );
   }
 
   @Post('block/:userId')
@@ -77,11 +68,8 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    try {
-      return this.connectionService.block(req.user.sub.toString(), userId);
-    } catch (error) {
-      handleError(error, 'Failed to block user');
-    }
+
+    return this.connectionService.block(req.user.sub.toString(), userId);
   }
 
   @Post('unblock/:userId')
@@ -89,10 +77,7 @@ export class SecurityController {
     if (!req.user) {
       throw new UnauthorizedException('User not authenticated');
     }
-    try {
-      return this.connectionService.unblock(req.user.sub.toString(), userId);
-    } catch (error) {
-      handleError(error, 'Failed to unblock user');
-    }
+
+    return this.connectionService.unblock(req.user.sub.toString(), userId);
   }
 }
