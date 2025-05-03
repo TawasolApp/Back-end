@@ -17,7 +17,6 @@ import {
 } from './infrastructure/database/schemas/plan-detail.schema';
 import { PaymentsService } from './payments.service';
 import { MessagesModule } from '../messages/messages.module';
-import { MessagesGateway } from '../gateway/messages.gateway';
 
 @Module({
   imports: [
@@ -27,6 +26,7 @@ import { MessagesGateway } from '../gateway/messages.gateway';
     ]),
     AuthModule,
     UsersModule,
+    MessagesModule,
     forwardRef(() => ProfilesModule),
     MessagesModule,
     JwtModule.register({
@@ -43,7 +43,6 @@ import { MessagesGateway } from '../gateway/messages.gateway';
       provide: APP_PIPE,
       useClass: ValidationPipe,
     },
-    MessagesGateway,
   ],
   controllers: [PaymentsController, WebhookController],
 })
