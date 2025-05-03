@@ -11,10 +11,9 @@ import {
   ValidationPipe,
   Query,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
+
 import { SecurityService } from './security.service';
 import { ReportRequestDto } from './dto/report-request.dto';
-import { BlockedUserDto } from './dto/blocked-user.dto';
 import { Types } from 'mongoose';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ConnectionsService } from '../connections/connections.service';
@@ -47,8 +46,6 @@ export class SecurityController {
     @Query('page') page = 1,
     @Query('limit') limit = 20,
   ) {
-    console.log('limit', limit);
-    console.log('page', page);
     return await this.connectionService.getBlocked(
       req.user.sub,
       Number(page),

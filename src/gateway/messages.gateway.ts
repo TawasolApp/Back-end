@@ -8,7 +8,7 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Socket, Server } from 'socket.io';
-import { MessagesService } from '../messages/messages.service'; // Adjust the path as necessary
+import { MessagesService } from '../messages/messages.service';
 import { SendMessageDto } from '../messages/dto/send-message.dto';
 import { Model, Types } from 'mongoose';
 import { isPremium } from '../payments/helpers/check-premium.helper';
@@ -26,7 +26,7 @@ import {
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // Allow frontend URL in production
+    origin: '*',
   },
 })
 export class MessagesGateway
@@ -38,14 +38,12 @@ export class MessagesGateway
     @InjectModel(PlanDetail.name)
     private readonly planDetailModel: Model<PlanDetailDocument>,
     @InjectModel(Profile.name)
-    private readonly profileModel: Model<ProfileDocument>, // Inject the Profile model
+    private readonly profileModel: Model<ProfileDocument>,
   ) {
     this.redis = new Redis({
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
-    }); // Initialize Redis without maxListeners
-
-    // Set max listeners globally to prevent warnings
+    });
     require('events').EventEmitter.defaultMaxListeners = 50;
 
     this.redis.on('error', (err) => {});
@@ -53,27 +51,18 @@ export class MessagesGateway
   private server: Server;
 
   afterInit(server: Server) {
-    this.server = server; // Initialize the server property
-    console.log('✅ WebSocket server initialized');
+    this.server = server;
   }
   async updatePremiumStatus(userId: string, isPremium: boolean) {
-    // Find all sockets for this user
     try {
       const sockets = await this.server.fetchSockets();
       const userSockets = sockets.filter(
         (socket) => socket.data.userId === userId,
       );
-
-      // Update premium status for each socket
       userSockets.forEach((socket) => {
         socket.data.isPremium = isPremium;
-        console.log(
-          `Updated premium status for user ${userId} to ${isPremium}`,
-        );
       });
-    } catch (error) {
-      console.error('❌ Error updating premium status:', error.message);
-    }
+    } catch (error) {}
   }
 
   async handleConnection(client: Socket) {
@@ -81,24 +70,18 @@ export class MessagesGateway
 
     if (userId) {
       client.data.userId = userId;
-      //client.data.isPremium = await isPremium(userId, this.planDetailModel);
       const profile = await this.profileModel
         .findById(new Types.ObjectId(userId))
         .lean();
       client.data.isPremium = profile?.is_premium;
-      console.log('isPremium: ', client.data.isPremium);
-      console.log(`✅ Client ${client.id} connected with userId: ${userId}`);
       client.join(userId);
       this.messagesService.markMessagesAsDelivered(userId);
     } else {
-      console.log('❌ Connection rejected: userId missing');
       client.disconnect();
     }
   }
 
-  handleDisconnect(client: Socket) {
-    console.log(`⚡ Client disconnected: ${client.id}`);
-  }
+  handleDisconnect(client: Socket) {}
 
   @SubscribeMessage('send_message')
   async handleMessage(
@@ -110,12 +93,9 @@ export class MessagesGateway
 
     const redisKey = `message_count:${userId}`;
     let count = parseInt((await this.redis.get(redisKey)) || '0');
-    console.log('Current message count:', count);
 
-    await this.redis.expire(redisKey, 864000); // Set expiry to 24 hours
+    await this.redis.expire(redisKey, 864000);
     if (count >= 5 && !isPremiumUser) {
-      console.log('❌ Message limit reached for non-premium user');
-
       client.emit('error_message', {
         type: 'LIMIT_REACHED',
         message:
@@ -124,29 +104,21 @@ export class MessagesGateway
 
       return;
     }
-    await this.redis.incr(redisKey); // Increment count
+    await this.redis.incr(redisKey);
 
     client.emit('error_message', {
       type: 'ACK',
       message: 'Your message has been sent.',
     });
-
-    // Optional: Set an expiry for daily reset
-
-    // 24 hours
-
-    // Parse and send message (your existing logic below)
     let payload;
     try {
       payload =
         typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
     } catch (error) {
-      console.error('❌ Invalid JSON received:', error.message);
       return;
     }
 
     if (!payload.receiverId) {
-      console.error('❌ Invalid payload: missing receiverId ');
       return;
     }
 
@@ -168,13 +140,7 @@ export class MessagesGateway
       media,
       sentAt: messageDate,
     });
-
-    console.log(
-      `📨 Message sent from ${senderId} to ${payload.receiverId}: ${payload.text}`,
-    );
   }
-
-  // Add these to your gateway
   @SubscribeMessage('messages_delivered')
   async handleDelivery(@ConnectedSocket() client: Socket) {
     const userId = client.data.userId;
@@ -190,12 +156,8 @@ export class MessagesGateway
     const payload =
       typeof rawPayload === 'string' ? JSON.parse(rawPayload) : rawPayload;
 
-    console.log('convvvvvvvvv: ', payload);
-
     const userId = client.data.userId;
     const conversationId = payload.conversationId;
-
-    console.log('id==== ', conversationId);
 
     await this.messagesService.markMessagesAsRead(
       new Types.ObjectId(conversationId),
@@ -207,13 +169,8 @@ export class MessagesGateway
     @MessageBody() payload: string | { receiverId: string },
     @ConnectedSocket() client: Socket,
   ) {
-    // Parse if it's a string
     const parsed = typeof payload === 'string' ? JSON.parse(payload) : payload;
-
-    // Extract receiverId
     const receiverId = parsed.receiverId || parsed;
-
-    console.log('Typing event received for:', receiverId);
 
     client.to(receiverId).emit('typing', {
       senderId: client.data.userId,

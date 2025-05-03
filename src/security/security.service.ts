@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ReportRequestDto } from './dto/report-request.dto';
-import { BlockedUserDto } from './dto/blocked-user.dto';
+
 import {
   ReportDocument,
   Report,
@@ -25,9 +25,7 @@ export class SecurityService {
     private readonly jobModel: Model<JobDocument>,
     @InjectModel(Profile.name)
     private readonly profileModel: Model<ProfileDocument>,
-  ) {
-    // Inject necessary models or services here
-  }
+  ) {}
   async createReport(
     loggedInUserId: Types.ObjectId,
     reportRequest: ReportRequestDto,
