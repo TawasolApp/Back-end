@@ -23,7 +23,6 @@ describe('UsersService', () => {
   let mockShareModel: any;
   let mockUserConnectionModel: any;
   let mockCompanyConnectionModel: any;
-  let mockCompanyEmployerModel: any;
   let mockCompanyManagerModel: any;
   let mockApplicationModel: any;
   let mockJobModel: any;
@@ -55,7 +54,6 @@ describe('UsersService', () => {
     mockShareModel = { deleteMany: jest.fn() };
     mockUserConnectionModel = { deleteMany: jest.fn() };
     mockCompanyConnectionModel = { deleteMany: jest.fn() };
-    mockCompanyEmployerModel = { deleteMany: jest.fn() };
     mockCompanyManagerModel = { deleteMany: jest.fn() };
     mockApplicationModel = {
       find: jest.fn(),
@@ -115,10 +113,6 @@ describe('UsersService', () => {
         {
           provide: getModelToken('CompanyConnection'),
           useValue: mockCompanyConnectionModel,
-        },
-        {
-          provide: getModelToken('CompanyEmployer'),
-          useValue: mockCompanyEmployerModel,
         },
         {
           provide: getModelToken('CompanyManager'),
@@ -400,9 +394,6 @@ describe('UsersService', () => {
       });
       expect(mockCompanyConnectionModel.deleteMany).toHaveBeenCalledWith({
         user_id: objectId,
-      });
-      expect(mockCompanyEmployerModel.deleteMany).toHaveBeenCalledWith({
-        employer_id: objectId,
       });
       expect(mockCompanyManagerModel.deleteMany).toHaveBeenCalledWith({
         manager_id: objectId,
